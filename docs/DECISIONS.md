@@ -47,3 +47,15 @@ Type: PRODUIT
 Statut: VALIDÉE  
 Décision: `next` et `previous` sont des intentions de navigation adressées au serveur ; le serveur détermine la page résultante et la diffuse au groupe. Le serveur peut également imposer directement une page.  
 Conséquences: ESP et Web peuvent partager la même sémantique de navigation.
+
+## D-009
+Type: TECHNIQUE  
+Statut: VALIDÉE  
+Décision: Le matériel d'affichage est décrit par un profil device déclaratif, prévu en JSON, contenant au minimum les caractéristiques utiles au rendu et aux interactions (résolution, forme d'écran, tactile, orientation et capacités pertinentes).  
+Conséquences: Le moteur n'est pas figé sur le module 240×240 initial et pourra cibler d'autres écrans ESP sans introduire de logique métier spécifique au matériel.
+
+## D-010
+Type: UX  
+Statut: VALIDÉE  
+Décision: Le placement des composants utilise une grille logique dérivée des caractéristiques du device plutôt que des coordonnées pixel codées spécifiquement pour le module initial.  
+Conséquences: Le device 240×240 sert de référence de composition ; la grille de référence candidate est 8×8, soit environ 30×30 px par unité. La règle exacte d'adaptation aux autres résolutions reste à formaliser avant développement.
