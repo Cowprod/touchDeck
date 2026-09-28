@@ -65,3 +65,15 @@ Type: PRODUIT
 Statut: VALIDÉE  
 Décision: Un jeu de pages est associé à un profil de device précis.  
 Conséquences: Il n'y a pas d'adaptation automatique d'un même jeu de pages entre formats différents en V1. Les différents profils peuvent partager les mêmes composants et le même protocole, mais disposent de jeux de pages conçus pour leur propre résolution et leur propre grille.
+
+## D-012
+Type: PRODUIT  
+Statut: VALIDÉE  
+Décision: Un client non affecté affiche un écran système interne du firmware permettant son identification. Cet écran affiche au minimum le libellé humain du device et un identifiant technique court.  
+Conséquences: L'identification physique d'un terminal non affecté reste possible même sans jeu de pages fonctionnel.
+
+## D-013
+Type: PRODUIT  
+Statut: VALIDÉE  
+Décision: Le libellé humain d'un device est modifiable depuis l'administration et peut être utilisé sur les écrans système pour faciliter son identification.  
+Conséquences: Le libellé est purement fonctionnel et n'altère jamais l'identifiant technique du client.
