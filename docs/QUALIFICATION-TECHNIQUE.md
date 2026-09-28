@@ -34,6 +34,30 @@ Mesures attendues : latence réelle sur réseau local, perception sur matériel 
 
 Si nécessaire, un préchargement pourra être étudié sans changer le modèle fonctionnel autoritaire côté serveur.
 
+
+## QT-005 — Distribution des variables et stratégie de rendu
+
+**Caractère bloquant :** ce POC doit être réalisé sur le matériel réel avant de figer et développer le moteur de rendu.
+
+Question : pour une mise à jour différentielle reçue par WebSocket, quelle stratégie est la plus adaptée sur l'ESP : distribuer la nouvelle valeur aux composants liés et ne rafraîchir que ceux-ci, ou redessiner la page complète ?
+
+À tester :
+- réception WebSocket d'une modification d'une variable ;
+- distribution d'une même variable à plusieurs composants liés ;
+- rafraîchissement ciblé des seuls composants concernés ;
+- même scénario avec redessin complet de la page ;
+- variable évoluant rapidement, avec plusieurs mises à jour par seconde et fréquences croissantes.
+
+Mesures/preuves attendues :
+- latence de réception et d'affichage ;
+- fluidité/perception sur l'écran réel ;
+- charge CPU ;
+- consommation mémoire ;
+- comportement à fréquence élevée et seuil d'apparition d'une dégradation ;
+- complexité et robustesse comparées des deux implémentations.
+
+La sémantique réseau reste indépendante du résultat : le serveur envoie des mises à jour différentielles de variables. Le POC détermine uniquement la stratégie de rendu locale du firmware.
+
 ## Sources historiques
 
 Des essais antérieurs réalisés avec Codex existent potentiellement. Ils doivent être récupérés et analysés avant de refaire inutilement les mêmes POC.
