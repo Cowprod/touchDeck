@@ -57,5 +57,11 @@ Conséquences: Le moteur n'est pas figé sur le module 240×240 initial et pourr
 ## D-010
 Type: UX  
 Statut: VALIDÉE  
-Décision: Le placement des composants utilise une grille logique dérivée des caractéristiques du device plutôt que des coordonnées pixel codées spécifiquement pour le module initial.  
-Conséquences: Le device 240×240 sert de référence de composition ; la grille de référence candidate est 8×8, soit environ 30×30 px par unité. La règle exacte d'adaptation aux autres résolutions reste à formaliser avant développement.
+Décision: Le profil JSON du device déclare explicitement la grille logique de composition (`gridColumns`, `gridRows`). Elle n'est pas dérivée automatiquement de la résolution. Pour le device de référence 240×240, la grille est 8×8.  
+Conséquences: Chaque format maîtrise sa granularité logique tout en utilisant le même moteur de rendu.
+
+## D-011
+Type: PRODUIT  
+Statut: VALIDÉE  
+Décision: Un jeu de pages est associé à un profil de device précis.  
+Conséquences: Il n'y a pas d'adaptation automatique d'un même jeu de pages entre formats différents en V1. Les différents profils peuvent partager les mêmes composants et le même protocole, mais disposent de jeux de pages conçus pour leur propre résolution et leur propre grille.
