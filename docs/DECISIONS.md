@@ -95,3 +95,9 @@ Type: PRODUIT
 Statut: VALIDÉE  
 Décision: Les actions exposées par une source peuvent déclarer des paramètres typés et contraints (par exemple type, plage, valeurs autorisées).  
 Conséquences: L’éditeur de page peut construire automatiquement les contrôles nécessaires et valider les paramètres avant envoi.
+
+## D-017
+Type: TECHNIQUE  
+Statut: VALIDÉE  
+Décision: Le firmware/device ne connaît ni les sources de données, ni les bindings, ni la logique métier. Le serveur résout les bindings et transmet uniquement des pages/composants avec des valeurs prêtes à rendre.  
+Conséquences: Le protocole device reste générique et indépendant des intégrations externes ; les interactions remontées par le device sont des événements génériques identifiés par composant/action.
