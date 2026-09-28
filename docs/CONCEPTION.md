@@ -91,6 +91,12 @@ Les icônes standard doivent de préférence être embarquées dans le firmware 
 
 Le client ne connaît pas la signification métier des informations affichées.
 
+### Écrans système
+
+Le firmware doit disposer d'écrans système internes, indépendants des pages fonctionnelles servies par le serveur. Ils couvrent notamment le démarrage, la connexion réseau/serveur, l'état non affecté et les erreurs de connexion.
+
+Pour l'état non affecté, l'écran affiche au minimum le libellé humain du device et un identifiant technique court permettant de le retrouver facilement dans l'administration. Le libellé humain est modifiable depuis l'administration et n'altère jamais l'identité technique du client.
+
 ## Responsabilités du serveur
 
 À ce stade :
