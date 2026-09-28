@@ -77,3 +77,15 @@ Type: PRODUIT
 Statut: VALIDÉE  
 Décision: Le libellé humain d'un device est modifiable depuis l'administration et peut être utilisé sur les écrans système pour faciliter son identification.  
 Conséquences: Le libellé est purement fonctionnel et n'altère jamais l'identifiant technique du client.
+
+## D-014
+Type: PRODUIT  
+Statut: VALIDÉE  
+Décision: Les sources de données sont globales à l'instance touchDeck. Les composants de page utilisent des bindings vers les propriétés/actions/événements annoncés par ces sources.  
+Conséquences: Les données sont découplées des devices, groupes et jeux de pages ; une même source peut alimenter plusieurs interfaces.
+
+## D-015
+Type: TECHNIQUE  
+Statut: VALIDÉE  
+Décision: Une source peut mettre à jour touchDeck en push via une API exposée par le serveur ou être interrogée périodiquement par le serveur. Dans les deux cas, les mises à jour destinées aux devices sont diffusées par WebSocket.  
+Conséquences: Les connecteurs peuvent s'adapter aux capacités des systèmes externes sans introduire de polling côté ESP/Web.
