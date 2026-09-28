@@ -77,6 +77,20 @@ Conséquences :
 
 Les icônes standard doivent de préférence être embarquées dans le firmware et référencées par nom. Les images arbitraires restent à qualifier séparément.
 
+## Sources de données
+
+Les sources sont globales à l'instance touchDeck et indépendantes des devices, groupes et jeux de pages. Les composants d'une page consomment des données via des bindings vers les propriétés exposées par ces sources.
+
+Chaque source expose un descripteur touchDeck inspiré de W3C Web of Things, sans imposer la compatibilité WoT complète en V1. Le descripteur annonce au minimum ses propriétés, actions et événements ainsi que les métadonnées nécessaires à l'éditeur (type, unité, plage, caractère modifiable, etc.).
+
+Une source peut alimenter touchDeck selon deux modes :
+- **push** : la source appelle une API exposée par le serveur touchDeck lorsqu'une valeur change ;
+- **polling** : le serveur touchDeck interroge périodiquement la source lorsque celle-ci ne sait pas pousser ses changements.
+
+Quel que soit le mode d'acquisition, le serveur maintient l'état courant des données puis pousse par WebSocket les changements uniquement aux clients concernés. Il n'y a pas de polling entre les devices et le serveur touchDeck.
+
+Le support direct de systèmes tels que Home Assistant est envisagé ultérieurement sous forme d'intégration/adaptateur, sans contraindre le modèle V1.
+
 ## Responsabilités du client ESP
 
 À ce stade :
