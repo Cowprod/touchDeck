@@ -44,9 +44,13 @@ Question : pour une mise à jour différentielle reçue par WebSocket, quelle st
 À tester :
 - réception WebSocket d'une modification d'une variable ;
 - distribution d'une même variable à plusieurs composants liés ;
+- mise à jour différentielle minimale (`componentId` + propriété + valeur) ;
+- renvoi de l'état complet du composant ;
 - rafraîchissement ciblé des seuls composants concernés ;
 - même scénario avec redessin complet de la page ;
 - variable évoluant rapidement, avec plusieurs mises à jour par seconde et fréquences croissantes.
+
+La comparaison doit mesurer à la fois le coût du transport/décodage et celui du rendu afin de ne pas retenir une granularité plus complexe si elle n'apporte aucun gain mesurable sur le matériel réel.
 
 Mesures/preuves attendues :
 - latence de réception et d'affichage ;
