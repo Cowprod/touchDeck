@@ -6,11 +6,20 @@
 
 ## Produit / UX
 
-- Liste minimale des composants graphiques nécessaires en V1.
+- Finaliser la liste minimale des composants graphiques V1 : Label, Button, Toggle, Icon, IconBar, Gauge/Progress sont candidats ; Slider reste sous qualification.
 - Règles exactes de navigation : ordre des pages, extrémités, boucle éventuelle.
 - Comportement attendu d'un client « non affecté ».
 - Niveau d'identité visuelle exigé entre rendu ESP et rendu Web : mêmes coordonnées et comportement ou exigence pixel-perfect incluant polices/rasterisation.
 - Comportement des interactions lorsqu'un composant tactile entre en concurrence avec un swipe.
+- Règle exacte de dérivation de la grille pour des devices de résolutions et ratios différents.
+- Définition d'une éventuelle safe area pour les écrans ronds ou autres formes non rectangulaires.
+
+## Device profile
+
+- Schéma JSON exact du profil device.
+- Quelles capacités sont nécessaires en V1 au-delà de résolution, forme, tactile et orientation ?
+- Le profil device est-il embarqué dans le firmware, fourni par le serveur, ou les deux avec un identifiant de modèle ?
+- Comment un client Web choisit-il le profil device à simuler ?
 
 ## Serveur / exploitation
 
