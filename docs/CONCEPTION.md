@@ -4,7 +4,9 @@
 
 touchDeck transforme un petit écran tactile ESP en terminal graphique générique piloté par un serveur. Le terminal n'embarque pas de logique métier propre : il affiche des pages et composants décrits par le serveur, remonte les interactions utilisateur et reçoit les changements en temps réel.
 
-Une version Web doit offrir les mêmes capacités et reproduire la surface utile du module à sa résolution exacte afin de servir à la fois de client et de simulateur.
+Une version Web doit offrir les mêmes capacités et reproduire la surface utile du device afin de servir à la fois de client et de simulateur.
+
+Le module 240×240 acheté initialement reste le **device de référence de la V1**, mais l'architecture ne doit pas être figée sur cette résolution ni sur ce matériel précis.
 
 ## Modèle fonctionnel retenu
 
@@ -20,6 +22,50 @@ Une version Web doit offrir les mêmes capacités et reproduire la surface utile
 - Le serveur peut forcer l'affichage d'une page pour un groupe.
 - Une modification d'affectation ou de configuration côté serveur ne nécessite ni reflash ni reconfiguration fonctionnelle de l'ESP.
 
+## Device profile
+
+Chaque type de device est décrit par un profil déclaratif, a priori en JSON.
+
+Le profil décrit uniquement les capacités matérielles et de rendu nécessaires au moteur générique, par exemple :
+- largeur et hauteur natives ;
+- forme de l'écran : rectangulaire, ronde, etc. ;
+- présence ou absence du tactile ;
+- type/capacités tactiles utiles ;
+- orientation ;
+- capacités graphiques pertinentes ;
+- éventuellement les marges/safe areas nécessaires au rendu.
+
+Le but n'est pas de déplacer la logique métier dans ce JSON mais de permettre au même moteur et au même serveur de cibler plusieurs écrans ESP.
+
+Le device de référence initial est le module 240×240 tactile acheté pour le projet.
+
+## Grille logique
+
+Les pages sont composées sur une grille logique indépendante des pixels.
+
+La grille doit être calculée à partir de la résolution du device tout en conservant le même ratio de composition que celui validé sur le device de référence.
+
+Base actuellement retenue pour le device 240×240 :
+- grille candidate : 8×8 ;
+- unité logique : environ 30×30 px ;
+- une icône standard peut occuper 1×1 ;
+- une jauge horizontale peut occuper 1 cellule de hauteur ;
+- les composants tactiles doivent respecter une taille minimale adaptée au doigt.
+
+Le nombre exact de colonnes/lignes ou la règle de dérivation pour les autres résolutions reste à formaliser avant implémentation.
+
+## Composants V1 candidats
+
+- Label ;
+- Button ;
+- Toggle ;
+- Icon ;
+- IconBar ;
+- Gauge / Progress ;
+- Slider, sous réserve de qualification du conflit avec le swipe.
+
+Les icônes standard doivent de préférence être embarquées dans le firmware et référencées par nom. Les images arbitraires restent à qualifier séparément.
+
 ## Responsabilités du client ESP
 
 À ce stade :
@@ -27,6 +73,7 @@ Une version Web doit offrir les mêmes capacités et reproduire la surface utile
 - configuration réseau ;
 - adresse du serveur ;
 - communication avec le serveur ;
+- chargement de son profil device ;
 - moteur graphique générique ;
 - gestion tactile et gestes ;
 - affichage des composants/pages reçus.
@@ -43,12 +90,13 @@ Le client ne connaît pas la signification métier des informations affichées.
 - jeux de pages ;
 - page courante de chaque groupe ;
 - définition des pages et composants ;
+- prise en compte du profil device ;
 - traitement des intentions de navigation ;
 - diffusion temps réel des changements aux clients.
 
 ## Client Web
 
-Le client Web utilise le même modèle fonctionnel que l'ESP. La surface simulée doit correspondre exactement à la résolution du module. Sur ordinateur, des commandes gauche/droite peuvent simuler les gestes de swipe.
+Le client Web utilise le même modèle fonctionnel que l'ESP. Il doit pouvoir simuler le profil du device ciblé et afficher la surface à sa résolution logique/native afin d'éviter les écarts de rendu. Sur ordinateur, des commandes gauche/droite peuvent simuler les gestes de swipe.
 
 ## Matériel initial
 
@@ -58,4 +106,4 @@ Les caractéristiques exactes du module doivent être confirmées par documentat
 
 ## Hors décision à ce stade
 
-Le protocole exact, le format de description des pages, la liste V1 des composants, le stockage serveur, la stack backend et les choix précis de bibliothèques embarquées ne sont pas encore figés.
+Le protocole exact, le schéma JSON du profil device, la règle exacte de dérivation de grille pour les autres résolutions, le format de description des pages, le stockage serveur, la stack backend et les choix précis de bibliothèques embarquées ne sont pas encore figés.
