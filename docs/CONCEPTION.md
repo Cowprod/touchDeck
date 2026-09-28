@@ -21,10 +21,11 @@ Le module 240×240 acheté initialement reste le **device de référence de la V
 - Un geste `next` / `previous` est une intention envoyée au serveur. Le serveur détermine la page résultante et la pousse aux clients concernés.
 - Le serveur peut forcer l'affichage d'une page pour un groupe.
 - Une modification d'affectation ou de configuration côté serveur ne nécessite ni reflash ni reconfiguration fonctionnelle de l'ESP.
+- Un jeu de pages cible un profil de device précis.
 
 ## Device profile
 
-Chaque type de device est décrit par un profil déclaratif, a priori en JSON.
+Chaque type de device est décrit par un profil déclaratif en JSON.
 
 Le profil décrit uniquement les capacités matérielles et de rendu nécessaires au moteur générique, par exemple :
 - largeur et hauteur natives ;
@@ -32,6 +33,7 @@ Le profil décrit uniquement les capacités matérielles et de rendu nécessaire
 - présence ou absence du tactile ;
 - type/capacités tactiles utiles ;
 - orientation ;
+- nombre de colonnes et de lignes de la grille logique ;
 - capacités graphiques pertinentes ;
 - éventuellement les marges/safe areas nécessaires au rendu.
 
@@ -43,16 +45,25 @@ Le device de référence initial est le module 240×240 tactile acheté pour le 
 
 Les pages sont composées sur une grille logique indépendante des pixels.
 
-La grille doit être calculée à partir de la résolution du device tout en conservant le même ratio de composition que celui validé sur le device de référence.
+La grille n'est pas calculée automatiquement à partir de la résolution : elle est déclarée explicitement dans le profil JSON du device.
 
-Base actuellement retenue pour le device 240×240 :
-- grille candidate : 8×8 ;
-- unité logique : environ 30×30 px ;
+Base retenue pour le device 240×240 :
+- grille : 8×8 ;
+- unité logique : 30×30 px ;
 - une icône standard peut occuper 1×1 ;
 - une jauge horizontale peut occuper 1 cellule de hauteur ;
 - les composants tactiles doivent respecter une taille minimale adaptée au doigt.
 
-Le nombre exact de colonnes/lignes ou la règle de dérivation pour les autres résolutions reste à formaliser avant implémentation.
+Chaque futur profil de device définit sa propre grille logique.
+
+## Pages et profils
+
+Un jeu de pages est conçu pour un profil de device donné. Il n'y a pas d'adaptation automatique d'un même jeu de pages vers une autre résolution ou une autre grille en V1.
+
+Conséquences :
+- une page 240×240 / 8×8 est conçue et validée pour ce format ;
+- le client Web simule ce même profil pour garantir le rendu ;
+- un autre matériel peut réutiliser les mêmes types de composants et le même protocole, mais avec son propre profil et son propre jeu de pages.
 
 ## Composants V1 candidats
 
@@ -106,4 +117,4 @@ Les caractéristiques exactes du module doivent être confirmées par documentat
 
 ## Hors décision à ce stade
 
-Le protocole exact, le schéma JSON du profil device, la règle exacte de dérivation de grille pour les autres résolutions, le format de description des pages, le stockage serveur, la stack backend et les choix précis de bibliothèques embarquées ne sont pas encore figés.
+Le protocole exact, le schéma JSON complet du profil device, le format de description des pages, le stockage serveur, la stack backend et les choix précis de bibliothèques embarquées ne sont pas encore figés.
