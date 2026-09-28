@@ -89,3 +89,9 @@ Type: TECHNIQUE
 Statut: VALIDÉE  
 Décision: Une source peut mettre à jour touchDeck en push via une API exposée par le serveur ou être interrogée périodiquement par le serveur. Dans les deux cas, les mises à jour destinées aux devices sont diffusées par WebSocket.  
 Conséquences: Les connecteurs peuvent s'adapter aux capacités des systèmes externes sans introduire de polling côté ESP/Web.
+
+## D-016
+Type: PRODUIT  
+Statut: VALIDÉE  
+Décision: Les actions exposées par une source peuvent déclarer des paramètres typés et contraints (par exemple type, plage, valeurs autorisées).  
+Conséquences: L’éditeur de page peut construire automatiquement les contrôles nécessaires et valider les paramètres avant envoi.
