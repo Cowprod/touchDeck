@@ -100,6 +100,24 @@ Les actions sont toujours routées par le serveur touchDeck vers les sources.
 - Timeout d’action par défaut : 5 secondes.
 - Une action peut annoncer des paramètres typés et contraints dans le descripteur de source afin que l’éditeur puisse proposer et valider les valeurs compatibles.
 
+## Principe de minimalisme du device
+
+Le serveur pré-résout autant que possible ce qui peut l'être avant transmission :
+- bindings vers les sources ;
+- valeurs à afficher ;
+- actions à associer aux interactions ;
+- conversion éventuelle de la grille logique vers les coordonnées physiques du profil device ;
+- autres décisions de présentation qui n'ont pas besoin d'être recalculées localement.
+
+Le device conserve uniquement ce qui est nécessaire pour :
+- afficher les composants ;
+- recevoir les mises à jour ;
+- gérer le tactile et les gestes ;
+- remonter des événements génériques ;
+- maintenir les écrans système locaux.
+
+L'éditeur et le modèle produit restent basés sur la grille logique, même si le protocole final serveur → device transporte des coordonnées physiques déjà calculées.
+
 ## Contrat serveur → device
 
 Le device est volontairement sans intelligence métier. Il ne connaît ni les sources, ni les bindings, ni les variables externes.
