@@ -91,6 +91,15 @@ Quel que soit le mode d'acquisition, le serveur maintient l'état courant des do
 
 Le support direct de systèmes tels que Home Assistant est envisagé ultérieurement sous forme d'intégration/adaptateur, sans contraindre le modèle V1.
 
+## Actions et acquittements
+
+Les actions sont toujours routées par le serveur touchDeck vers les sources.
+
+- Un Button entre en état `pending` jusqu’à acquittement du serveur touchDeck au minimum, puis redevient actionnable.
+- Un Toggle utilise un modèle conservateur : il reste en `pending` jusqu’à confirmation de la nouvelle valeur par la source. En cas de timeout, il revient à la dernière valeur connue.
+- Timeout d’action par défaut : 5 secondes.
+- Une action peut annoncer des paramètres typés et contraints dans le descripteur de source afin que l’éditeur puisse proposer et valider les valeurs compatibles.
+
 ## Responsabilités du client ESP
 
 À ce stade :
