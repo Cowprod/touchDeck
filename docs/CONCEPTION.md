@@ -100,6 +100,22 @@ Les actions sont toujours routées par le serveur touchDeck vers les sources.
 - Timeout d’action par défaut : 5 secondes.
 - Une action peut annoncer des paramètres typés et contraints dans le descripteur de source afin que l’éditeur puisse proposer et valider les valeurs compatibles.
 
+## Contrat serveur → device
+
+Le device est volontairement sans intelligence métier. Il ne connaît ni les sources, ni les bindings, ni les variables externes.
+
+Le serveur :
+- résout les bindings ;
+- calcule les valeurs à afficher ;
+- transmet une définition de page déjà exploitable par le renderer ;
+- pousse ensuite les changements de valeurs nécessaires.
+
+Le device :
+- rend les composants reçus ;
+- maintient seulement l'état local nécessaire au rendu et aux interactions ;
+- remonte des événements génériques identifiés par composant/action ;
+- ne contacte jamais directement une source et ne tente jamais d'interpréter la signification métier d'une valeur.
+
 ## Responsabilités du client ESP
 
 À ce stade :
