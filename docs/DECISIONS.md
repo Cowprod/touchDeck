@@ -101,3 +101,9 @@ Type: TECHNIQUE
 Statut: VALIDÉE  
 Décision: Le firmware/device ne connaît ni les sources de données, ni les bindings, ni la logique métier. Le serveur résout les bindings et transmet uniquement des pages/composants avec des valeurs prêtes à rendre.  
 Conséquences: Le protocole device reste générique et indépendant des intégrations externes ; les interactions remontées par le device sont des événements génériques identifiés par composant/action.
+
+## D-018
+Type: TECHNIQUE  
+Statut: VALIDÉE  
+Décision: Le serveur pré-résout autant que possible la présentation destinée au device. Le device ne réalise que le travail strictement nécessaire au rendu et aux interactions.  
+Conséquences: Les coordonnées de grille, bindings, règles de source et autres abstractions restent côté serveur ; le protocole device peut recevoir des coordonnées déjà traduites en pixels et des valeurs prêtes à afficher si cela simplifie le firmware.
