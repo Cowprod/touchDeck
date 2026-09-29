@@ -107,3 +107,15 @@ Type: TECHNIQUE
 Statut: VALIDÉE  
 Décision: Le serveur pré-résout autant que possible la présentation destinée au device. Le device ne réalise que le travail strictement nécessaire au rendu et aux interactions.  
 Conséquences: Les coordonnées de grille, bindings, règles de source et autres abstractions restent côté serveur ; le protocole device peut recevoir des coordonnées déjà traduites en pixels et des valeurs prêtes à afficher si cela simplifie le firmware.
+
+## D-019
+Type: UX  
+Statut: VALIDÉE POUR V1  
+Décision: Le device embarque une police principale fixe pour le rendu des textes. Le serveur ne choisit pas librement une famille de police en V1.  
+Conséquences: Le firmware reste simple et la cohérence de rendu ESP/Web est facilitée. Les tailles/styles nécessaires restent à qualifier sur le matériel réel.
+
+## D-020
+Type: UX  
+Statut: VALIDÉE  
+Décision: touchDeck définit côté serveur un système de thème avec tokens sémantiques inspirés de Bootstrap (par exemple primary, secondary, success, warning, danger, info, light, dark) ainsi que les règles typographiques.  
+Conséquences: L'éditeur manipule des rôles visuels cohérents ; le serveur résout le thème en propriétés finales avant transmission au device, qui ne connaît pas la notion de thème.
