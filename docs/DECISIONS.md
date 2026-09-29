@@ -119,3 +119,9 @@ Type: UX
 Statut: VALIDÉE  
 Décision: touchDeck définit côté serveur un système de thème avec tokens sémantiques inspirés de Bootstrap (par exemple primary, secondary, success, warning, danger, info, light, dark) ainsi que les règles typographiques.  
 Conséquences: L'éditeur manipule des rôles visuels cohérents ; le serveur résout le thème en propriétés finales avant transmission au device, qui ne connaît pas la notion de thème.
+
+## D-021
+Type: UX  
+Statut: VALIDÉE  
+Décision: Les tokens sémantiques du thème peuvent s'appliquer au fond global de la page ainsi qu'au fond des composants compatibles (Label, Button, Toggle, etc.).  
+Conséquences: L'éditeur peut exprimer des variantes visuelles cohérentes de type `bg-success`, `bg-warning`, `bg-danger`, etc., sans exposer cette sémantique au firmware.
