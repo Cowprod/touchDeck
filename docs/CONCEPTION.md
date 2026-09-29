@@ -118,6 +118,18 @@ Le device conserve uniquement ce qui est nécessaire pour :
 
 L'éditeur et le modèle produit restent basés sur la grille logique, même si le protocole final serveur → device transporte des coordonnées physiques déjà calculées.
 
+## Typographie et thème
+
+Pour la V1, le device embarque une police principale fixe. L'objectif est d'éviter la multiplication des fontes et la logique typographique côté firmware.
+
+Le serveur gère un thème de présentation avec :
+- la typographie de référence ;
+- des tailles/niveaux de texte définis côté serveur ;
+- des couleurs sémantiques inspirées de Bootstrap : `primary`, `secondary`, `success`, `warning`, `danger`, `info`, `light`, `dark` ;
+- éventuellement d'autres tokens visuels si un besoin concret apparaît.
+
+L'éditeur travaille avec ces tokens sémantiques. Le serveur les résout en propriétés finales compatibles avec le profil device avant envoi. Le firmware ne connaît pas les thèmes et n'effectue pas de résolution de tokens.
+
 ## Contrat serveur → device
 
 Le device est volontairement sans intelligence métier. Il ne connaît ni les sources, ni les bindings, ni les variables externes.
