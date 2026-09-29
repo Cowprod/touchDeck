@@ -125,3 +125,9 @@ Type: UX
 Statut: VALIDÉE  
 Décision: Les tokens sémantiques du thème peuvent s'appliquer au fond global de la page ainsi qu'au fond des composants compatibles (Label, Button, Toggle, etc.).  
 Conséquences: L'éditeur peut exprimer des variantes visuelles cohérentes de type `bg-success`, `bg-warning`, `bg-danger`, etc., sans exposer cette sémantique au firmware.
+
+## D-024
+Type: UX  
+Statut: VALIDÉE  
+Décision: Les composants interactifs utilisent les modificateurs d'état `active` et `disabled`, dans une logique proche de Bootstrap. L'état normal est implicite et n'est pas modélisé par `enabled=true`.  
+Conséquences: `disabled` devient le vocabulaire standard de l'éditeur et du contrat UI. L'état fonctionnel `pending` peut réutiliser visuellement la variante `disabled` sans être confondu avec lui côté serveur.
