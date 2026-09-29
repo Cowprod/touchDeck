@@ -128,7 +128,7 @@ Le serveur gère un thème de présentation avec :
 - des couleurs sémantiques inspirées de Bootstrap : `primary`, `secondary`, `success`, `warning`, `danger`, `info`, `light`, `dark` ;
 - éventuellement d'autres tokens visuels si un besoin concret apparaît.
 
-L'éditeur travaille avec ces tokens sémantiques. Le serveur les résout en propriétés finales compatibles avec le profil device avant envoi. Le firmware ne connaît pas les thèmes et n'effectue pas de résolution de tokens.
+L'éditeur travaille avec ces tokens sémantiques. Ils peuvent s'appliquer au fond global d'une page ainsi qu'au fond et aux autres propriétés visuelles des composants qui le permettent (Label, Button, Toggle, etc.). Le serveur les résout en propriétés finales compatibles avec le profil device avant envoi. Le firmware ne connaît pas les thèmes et n'effectue pas de résolution de tokens.
 
 ## Contrat serveur → device
 
