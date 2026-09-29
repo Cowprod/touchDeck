@@ -62,6 +62,38 @@ Mesures/preuves attendues :
 
 La sémantique réseau reste indépendante du résultat : le serveur envoie des mises à jour différentielles de variables. Le POC détermine uniquement la stratégie de rendu locale du firmware.
 
+
+## QT-006 — Ressources graphiques et icônes persistantes
+
+Question : quel format et quel mécanisme de synchronisation offrent le meilleur compromis qualité / stockage / RAM / vitesse pour des icônes fonctionnelles provenant du serveur ?
+
+Principe à qualifier :
+- les icônes sont gérées côté serveur à partir de ressources vectorielles, notamment SVG Font Awesome ;
+- le serveur ne prépare que les icônes réellement utilisées par le jeu de pages affecté au groupe ;
+- le device stocke les ressources nécessaires en flash persistante ;
+- les ressources devenues inutiles peuvent être supprimées ;
+- le firmware conserve seulement les icônes système minimales nécessaires aux écrans locaux ;
+- la couleur d'une icône fonctionnelle n'est pas intégrée dans sa ressource : elle est appliquée au rendu à partir de la propriété de couleur finale envoyée par le serveur.
+
+À comparer sur le matériel réel :
+- masque monochrome 1 bit ;
+- masque alpha 8 bits ;
+- taille flash occupée par un catalogue représentatif ;
+- RAM nécessaire au décodage/rendu ;
+- temps de transfert et de synchronisation ;
+- vitesse d'affichage ;
+- qualité visuelle / antialiasing ;
+- comportement avec plusieurs tailles d'une même icône ;
+- redimensionnement côté device d'une ressource unique vs plusieurs tailles pré-rasterisées côté serveur ;
+- coût et simplicité d'un manifest de ressources permettant de détecter les fichiers manquants, modifiés ou devenus inutiles.
+
+Preuves attendues :
+- mesures brutes de tailles et temps ;
+- captures/photos comparatives du rendu réel ;
+- consommation mémoire ;
+- inventaire des formats testés ;
+- conclusion limitée au matériel réellement testé.
+
 ## Sources historiques
 
 Des essais antérieurs réalisés avec Codex existent potentiellement. Ils doivent être récupérés et analysés avant de refaire inutilement les mêmes POC.
