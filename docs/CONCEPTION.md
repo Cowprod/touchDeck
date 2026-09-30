@@ -180,6 +180,14 @@ Pour l'état non affecté, l'écran affiche au minimum le libellé humain du dev
 - traitement des intentions de navigation ;
 - diffusion temps réel des changements aux clients.
 
+## Éditeur et propagation en direct
+
+L'éditeur utilise l'autosave. Toute modification enregistrée d'une page actuellement utilisée est propagée immédiatement :
+- aux témoins HTML affichant cette page ;
+- aux devices connectés appartenant aux groupes utilisant ce jeu de pages.
+
+Pour éviter un trafic inutile, les opérations continues sont consolidées : envoi à la fin d'un drag/resize et après temporisation pour une saisie texte.
+
 ## Client Web
 
 Le client Web utilise le même modèle fonctionnel que l'ESP. Il doit pouvoir simuler le profil du device ciblé et afficher la surface à sa résolution logique/native afin d'éviter les écarts de rendu. Sur ordinateur, des commandes gauche/droite peuvent simuler les gestes de swipe.
