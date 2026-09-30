@@ -166,6 +166,16 @@ Le firmware doit disposer d'écrans système internes, indépendants des pages f
 
 Pour l'état non affecté, l'écran affiche au minimum le libellé humain du device et un identifiant technique court permettant de le retrouver facilement dans l'administration. Le libellé humain est modifiable depuis l'administration et n'altère jamais l'identité technique du client.
 
+## Intégrité des dépendances
+
+Les suppressions structurantes sont bloquées tant qu'une dépendance existe :
+- groupe avec au moins un client affecté ;
+- jeu de pages utilisé par au moins un groupe ;
+- profil device utilisé par au moins un jeu de pages ;
+- source référencée par au moins un binding.
+
+L'administration doit indiquer les usages bloquants pour permettre leur réaffectation ou suppression préalable.
+
 ## Responsabilités du serveur
 
 À ce stade :
