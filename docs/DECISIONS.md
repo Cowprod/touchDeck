@@ -3,8 +3,8 @@
 ## D-001
 Type: PRODUIT  
 Statut: VALIDÉE  
-Décision: Le serveur est autoritaire sur le jeu de pages et la page à afficher. Un client n'a pas à connaître durablement toutes les pages.  
-Conséquences: La navigation peut être résolue côté serveur et une modification de page côté serveur ne nécessite pas de reflash.
+Décision: Le serveur est autoritaire sur les jeux de pages, les règles de navigation et les commandes d'affichage. La page courante appartient toutefois à chaque client.  
+Conséquences: Les clients naviguent indépendamment par défaut, tandis que le serveur peut imposer explicitement une page à un client ou à tout un groupe.
 
 ## D-002
 Type: PRODUIT  
@@ -15,8 +15,8 @@ Conséquences: Aucun mode spécial « indépendant » n'est nécessaire.
 ## D-003
 Type: PRODUIT  
 Statut: VALIDÉE  
-Décision: Un groupe possède un jeu de pages et une page courante.  
-Conséquences: Tous les clients du groupe partagent la même navigation et reçoivent la page courante du groupe.
+Décision: Un groupe possède un jeu de pages et des paramètres collectifs, mais pas de page courante commune permanente. Chaque client possède sa propre page courante.  
+Conséquences: Un swipe ne modifie que le client qui l'a émis. Une synchronisation de groupe résulte d'une commande serveur explicite.
 
 ## D-004
 Type: PRODUIT  
@@ -45,8 +45,8 @@ Conséquences: Une MAC ou un UUID peut être renommé côté serveur sans modifi
 ## D-008
 Type: PRODUIT  
 Statut: VALIDÉE  
-Décision: `next` et `previous` sont des intentions de navigation adressées au serveur ; le serveur détermine la page résultante et la diffuse au groupe. Le serveur peut également imposer directement une page.  
-Conséquences: ESP et Web peuvent partager la même sémantique de navigation.
+Décision: `next` et `previous` sont des intentions de navigation adressées au serveur pour le client émetteur ; le serveur détermine sa page résultante et la lui renvoie. Le serveur peut imposer directement une page à un client ou à tout un groupe.  
+Conséquences: ESP et Web partagent la même sémantique de navigation sans rendre les swipes collectifs.
 
 ## D-009
 Type: TECHNIQUE  
@@ -155,3 +155,10 @@ Type: PRODUIT
 Statut: VALIDÉE  
 Décision: Une ressource structurante ne peut pas être supprimée tant qu'elle est référencée : groupe avec clients attachés, jeu de pages affecté à un groupe, profil device utilisé par un jeu de pages, source utilisée par au moins un binding.  
 Conséquences: L'administration doit empêcher la suppression et indiquer les dépendances existantes afin de permettre leur nettoyage préalable.
+
+
+## D-029
+Type: PRODUIT  
+Statut: VALIDÉE  
+Décision: Hors commande collective explicite, la navigation est individuelle par client. Le mode sentinelle est une politique serveur appliquée aux clients du groupe ; chaque interaction remet le délai du client concerné à zéro.  
+Conséquences: Les clients d'un même groupe peuvent afficher des pages différentes. Une commande « forcer page » permet de les resynchroniser explicitement.
