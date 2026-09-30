@@ -188,6 +188,19 @@ L'éditeur utilise l'autosave. Toute modification enregistrée d'une page actuel
 
 Pour éviter un trafic inutile, les opérations continues sont consolidées : envoi à la fin d'un drag/resize et après temporisation pour une saisie texte.
 
+## Panel de simulateurs HTML
+
+L'éditeur intègre un panel de simulateurs HTML persistants permettant d'observer plusieurs clients en parallèle.
+
+Chaque simulateur :
+- possède une identité de client distincte ;
+- est un vrai client temps réel du protocole touchDeck ;
+- peut être rattaché à un groupe ;
+- affiche exactement la résolution et le profil device associés au jeu de pages du groupe ;
+- suit les changements de page, le mode sentinelle et les mises à jour dynamiques comme un device normal.
+
+Le panel peut contenir plusieurs simulateurs simultanément. Lorsqu'un jeu de pages ou un groupe est en cours d'édition, les simulateurs associés aux groupes concernés sont remontés en tête de liste afin de faciliter la validation visuelle.
+
 ## Client Web
 
 Le client Web utilise le même modèle fonctionnel que l'ESP. Il doit pouvoir simuler le profil du device ciblé et afficher la surface à sa résolution logique/native afin d'éviter les écarts de rendu. Sur ordinateur, des commandes gauche/droite peuvent simuler les gestes de swipe.
