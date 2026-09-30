@@ -12,14 +12,14 @@ Le module 240×240 acheté initialement reste le **device de référence de la V
 
 - Le serveur est autoritaire sur la configuration fonctionnelle.
 - Un client peut être un ESP ou un navigateur Web.
-- Un groupe possède un jeu de pages et une page courante.
-- Chaque client affecté appartient à un seul groupe.
-- Plusieurs clients d'un groupe affichent donc la même page courante.
+- Un groupe possède un jeu de pages et des paramètres collectifs, mais pas de page courante commune permanente.
+- Chaque client affecté appartient à un seul groupe et possède sa propre page courante.
+- Plusieurs clients d'un même groupe peuvent donc afficher des pages différentes.
 - Un client indépendant est simplement seul dans son propre groupe.
 - Un client connu peut rester sans groupe : état « non affecté / à ranger ».
 - Le client n'a pas besoin de connaître tout le jeu de pages. Il peut ne recevoir que la page à afficher.
-- Un geste `next` / `previous` est une intention envoyée au serveur. Le serveur détermine la page résultante et la pousse aux clients concernés.
-- Le serveur peut forcer l'affichage d'une page pour un groupe.
+- Un geste `next` / `previous` est une intention envoyée au serveur pour le client émetteur. Le serveur détermine sa page résultante et la lui pousse.
+- Le serveur peut forcer l'affichage d'une page pour un client précis ou pour tous les clients d'un groupe.
 - Une modification d'affectation ou de configuration côté serveur ne nécessite ni reflash ni reconfiguration fonctionnelle de l'ESP.
 - Un jeu de pages cible un profil de device précis.
 
@@ -187,7 +187,9 @@ L'administration doit indiquer les usages bloquants pour permettre leur réaffec
 - page courante de chaque groupe ;
 - définition des pages et composants ;
 - prise en compte du profil device ;
-- traitement des intentions de navigation ;
+- traitement des intentions de navigation individuelles ;
+- commandes collectives permettant notamment de forcer une page sur un groupe ;
+- mode sentinelle piloté côté serveur, avec temporisation par client ;
 - diffusion temps réel des changements aux clients.
 
 ## Éditeur et propagation en direct
