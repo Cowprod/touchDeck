@@ -131,3 +131,9 @@ Type: UX
 Statut: VALIDÉE  
 Décision: Les composants interactifs utilisent les modificateurs d'état `active` et `disabled`, dans une logique proche de Bootstrap. L'état normal est implicite et n'est pas modélisé par `enabled=true`.  
 Conséquences: `disabled` devient le vocabulaire standard de l'éditeur et du contrat UI. L'état fonctionnel `pending` peut réutiliser visuellement la variante `disabled` sans être confondu avec lui côté serveur.
+
+## D-025
+Type: UX  
+Statut: VALIDÉE  
+Décision: L'éditeur fonctionne en autosave. Une modification de page est enregistrée puis propagée immédiatement aux témoins HTML et aux devices connectés des groupes concernés.  
+Conséquences: Pour les interactions continues (drag, resize, saisie), l'envoi est déclenché en fin d'action ou après temporisation de saisie, pas à chaque mouvement ou frappe.
