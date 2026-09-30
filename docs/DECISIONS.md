@@ -137,3 +137,15 @@ Type: UX
 Statut: VALIDÉE  
 Décision: L'éditeur fonctionne en autosave. Une modification de page est enregistrée puis propagée immédiatement aux témoins HTML et aux devices connectés des groupes concernés.  
 Conséquences: Pour les interactions continues (drag, resize, saisie), l'envoi est déclenché en fin d'action ou après temporisation de saisie, pas à chaque mouvement ou frappe.
+
+## D-026
+Type: UX  
+Statut: VALIDÉE  
+Décision: L'éditeur intègre un panel de simulateurs HTML pouvant contenir plusieurs clients simultanés. Chaque simulateur possède une identité propre et peut être rattaché à un groupe via l'interface d'administration.  
+Conséquences: Plusieurs groupes peuvent être observés en parallèle depuis l'éditeur, sans ouvrir nécessairement plusieurs fenêtres.
+
+## D-027
+Type: UX  
+Statut: VALIDÉE  
+Décision: Lors de l'édition d'un jeu de pages utilisé par un groupe, les simulateurs HTML rattachés à ce groupe sont remontés en tête du panel de simulateurs.  
+Conséquences: L'éditeur privilégie visuellement les témoins les plus pertinents pour le contexte de travail courant.
