@@ -149,3 +149,9 @@ Type: UX
 Statut: VALIDÉE  
 Décision: Lors de l'édition d'un jeu de pages utilisé par un groupe, les simulateurs HTML rattachés à ce groupe sont remontés en tête du panel de simulateurs.  
 Conséquences: L'éditeur privilégie visuellement les témoins les plus pertinents pour le contexte de travail courant.
+
+## D-028
+Type: PRODUIT  
+Statut: VALIDÉE  
+Décision: Une ressource structurante ne peut pas être supprimée tant qu'elle est référencée : groupe avec clients attachés, jeu de pages affecté à un groupe, profil device utilisé par un jeu de pages, source utilisée par au moins un binding.  
+Conséquences: L'administration doit empêcher la suppression et indiquer les dépendances existantes afin de permettre leur nettoyage préalable.
