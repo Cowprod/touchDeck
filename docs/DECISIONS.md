@@ -162,3 +162,76 @@ Type: PRODUIT
 Statut: VALIDÉE  
 Décision: Hors commande collective explicite, la navigation est individuelle par client. Le mode sentinelle est une politique serveur appliquée aux clients du groupe ; chaque interaction remet le délai du client concerné à zéro.  
 Conséquences: Les clients d'un même groupe peuvent afficher des pages différentes. Une commande « forcer page » permet de les resynchroniser explicitement.
+
+## D-030
+Type: PRODUIT  
+Statut: VALIDÉE POUR V1  
+Décision: La visibilité d'une page est une propriété unique indépendante du mode sentinelle. Une page invisible reste éditable mais est ignorée par la navigation `next/previous` et par la sentinelle.  
+Conséquences: La sentinelle suit exactement le même ensemble de pages visibles que le swipe ; aucun attribut spécifique `sentinel` n'est nécessaire sur les pages.
+
+## D-031
+Type: PRODUIT  
+Statut: VALIDÉE  
+Décision: Il n'existe pas de `defaultPage`. Lorsqu'un client doit initialiser son affichage, il prend la première page visible dans l'ordre du jeu. Après redémarrage du serveur, les clients repartent également sur cette première page visible.  
+Conséquences: La page courante n'a pas à être restaurée après redémarrage et l'initialisation reste déterministe.
+
+## D-032
+Type: PRODUIT  
+Statut: VALIDÉE  
+Décision: La réaffectation d'un client à un autre groupe ou le changement du jeu de pages d'un groupe replace les clients concernés sur la première page visible du nouveau jeu. Une simple réorganisation des pages conserve en revanche la page courante de chaque client.  
+Conséquences: Le nouvel ordre ne prend effet qu'au prochain `next/previous` ou passage de sentinelle.
+
+## D-033
+Type: PRODUIT  
+Statut: VALIDÉE POUR V1  
+Décision: Si la page courante devient invisible, elle reste affichée jusqu'à la prochaine navigation, qui rejoint une page visible. Si la page courante est supprimée, le client bascule immédiatement sur la première page visible.  
+Conséquences: Rendre une page invisible ne provoque pas de rupture brutale sur les écrans qui l'affichent déjà, contrairement à sa suppression.
+
+## D-034
+Type: PRODUIT  
+Statut: VALIDÉE  
+Décision: Un client sans page fonctionnelle affichable montre l'écran système local et bascule automatiquement sur la première page visible dès qu'une page devient disponible. Si le client possède déjà une page visible valide, l'apparition d'une nouvelle page visible ne modifie pas immédiatement son affichage.  
+Conséquences: Ce mécanisme couvre notamment affectation tardive d'un jeu, activation d'une page, reconnexion et retour de contenu disponible.
+
+## D-035
+Type: TECHNIQUE  
+Statut: VALIDÉE  
+Décision: La page courante est référencée par UUID et non par index. Pour `next/previous`, le serveur retrouve cet UUID dans l'ordre courant et sélectionne la page visible précédente ou suivante.  
+Conséquences: Les changements d'ordre ne rendent pas obsolète un index conservé côté client.
+
+## D-036
+Type: UX  
+Statut: VALIDÉE POUR V1  
+Décision: Pour la navigation, un client ne possède qu'une requête en vol et une seule intention pending ; toute nouvelle intention remplace la pending précédente.  
+Conséquences: La navigation applique une sémantique « dernière intention gagnante » sans constituer une file de swipes.
+
+## D-037
+Type: TECHNIQUE  
+Statut: VALIDÉE POUR V1  
+Décision: Les actions de composants utilisent une file stricte par client et sont exécutées dans leur ordre de déclenchement. Une action en erreur est consommée, l'erreur est remontée/loguée côté serveur, puis la file continue avec l'action suivante. Aucune gestion avancée de débordement n'est prévue en V1.  
+Conséquences: Les actions utilisateur ne sont pas perdues par une logique last-write-wins. L'état visuel du composant, notamment son aspect grisé selon le thème, suffit comme retour d'exécution en V1.
+
+## D-038
+Type: PRODUIT  
+Statut: VALIDÉE POUR V1  
+Décision: Un composant peut être entièrement statique ou être associé à une seule source. Lorsqu'une source est associée, tous les bindings dynamiques du composant proviennent exclusivement de cette source ; les propriétés du composant peuvent néanmoins mélanger contenu statique et références aux variables de cette source.  
+Conséquences: Une propriété textuelle peut par exemple contenir du texte fixe et une substitution de variable. Une variable sans valeur est substituée par une valeur vide.
+
+## D-039
+Type: PRODUIT  
+Statut: VALIDÉE POUR V1  
+Décision: Le descripteur de la source est la référence qui définit les actions et leurs paramètres. Un paramètre configuré peut être une valeur fixe ou une variable de la même source. Une valeur vide est envoyée telle quelle ; touchDeck ne lui attribue aucune signification métier. Il n'y a pas de notion bloquante requis/optionnel en V1.  
+Conséquences: La source reste responsable de l'interprétation métier et peut signaler une erreur, sans que touchDeck bloque préventivement l'action.
+
+## D-040
+Type: TECHNIQUE  
+Statut: VALIDÉE POUR V1  
+Décision: Les états d'exécution ne sont pas persistés : ni valeurs courantes des variables de sources, ni page courante des clients, ni files d'actions. Après redémarrage, les variables repartent sans valeur, les files sont vides et l'affichage repart selon D-031.  
+Conséquences: Aucune action ancienne n'est rejouée automatiquement après un arrêt ou un crash.
+
+## D-041
+Type: TECHNIQUE  
+Statut: VALIDÉE  
+Décision: La configuration de l'instance touchDeck est persistante et unique. Son support physique (petit fichier JSON ou enregistrement/table de configuration en base) n'est pas imposé à ce stade.  
+Conséquences: Le choix de stockage peut être arrêté lors de l'implémentation sans modifier le contrat fonctionnel.
+
