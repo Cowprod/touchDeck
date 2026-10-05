@@ -136,6 +136,9 @@ Valider la bibliothèque graphique/tactile du firmware sur le matériel réel.
 - compatibilité réelle avec le contrôleur tactile CST816 présent sur le module ;
 - lecture fiable des pressions et gestes simples ;
 - détection des swipes ;
+- validation des quatre rotations 0/90/180/270° ;
+- remappage correct des coordonnées tactiles selon la rotation ;
+- cohérence du sens des swipes après rotation ;
 - rendu d'une page complète 240x240 ;
 - redraw partiel de composants ;
 - fréquence d'actualisation répétée ;
