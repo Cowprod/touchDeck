@@ -249,3 +249,10 @@ Type: PRODUIT
 Statut: VALIDÉE POUR V1  
 Décision: Une source créée manuellement peut être éditée directement dans l'administration, notamment pour ajouter, modifier ou supprimer ses propriétés et actions. Une source issue d'un descripteur JSON expose ces éléments en lecture seule ; sa définition se modifie par réimport du descripteur.  
 Conséquences: L'origine de la définition de la source détermine son mode d'édition et évite toute divergence entre une source importée et son descripteur de référence.
+
+
+## D-044
+Type: PRODUIT  
+Statut: VALIDÉE POUR V1  
+Décision: Les événements restent supportés dans le modèle et peuvent être exposés par un descripteur de source, mais aucun éditeur manuel spécifique d'événements n'est prévu en V1. Les sources de test/fake fourniront leur propre descripteur.  
+Conséquences: La V1 conserve la compatibilité avec le modèle complet sans alourdir l'administration avec une fonction non exploitée directement.
