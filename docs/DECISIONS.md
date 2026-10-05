@@ -298,3 +298,10 @@ Type: TECHNIQUE
 Statut: VALIDÉE POUR V1  
 Décision: Les inconnues matérielles et firmware de la V1 sont validées au moyen d'un POC matériel unique et progressif, enrichi étape par étape, plutôt que par une succession de POC indépendants.  
 Conséquences: Le même firmware de qualification doit permettre de valider progressivement le matériel exact, le tactile, le rendu, le réseau, Socket.IO, mDNS, le stockage flash, les performances et l'empreinte mémoire. Chaque étape conserve ses critères de preuve propres.
+
+
+## D-055
+Type: PRODUIT / TECHNIQUE  
+Statut: VALIDÉE POUR V1  
+Décision: La luminosité est définie au niveau du groupe avec une surcharge optionnelle au niveau de chaque client. Une surcharge client absente signifie que le client hérite de la valeur du groupe. Le serveur calcule la luminosité effective et l'envoie au device.  
+Conséquences: Une modification de la luminosité du groupe est propagée immédiatement à tous les clients qui héritent. Le firmware ne connaît pas la hiérarchie groupe/client ; il applique uniquement la valeur effective reçue.
