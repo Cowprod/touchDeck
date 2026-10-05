@@ -335,3 +335,10 @@ Cette capacité doit être validée dans le POC matériel, notamment pour vérif
 La V1 vise une mise à jour OTA par Wi-Fi, déclenchée depuis le serveur/admin. Le flash USB reste disponible comme solution de développement et de secours.
 
 Cette capacité n'est pas considérée comme acquise avant validation du POC matériel : le partitionnement réel, la taille disponible sur les 4 Mo de flash, la taille du firmware et le comportement en cas d'échec doivent être vérifiés.
+
+
+### Veille et rétroéclairage
+
+La V1 ne met pas l'ESP32 en deep sleep. Le client reste connecté au Wi-Fi et au serveur afin de conserver le comportement temps réel.
+
+La veille éventuelle est uniquement visuelle et agit sur le rétroéclairage. Une valeur de 0 % peut être utilisée si le matériel le permet ; un réveil sur interaction tactile pourra alors être géré localement sans cycle complet de reconnexion réseau.
