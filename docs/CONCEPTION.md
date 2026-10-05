@@ -91,6 +91,16 @@ Quel que soit le mode d'acquisition, le serveur maintient l'état courant des do
 
 Le support direct de systèmes tels que Home Assistant est envisagé ultérieurement sous forme d'intégration/adaptateur, sans contraindre le modèle V1.
 
+## Import et mise à jour des descripteurs de source
+
+Une source peut être définie manuellement ou importée depuis un descripteur JSON.
+
+La réimportation d'un descripteur sur une source existante suit une logique annule/remplace :
+- l'identité de la source est conservée ;
+- sa définition est remplacée par le nouveau descripteur ;
+- les bindings continuent de fonctionner si leurs identifiants existent toujours ;
+- les références devenues absentes ne sont pas supprimées silencieusement : elles sont signalées comme invalides jusqu'à correction.
+
 ## Actions et acquittements
 
 Les actions sont toujours routées par le serveur touchDeck vers les sources.
