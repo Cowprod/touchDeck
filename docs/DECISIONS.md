@@ -263,3 +263,10 @@ Type: PRODUIT
 Statut: VALIDÉE POUR V1  
 Décision: L'écran Configuration reste minimal en V1. Il permet de modifier uniquement le libellé de l'instance et son fuseau horaire d'affichage. Des informations techniques non modifiables, comme la version du serveur ou l'état WebSocket, peuvent être affichées si elles sont utiles à l'exploitation.  
 Conséquences: Aucun autre réglage global n'est introduit sans besoin concret.
+
+
+## D-046
+Type: TECHNIQUE  
+Statut: VALIDÉE POUR V1  
+Décision: Node.js est le serveur principal unique de touchDeck. Il porte l'administration Web, le WebSocket, l'orchestration des clients et groupes, ainsi que l'intégration des sources push/polling.  
+Conséquences: La V1 n'introduit pas de backend PHP séparé ni de service WebSocket distinct sans nécessité démontrée.
