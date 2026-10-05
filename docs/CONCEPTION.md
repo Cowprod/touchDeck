@@ -291,3 +291,10 @@ Pour éviter les corruptions :
 - aucun état runtime (page courante, valeurs de sources, files d'actions) n'est persisté.
 
 Un SGBD n'est pas retenu en V1 ; il pourra être introduit ultérieurement si la volumétrie, les requêtes ou les besoins transactionnels le justifient.
+
+
+### Transport temps réel
+
+Socket.IO est le candidat privilégié pour la V1, avec transport WebSocket uniquement. Ce choix est particulièrement adapté aux clients Web de simulation et simplifie la reconnexion, les événements applicatifs, les ACK et le regroupement logique des clients.
+
+Le choix reste conditionné au POC QT-007 sur l'ESP32-C3 réel. En cas de coût ou d'instabilité excessifs, le protocole applicatif sera porté sur un WebSocket standard sans remettre en cause l'architecture générale.
