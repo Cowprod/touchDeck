@@ -97,3 +97,23 @@ Preuves attendues :
 ## Sources historiques
 
 Des essais antérieurs réalisés avec Codex existent potentiellement. Ils doivent être récupérés et analysés avant de refaire inutilement les mêmes POC.
+
+
+## QT-007 — Socket.IO sur ESP32-C3
+
+**Objectif**  
+Valider Socket.IO comme transport temps réel V1 sur le matériel cible réel.
+
+**À tester**
+- connexion initiale au serveur Node.js ;
+- transport WebSocket uniquement, sans fallback polling ;
+- reconnexion après coupure Wi-Fi et après redémarrage serveur ;
+- émission/réception d'événements JSON ;
+- ACK aller/retour ;
+- stabilité sur plusieurs heures ;
+- consommation RAM et flash ;
+- impact sur la fluidité tactile et le rendu ;
+- compatibilité avec l'identification du client et les rooms côté serveur.
+
+**Critère de décision**  
+Si la bibliothèque Socket.IO/Engine.IO choisie est stable et suffisamment légère sur l'ESP32-C3, Socket.IO est retenu. Sinon, retour à un WebSocket RFC standard via `ws`, sans modifier le modèle applicatif.
