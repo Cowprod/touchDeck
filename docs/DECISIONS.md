@@ -319,3 +319,10 @@ Type: TECHNIQUE / EXPLOITATION
 Statut: CANDIDAT V1 - À VALIDER PAR POC  
 Décision: La V1 doit pouvoir mettre à jour le firmware des clients par Wi-Fi (OTA), tout en conservant le flash USB comme solution de secours. L'OTA produit sera déclenchée depuis le serveur/admin et n'est pas automatique.  
 Conséquences: Le POC matériel doit valider le partitionnement flash réel du module, l'espace disponible avec 4 Mo de flash, l'écriture du nouveau firmware, le redémarrage sur la nouvelle version et le retour à un état fonctionnel après mise à jour.
+
+
+## D-058
+Type: PRODUIT / TECHNIQUE  
+Statut: VALIDÉE POUR V1  
+Décision: La V1 n'utilise pas le deep sleep pour la veille. Les clients restent connectés au Wi-Fi et au serveur en permanence. Une mise en veille visuelle éventuelle repose uniquement sur le rétroéclairage, qui peut être abaissé jusqu'à 0 % si le matériel le permet.  
+Conséquences: Le firmware évite la complexité de reconnexion Wi-Fi/WebSocket liée au sommeil profond. Un éventuel réveil par interaction tactile reste une logique locale simple de rétroéclairage.
