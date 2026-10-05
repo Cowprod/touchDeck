@@ -242,3 +242,10 @@ Type: PRODUIT
 Statut: VALIDÉE POUR V1  
 Décision: La réimportation du descripteur JSON d'une source remplace intégralement sa définition courante tout en conservant l'identité de la source.  
 Conséquences: Les bindings existants restent valides uniquement si les identifiants de propriétés/actions/événements qu'ils référencent existent encore dans le nouveau descripteur ; sinon ils sont conservés mais signalés comme invalides jusqu'à correction.
+
+
+## D-043
+Type: PRODUIT  
+Statut: VALIDÉE POUR V1  
+Décision: Une source créée manuellement peut être éditée directement dans l'administration, notamment pour ajouter, modifier ou supprimer ses propriétés et actions. Une source issue d'un descripteur JSON expose ces éléments en lecture seule ; sa définition se modifie par réimport du descripteur.  
+Conséquences: L'origine de la définition de la source détermine son mode d'édition et évite toute divergence entre une source importée et son descripteur de référence.
