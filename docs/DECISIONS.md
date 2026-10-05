@@ -277,3 +277,10 @@ Type: TECHNIQUE
 Statut: VALIDÉE POUR V1  
 Décision: La configuration persistante du serveur touchDeck est stockée en fichiers JSON. L'état runtime reste en mémoire et n'est pas persisté.  
 Conséquences: Les données sont réparties en fichiers cohérents par domaine plutôt que dans un unique gros fichier. Les références utilisent des UUID. Les écritures sont sérialisées par le serveur Node.js et réalisées de manière atomique (écriture temporaire puis renommage) afin d'éviter les fichiers partiellement écrits. Un SGBD ne sera introduit que si un besoin concret apparaît.
+
+
+## D-048
+Type: TECHNIQUE  
+Statut: CANDIDAT V1 - À VALIDER PAR POC  
+Décision: Socket.IO est le candidat privilégié pour le transport temps réel de touchDeck, en transport WebSocket uniquement. Le choix définitif dépend d'une validation sur l'ESP32-C3 réel.  
+Conséquences: Les clients Web de simulation profitent nativement de Socket.IO (reconnexion, événements, ACK, rooms). Le firmware devra utiliser un client Socket.IO/Engine.IO compatible ; si le coût mémoire, flash ou la stabilité sont insuffisants, la solution de repli est un WebSocket standard via `ws`.
