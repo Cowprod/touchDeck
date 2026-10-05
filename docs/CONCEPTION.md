@@ -258,3 +258,8 @@ L'administration V1 comporte une rubrique Configuration volontairement minimale 
 - fuseau horaire utilisé pour l'affichage.
 
 Les horodatages techniques restent stockés en UTC. Des informations purement diagnostiques, telles que la version du serveur ou l'état du service WebSocket, peuvent être affichées sans devenir des paramètres configurables.
+
+
+## Architecture serveur V1
+
+Le backend touchDeck V1 repose sur un serveur Node.js unique. Il sert l'administration Web, maintient les connexions WebSocket des clients, orchestre les groupes/pages et gère les échanges avec les sources. L'objectif est d'éviter une architecture multi-backends inutile pour la V1.
