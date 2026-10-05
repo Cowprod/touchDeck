@@ -146,3 +146,20 @@ Valider la bibliothèque graphique/tactile du firmware sur le matériel réel.
 
 **Critère de décision**  
 LovyanGFX est retenu si l'écran, le tactile et les redraws sont stables et suffisamment légers sur le module réel. Sinon, bascule vers TFT_eSPI et une bibliothèque tactile séparée.
+
+
+## Stratégie de POC matériel
+
+Les qualifications matérielles et firmware sont regroupées dans un POC progressif unique. Le firmware de test est enrichi par étapes et sert de support commun aux QT concernées.
+
+Ordre indicatif :
+1. identification exacte du module, partitions et ressources ;
+2. écran et tactile ;
+3. gestes/swipes et fluidité ;
+4. Wi-Fi, identité et mDNS ;
+5. connexion temps réel et Socket.IO ;
+6. rendu de pages et redraws différentiels ;
+7. ressources graphiques, cache flash et icônes ;
+8. tests de charge, stabilité, RAM et flash.
+
+Une étape n'est considérée comme validée que si les mesures et preuves demandées par la QT correspondante sont conservées.
