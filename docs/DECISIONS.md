@@ -291,3 +291,10 @@ Type: TECHNIQUE
 Statut: CANDIDAT V1 - À VALIDER PAR POC  
 Décision: LovyanGFX est le candidat principal pour le rendu graphique et l'intégration tactile du firmware V1. TFT_eSPI associé à une bibliothèque tactile dédiée constitue la solution de repli.  
 Conséquences: Le choix définitif dépend d'un POC sur le module réel, notamment pour vérifier le GC9A01, le contrôleur tactile CST816 de la carte, la fluidité, la RAM/flash et les redraw partiels.
+
+
+## D-052
+Type: TECHNIQUE  
+Statut: VALIDÉE POUR V1  
+Décision: Les inconnues matérielles et firmware de la V1 sont validées au moyen d'un POC matériel unique et progressif, enrichi étape par étape, plutôt que par une succession de POC indépendants.  
+Conséquences: Le même firmware de qualification doit permettre de valider progressivement le matériel exact, le tactile, le rendu, le réseau, Socket.IO, mDNS, le stockage flash, les performances et l'empreinte mémoire. Chaque étape conserve ses critères de preuve propres.
