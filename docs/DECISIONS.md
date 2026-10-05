@@ -312,3 +312,10 @@ Type: PRODUIT / TECHNIQUE
 Statut: CANDIDAT V1 - À VALIDER PAR POC  
 Décision: Une orientation écran par client (0/90/180/270°) est prévue comme capacité V1 candidate. Le serveur conserve des coordonnées logiques indépendantes de l'orientation ; le firmware applique la rotation à l'affichage et remappe les coordonnées tactiles.  
 Conséquences: Le POC matériel doit valider les quatre rotations, y compris le sens des swipes après transformation des coordonnées tactiles.
+
+
+## D-057
+Type: TECHNIQUE / EXPLOITATION  
+Statut: CANDIDAT V1 - À VALIDER PAR POC  
+Décision: La V1 doit pouvoir mettre à jour le firmware des clients par Wi-Fi (OTA), tout en conservant le flash USB comme solution de secours. L'OTA produit sera déclenchée depuis le serveur/admin et n'est pas automatique.  
+Conséquences: Le POC matériel doit valider le partitionnement flash réel du module, l'espace disponible avec 4 Mo de flash, l'écriture du nouveau firmware, le redémarrage sur la nouvelle version et le retour à un état fonctionnel après mise à jour.
