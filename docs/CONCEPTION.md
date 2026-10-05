@@ -310,3 +310,14 @@ Le POC QT-008 doit notamment valider le GC9A01, le tactile CST816 réellement mo
 ### Stratégie de qualification matérielle
 
 La qualification du firmware repose sur un POC matériel progressif unique. Il doit évoluer depuis l'initialisation minimale du module jusqu'à un client touchDeck représentatif, afin de valider les bibliothèques et choix techniques dans des conditions réalistes sans multiplier les prototypes jetables.
+
+
+### Luminosité
+
+La luminosité est gérée par le serveur avec deux niveaux :
+- une valeur par défaut portée par le groupe ;
+- une surcharge optionnelle portée par le client.
+
+Si aucune surcharge client n'est définie, le client hérite de la luminosité de son groupe. Le serveur résout cette valeur et transmet uniquement la luminosité effective au firmware.
+
+Une modification de la valeur du groupe est propagée immédiatement aux clients qui héritent de cette valeur. Cette organisation permet notamment de modifier facilement la luminosité de plusieurs clients sans ajouter de logique métier dans le firmware.
