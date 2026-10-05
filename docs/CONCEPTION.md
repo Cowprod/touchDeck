@@ -93,6 +93,13 @@ Le support direct de systèmes tels que Home Assistant est envisagé ultérieure
 
 ## Import et mise à jour des descripteurs de source
 
+### Mode d'édition selon l'origine
+
+- Une source créée manuellement peut être modifiée directement dans l'administration, y compris ses propriétés et actions.
+- Une source importée depuis un descripteur JSON présente sa définition en lecture seule.
+- Pour modifier une source importée, on réimporte un nouveau descripteur ; il remplace la définition précédente selon la règle annule/remplace.
+
+
 Une source peut être définie manuellement ou importée depuis un descripteur JSON.
 
 La réimportation d'un descripteur sur une source existante suit une logique annule/remplace :
