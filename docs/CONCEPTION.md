@@ -108,6 +108,12 @@ La réimportation d'un descripteur sur une source existante suit une logique ann
 - les bindings continuent de fonctionner si leurs identifiants existent toujours ;
 - les références devenues absentes ne sont pas supprimées silencieusement : elles sont signalées comme invalides jusqu'à correction.
 
+### Événements en V1
+
+Les événements peuvent être déclarés dans un descripteur de source et restent connus du modèle touchDeck. En V1, ils ne disposent pas d'un éditeur manuel dédié et aucun moteur de règles n'est construit autour d'eux.
+
+Les sources fake utilisées pour les essais fourniront elles-mêmes leur descripteur, afin de tester le chemin réel d'import et d'exploitation du modèle.
+
 ## Actions et acquittements
 
 Les actions sont toujours routées par le serveur touchDeck vers les sources.
