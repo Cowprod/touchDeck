@@ -166,3 +166,23 @@ Ordre indicatif :
 8. tests de charge, stabilité, RAM et flash.
 
 Une étape n'est considérée comme validée que si les mesures et preuves demandées par la QT correspondante sont conservées.
+
+
+## QT-009 — Mise à jour OTA du firmware
+
+**Objectif**  
+Valider la mise à jour du firmware par Wi-Fi sur le module cible réel.
+
+**À tester**
+- lecture du partitionnement flash réel ;
+- compatibilité avec les 4 Mo de flash annoncés ;
+- taille maximale de firmware compatible avec une stratégie OTA ;
+- téléchargement du nouveau firmware depuis le serveur touchDeck ;
+- écriture dans la partition OTA ;
+- redémarrage sur la nouvelle version ;
+- conservation de la configuration locale nécessaire ;
+- récupération après échec ou interruption de mise à jour ;
+- possibilité de reflasher en USB en secours.
+
+**Critère de décision**  
+L'OTA est retenue en V1 si la taille réelle du firmware et le partitionnement permettent une mise à jour fiable sans compromettre les ressources nécessaires au fonctionnement normal.
