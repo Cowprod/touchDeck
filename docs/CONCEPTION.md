@@ -249,3 +249,12 @@ Les caractéristiques exactes du module doivent être confirmées par documentat
 ## Hors décision à ce stade
 
 Le protocole exact, le schéma JSON complet du profil device, le format de description des pages, le stockage serveur, la stack backend et les choix précis de bibliothèques embarquées ne sont pas encore figés.
+
+
+## Configuration de l'instance
+
+L'administration V1 comporte une rubrique Configuration volontairement minimale :
+- libellé de l'instance ;
+- fuseau horaire utilisé pour l'affichage.
+
+Les horodatages techniques restent stockés en UTC. Des informations purement diagnostiques, telles que la version du serveur ou l'état du service WebSocket, peuvent être affichées sans devenir des paramètres configurables.
