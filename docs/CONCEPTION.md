@@ -263,3 +263,31 @@ Les horodatages techniques restent stockés en UTC. Des informations purement di
 ## Architecture serveur V1
 
 Le backend touchDeck V1 repose sur un serveur Node.js unique. Il sert l'administration Web, maintient les connexions WebSocket des clients, orchestre les groupes/pages et gère les échanges avec les sources. L'objectif est d'éviter une architecture multi-backends inutile pour la V1.
+
+
+## Persistance V1
+
+La V1 utilise des fichiers JSON pour la configuration persistante et conserve l'état d'exécution en mémoire.
+
+Organisation indicative :
+
+```text
+data/
+  config.json
+  clients.json
+  groups.json
+  device-profiles.json
+  page-sets/
+    <uuid>.json
+  sources/
+    <uuid>.json
+```
+
+Les relations entre objets utilisent des UUID et le serveur contrôle l'intégrité des références.
+
+Pour éviter les corruptions :
+- les écritures persistantes sont sérialisées dans le processus Node.js ;
+- chaque sauvegarde est atomique, par écriture dans un fichier temporaire puis renommage ;
+- aucun état runtime (page courante, valeurs de sources, files d'actions) n'est persisté.
+
+Un SGBD n'est pas retenu en V1 ; il pourra être introduit ultérieurement si la volumétrie, les requêtes ou les besoins transactionnels le justifient.
