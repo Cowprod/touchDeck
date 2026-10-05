@@ -235,3 +235,10 @@ Statut: VALIDÉE
 Décision: La configuration de l'instance touchDeck est persistante et unique. Son support physique (petit fichier JSON ou enregistrement/table de configuration en base) n'est pas imposé à ce stade.  
 Conséquences: Le choix de stockage peut être arrêté lors de l'implémentation sans modifier le contrat fonctionnel.
 
+
+
+## D-042
+Type: PRODUIT  
+Statut: VALIDÉE POUR V1  
+Décision: La réimportation du descripteur JSON d'une source remplace intégralement sa définition courante tout en conservant l'identité de la source.  
+Conséquences: Les bindings existants restent valides uniquement si les identifiants de propriétés/actions/événements qu'ils référencent existent encore dans le nouveau descripteur ; sinon ils sont conservés mais signalés comme invalides jusqu'à correction.
