@@ -270,3 +270,10 @@ Type: TECHNIQUE
 Statut: VALIDÉE POUR V1  
 Décision: Node.js est le serveur principal unique de touchDeck. Il porte l'administration Web, le WebSocket, l'orchestration des clients et groupes, ainsi que l'intégration des sources push/polling.  
 Conséquences: La V1 n'introduit pas de backend PHP séparé ni de service WebSocket distinct sans nécessité démontrée.
+
+
+## D-047
+Type: TECHNIQUE  
+Statut: VALIDÉE POUR V1  
+Décision: La configuration persistante du serveur touchDeck est stockée en fichiers JSON. L'état runtime reste en mémoire et n'est pas persisté.  
+Conséquences: Les données sont réparties en fichiers cohérents par domaine plutôt que dans un unique gros fichier. Les références utilisent des UUID. Les écritures sont sérialisées par le serveur Node.js et réalisées de manière atomique (écriture temporaire puis renommage) afin d'éviter les fichiers partiellement écrits. Un SGBD ne sera introduit que si un besoin concret apparaît.
