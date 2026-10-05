@@ -321,3 +321,10 @@ La luminosité est gérée par le serveur avec deux niveaux :
 Si aucune surcharge client n'est définie, le client hérite de la luminosité de son groupe. Le serveur résout cette valeur et transmet uniquement la luminosité effective au firmware.
 
 Une modification de la valeur du groupe est propagée immédiatement aux clients qui héritent de cette valeur. Cette organisation permet notamment de modifier facilement la luminosité de plusieurs clients sans ajouter de logique métier dans le firmware.
+
+
+### Orientation de l'écran
+
+Une orientation par client (0/90/180/270°) est envisagée pour la V1. Le serveur continue à raisonner dans le repère logique du device ; le firmware applique la rotation de l'affichage et transforme les coordonnées tactiles avant toute interprétation.
+
+Cette capacité doit être validée dans le POC matériel, notamment pour vérifier que les swipes restent cohérents avec l'orientation physique du module.
