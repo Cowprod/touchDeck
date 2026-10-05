@@ -117,3 +117,32 @@ Valider Socket.IO comme transport temps réel V1 sur le matériel cible réel.
 
 **Critère de décision**  
 Si la bibliothèque Socket.IO/Engine.IO choisie est stable et suffisamment légère sur l'ESP32-C3, Socket.IO est retenu. Sinon, retour à un WebSocket RFC standard via `ws`, sans modifier le modèle applicatif.
+
+
+## QT-008 — Rendu graphique et tactile sur le module cible
+
+**Objectif**  
+Valider la bibliothèque graphique/tactile du firmware sur le matériel réel.
+
+**Candidat principal**
+- LovyanGFX.
+
+**Solution de repli**
+- TFT_eSPI pour l'affichage ;
+- bibliothèque tactile dédiée si nécessaire.
+
+**À tester**
+- initialisation de l'écran GC9A01 ;
+- compatibilité réelle avec le contrôleur tactile CST816 présent sur le module ;
+- lecture fiable des pressions et gestes simples ;
+- détection des swipes ;
+- rendu d'une page complète 240x240 ;
+- redraw partiel de composants ;
+- fréquence d'actualisation répétée ;
+- utilisation de sprites/buffers ;
+- consommation RAM et flash ;
+- fluidité tactile pendant les redraws ;
+- stabilité sur fonctionnement prolongé.
+
+**Critère de décision**  
+LovyanGFX est retenu si l'écran, le tactile et les redraws sont stables et suffisamment légers sur le module réel. Sinon, bascule vers TFT_eSPI et une bibliothèque tactile séparée.
