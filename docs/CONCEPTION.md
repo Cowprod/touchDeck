@@ -298,3 +298,10 @@ Un SGBD n'est pas retenu en V1 ; il pourra être introduit ultérieurement si la
 Socket.IO est le candidat privilégié pour la V1, avec transport WebSocket uniquement. Ce choix est particulièrement adapté aux clients Web de simulation et simplifie la reconnexion, les événements applicatifs, les ACK et le regroupement logique des clients.
 
 Le choix reste conditionné au POC QT-007 sur l'ESP32-C3 réel. En cas de coût ou d'instabilité excessifs, le protocole applicatif sera porté sur un WebSocket standard sans remettre en cause l'architecture générale.
+
+
+### Rendu graphique et tactile
+
+LovyanGFX est le candidat principal pour le rendu graphique du firmware et, si compatible avec le contrôleur présent sur le module, pour l'accès tactile. Le choix n'est pas figé avant essai sur le matériel réel.
+
+Le POC QT-008 doit notamment valider le GC9A01, le tactile CST816 réellement monté sur la carte, les redraws partiels, les buffers et l'empreinte mémoire. En cas de problème, la solution de repli est TFT_eSPI avec une bibliothèque tactile dédiée.
