@@ -256,3 +256,10 @@ Type: PRODUIT
 Statut: VALIDÉE POUR V1  
 Décision: Les événements restent supportés dans le modèle et peuvent être exposés par un descripteur de source, mais aucun éditeur manuel spécifique d'événements n'est prévu en V1. Les sources de test/fake fourniront leur propre descripteur.  
 Conséquences: La V1 conserve la compatibilité avec le modèle complet sans alourdir l'administration avec une fonction non exploitée directement.
+
+
+## D-045
+Type: PRODUIT  
+Statut: VALIDÉE POUR V1  
+Décision: L'écran Configuration reste minimal en V1. Il permet de modifier uniquement le libellé de l'instance et son fuseau horaire d'affichage. Des informations techniques non modifiables, comme la version du serveur ou l'état WebSocket, peuvent être affichées si elles sont utiles à l'exploitation.  
+Conséquences: Aucun autre réglage global n'est introduit sans besoin concret.
