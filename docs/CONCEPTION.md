@@ -328,3 +328,10 @@ Une modification de la valeur du groupe est propagée immédiatement aux clients
 Une orientation par client (0/90/180/270°) est envisagée pour la V1. Le serveur continue à raisonner dans le repère logique du device ; le firmware applique la rotation de l'affichage et transforme les coordonnées tactiles avant toute interprétation.
 
 Cette capacité doit être validée dans le POC matériel, notamment pour vérifier que les swipes restent cohérents avec l'orientation physique du module.
+
+
+### Mise à jour du firmware
+
+La V1 vise une mise à jour OTA par Wi-Fi, déclenchée depuis le serveur/admin. Le flash USB reste disponible comme solution de développement et de secours.
+
+Cette capacité n'est pas considérée comme acquise avant validation du POC matériel : le partitionnement réel, la taille disponible sur les 4 Mo de flash, la taille du firmware et le comportement en cas d'échec doivent être vérifiés.
