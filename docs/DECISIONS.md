@@ -305,3 +305,10 @@ Type: PRODUIT / TECHNIQUE
 Statut: VALIDÉE POUR V1  
 Décision: La luminosité est définie au niveau du groupe avec une surcharge optionnelle au niveau de chaque client. Une surcharge client absente signifie que le client hérite de la valeur du groupe. Le serveur calcule la luminosité effective et l'envoie au device.  
 Conséquences: Une modification de la luminosité du groupe est propagée immédiatement à tous les clients qui héritent. Le firmware ne connaît pas la hiérarchie groupe/client ; il applique uniquement la valeur effective reçue.
+
+
+## D-056
+Type: PRODUIT / TECHNIQUE  
+Statut: CANDIDAT V1 - À VALIDER PAR POC  
+Décision: Une orientation écran par client (0/90/180/270°) est prévue comme capacité V1 candidate. Le serveur conserve des coordonnées logiques indépendantes de l'orientation ; le firmware applique la rotation à l'affichage et remappe les coordonnées tactiles.  
+Conséquences: Le POC matériel doit valider les quatre rotations, y compris le sens des swipes après transformation des coordonnées tactiles.
