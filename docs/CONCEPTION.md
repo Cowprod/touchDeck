@@ -342,3 +342,10 @@ Cette capacité n'est pas considérée comme acquise avant validation du POC mat
 La V1 ne met pas l'ESP32 en deep sleep. Le client reste connecté au Wi-Fi et au serveur afin de conserver le comportement temps réel.
 
 La veille éventuelle est uniquement visuelle et agit sur le rétroéclairage. Une valeur de 0 % peut être utilisée si le matériel le permet ; un réveil sur interaction tactile pourra alors être géré localement sans cycle complet de reconnexion réseau.
+
+
+### Contrat de rendu serveur → client
+
+Le serveur transforme la définition fonctionnelle des pages en une représentation directement exploitable par le firmware. Il résout notamment les coordonnées en pixels, les dimensions, les valeurs de bindings, les textes, les couleurs et les paramètres graphiques.
+
+Le firmware conserve uniquement la sémantique minimale nécessaire au rendu et aux interactions génériques. Il ne connaît pas les sources, les bindings, Bootstrap ni la logique des thèmes serveur.
