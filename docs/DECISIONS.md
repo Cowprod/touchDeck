@@ -333,3 +333,94 @@ Type: ARCHITECTURE / PROTOCOLE
 Statut: VALIDÉE POUR V1
 Décision: Le serveur résout au maximum la présentation avant envoi au client. Le firmware reçoit des composants prêts à rendre : coordonnées finales, dimensions, texte déjà substitué, couleurs finales, taille de police, ressources graphiques et états nécessaires. Il ne connaît ni Bootstrap, ni les thèmes serveur, ni les sources, ni les bindings métier.
 Conséquences: Le firmware reste générique et stable ; l'éditeur, les thèmes et la résolution des données peuvent évoluer côté serveur sans imposer un nouveau firmware, tant que le contrat de rendu reste compatible.
+
+## D-060
+Type: TECHNIQUE  
+Statut: VALIDÉE POUR V1  
+Décision: Le client annonce `firmwareVersion` et `protocolVersion` à la connexion. Le serveur connaît les versions de protocole supportées. Un client incompatible ne reçoit aucune page fonctionnelle et affiche un écran système local indiquant qu'une mise à jour est nécessaire.  
+Conséquences: L'administration signale clairement l'incompatibilité et peut proposer l'OTA sans tenter d'exécuter un protocole non compatible.
+
+## D-061
+Type: SÉCURITÉ  
+Statut: VALIDÉE POUR V1  
+Décision: L'authentification d'un device reste simple : un token aléatoire persistant est associé à son `deviceId`. La MAC reste une identité matérielle mais ne constitue pas à elle seule une authentification.  
+Conséquences: Pas de comptes utilisateurs, certificats clients ni PKI en V1.
+
+## D-062
+Type: PRODUIT  
+Statut: VALIDÉE POUR V1  
+Décision: L'enrôlement d'un nouveau device est explicite. Un device inconnu apparaît dans l'administration comme non validé et ne reçoit pas de pages fonctionnelles. La validation manuelle par l'administrateur autorise son enrôlement et l'association d'un token persistant.  
+Conséquences: La présence sur le LAN ne suffit pas à obtenir le contenu fonctionnel.
+
+## D-063
+Type: PRODUIT  
+Statut: VALIDÉE POUR V1  
+Décision: La V1 utilise une action unique « Supprimer » pour retirer un client. La suppression invalide son token, supprime son affectation et son enregistrement côté serveur.  
+Conséquences: Si le même matériel se reconnecte ensuite, il est traité comme un nouveau client non validé et doit être enrôlé à nouveau.
+
+## D-064
+Type: SÉCURITÉ  
+Statut: VALIDÉE POUR V1  
+Décision: Aucun PIN ni code d'appairage n'est ajouté à l'enrôlement V1. La validation manuelle dans l'administration constitue le contrôle d'enrôlement.  
+Conséquences: Le processus reste volontairement simple pour un usage sur LAN.
+
+## D-065
+Type: TECHNIQUE  
+Statut: VALIDÉE POUR V1  
+Décision: Le serveur touchDeck est découvert par mDNS via `_touchdeck._tcp`. Chaque instance publie un libellé lisible et un identifiant d'instance stable. Le device mémorise l'identifiant stable de l'instance choisie et la retrouve via mDNS, indépendamment de son adresse IP. En présence de plusieurs instances, l'utilisateur choisit celle à utiliser.  
+Conséquences: Le choix du serveur survit aux changements d'adresse IP et reste explicite lorsqu'il existe plusieurs instances.
+
+## D-066
+Type: TECHNIQUE  
+Statut: VALIDÉE POUR V1  
+Décision: Si le serveur mémorisé ne peut pas être joint, le device effectue trois tentatives espacées de 30 secondes. Après trois échecs, il revient à l'écran de découverte/choix mDNS. Il n'effectue pas de bascule silencieuse vers une autre instance.  
+Conséquences: La reconnexion ne crée pas de boucle intensive. Le POC doit particulièrement vérifier l'absence de boucle découverte → sélection → reconnexion observée dans l'ancien firmware.
+
+## D-067
+Type: TECHNIQUE  
+Statut: VALIDÉE POUR V1  
+Décision: En cas de perte du Wi-Fi, le device affiche un écran système local et tente périodiquement de se reconnecter. Il n'ouvre jamais automatiquement son point d'accès de configuration.  
+Conséquences: Une panne Wi-Fi ne provoque pas l'apparition automatique d'AP touchDeck. Le mode configuration reste une action locale volontaire au démarrage.
+
+## D-068
+Type: PRODUIT  
+Statut: VALIDÉE POUR V1  
+Décision: La configuration Wi-Fi initiale s'effectue via l'AP temporaire et sa page Web. Les SSID visibles sont proposés, avec saisie manuelle possible pour un SSID masqué. Une nouvelle configuration n'est enregistrée qu'après un test de connexion réussi.  
+Conséquences: Une erreur de SSID ou de mot de passe ne remplace pas une configuration fonctionnelle par une configuration inutilisable.
+
+## D-069
+Type: PRODUIT  
+Statut: VALIDÉE POUR V1  
+Décision: Le mode AP de configuration Wi-Fi ne peut pas être déclenché à distance depuis l'administration en V1.  
+Conséquences: L'accès au mode configuration réseau reste local, notamment par l'action volontaire prévue au démarrage.
+
+## D-070
+Type: TECHNIQUE  
+Statut: VALIDÉE POUR V1  
+Décision: Le device utilise DHCP uniquement. Aucune configuration d'adresse IP statique n'est prévue sur l'ESP en V1.  
+Conséquences: Une adresse stable éventuelle est gérée par réservation DHCP côté infrastructure réseau ; la découverte du serveur reste basée sur mDNS.
+
+## D-071
+Type: TECHNIQUE  
+Statut: VALIDÉE POUR V1  
+Décision: Les écrans système locaux du firmware, y compris le démarrage, restent strictement fonctionnels et légers, sans splash animé ni habillage consommant inutilement des ressources.  
+Conséquences: Les ressources du device sont réservées au fonctionnement utile.
+
+## D-072
+Type: TECHNIQUE  
+Statut: VALIDÉE SOUS QUALIFICATION  
+Décision: Pendant une OTA, le device affiche un écran système minimal. Un pourcentage n'est affiché que si la progression fournie par le mécanisme OTA est fiable et si son rendu ne pénalise pas cette phase critique.  
+Conséquences: QT-009 doit déterminer si le pourcentage peut être affiché sans compromettre la fiabilité ; à défaut, un simple état « mise à jour » suffit.
+
+## D-073
+Type: TECHNIQUE  
+Statut: VALIDÉE POUR V1  
+Décision: Après une OTA réussie, le device redémarre et se reconnecte automatiquement en conservant sa configuration locale nécessaire, notamment Wi-Fi, serveur choisi, identité et token. Le serveur constate la nouvelle `firmwareVersion`.  
+Conséquences: Aucune intervention utilisateur n'est requise après une mise à jour réussie.
+
+## D-074
+Type: TECHNIQUE  
+Statut: VALIDÉE SOUS QUALIFICATION  
+Décision: La V1 n'implémente pas de mécanisme applicatif sophistiqué de rollback OTA au-delà des mécanismes sûrs fournis par la plateforme ESP32. Si le firmware courant reste amorçable après un échec, le device repart dessus et signale l'échec au serveur.  
+Conséquences: QT-009 doit tester les interruptions de téléchargement/écriture et vérifier les scénarios de récupération, avec flash USB comme secours.
+
