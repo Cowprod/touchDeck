@@ -384,3 +384,31 @@ Pendant une OTA, un état minimal de mise à jour est affiché. Un pourcentage n
 
 Après OTA réussie, le device redémarre et se reconnecte automatiquement en conservant Wi-Fi, serveur choisi, identité et token. En cas d'échec, la V1 s'appuie sur les mécanismes sûrs disponibles sur ESP32 plutôt que sur un rollback applicatif spécifique.
 
+## Persistance locale du client ESP
+
+La configuration locale persistante du client reste volontairement minimale et utilise NVS/Preferences. Elle contient uniquement les paramètres techniques nécessaires au fonctionnement autonome du device, notamment Wi-Fi, identité/deviceId, token d'enrôlement, serveur choisi et paramètres techniques locaux éventuels.
+
+Les pages, composants, bindings, valeurs métier et états d'exécution ne sont jamais persistés sur l'ESP.
+
+LittleFS est réservé en V1 au cache des icônes fonctionnelles fournies par le serveur. Les icônes système restent embarquées dans le firmware. Aucun autre type d'asset dynamique n'est prévu en V1.
+
+## Mémoire de page et capacité de composition
+
+Le firmware conserve une seule page fonctionnelle en RAM. Il n'existe aucun cache de page précédente ou suivante.
+
+Le nombre de composants d'une page n'est pas limité par une constante produit. Il découle de l'occupation de la grille logique et de l'absence de chevauchement entre composants.
+
+## Mise à jour des pages et cohérence des messages
+
+Un changement de page ou toute modification structurelle d'une page entraîne l'envoi d'une page complète déjà résolue.
+
+Les changements de propriétés finales d'un composant existant peuvent être envoyés de manière différentielle.
+
+Les modifications structurelles rapides sont consolidées selon une logique dernière version gagnante : les états intermédiaires obsolètes ne sont pas mis en file.
+
+Chaque page complète possède un `pageRevision`. Une mise à jour différentielle porte la même révision et est ignorée par le firmware si elle ne correspond plus à la page courante.
+
+Aucun numéro de séquence, replay ou historique d'updates n'est prévu. Après reconnexion, le serveur renvoie la page complète courante.
+
+La V1 n'ajoute pas de mécanisme applicatif sophistiqué d'ACK/retry. Un ACK simple d'une page complète peut être utilisé s'il est fourni naturellement par le transport retenu, sans logique de retry spécifique. Les updates différentielles de données ne nécessitent pas d'ACK.
+
