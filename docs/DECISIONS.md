@@ -326,3 +326,10 @@ Type: PRODUIT / TECHNIQUE
 Statut: VALIDÉE POUR V1  
 Décision: La V1 n'utilise pas le deep sleep pour la veille. Les clients restent connectés au Wi-Fi et au serveur en permanence. Une mise en veille visuelle éventuelle repose uniquement sur le rétroéclairage, qui peut être abaissé jusqu'à 0 % si le matériel le permet.  
 Conséquences: Le firmware évite la complexité de reconnexion Wi-Fi/WebSocket liée au sommeil profond. Un éventuel réveil par interaction tactile reste une logique locale simple de rétroéclairage.
+
+
+## D-059
+Type: ARCHITECTURE / PROTOCOLE
+Statut: VALIDÉE POUR V1
+Décision: Le serveur résout au maximum la présentation avant envoi au client. Le firmware reçoit des composants prêts à rendre : coordonnées finales, dimensions, texte déjà substitué, couleurs finales, taille de police, ressources graphiques et états nécessaires. Il ne connaît ni Bootstrap, ni les thèmes serveur, ni les sources, ni les bindings métier.
+Conséquences: Le firmware reste générique et stable ; l'éditeur, les thèmes et la résolution des données peuvent évoluer côté serveur sans imposer un nouveau firmware, tant que le contrat de rendu reste compatible.
