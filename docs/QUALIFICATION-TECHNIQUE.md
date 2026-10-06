@@ -182,7 +182,43 @@ Valider la mise à jour du firmware par Wi-Fi sur le module cible réel.
 - redémarrage sur la nouvelle version ;
 - conservation de la configuration locale nécessaire ;
 - récupération après échec ou interruption de mise à jour ;
-- possibilité de reflasher en USB en secours.
+- possibilité de reflasher en USB en secours ;
+- progression OTA fiable et coût du rafraîchissement d'un éventuel pourcentage ;
+- conservation du Wi-Fi, du serveur choisi, de l'identité et du token après reboot ;
+- interruption pendant téléchargement et pendant écriture ;
+- retour sur un firmware amorçable après échec selon les mécanismes natifs ESP32 ;
+- signalement de l'échec au serveur lorsque le firmware courant reste fonctionnel.
 
 **Critère de décision**  
 L'OTA est retenue en V1 si la taille réelle du firmware et le partitionnement permettent une mise à jour fiable sans compromettre les ressources nécessaires au fonctionnement normal.
+
+## QT-010 — Découverte mDNS et machine d'état de connexion
+
+**Objectif**  
+Valider la découverte et la sélection du serveur sans reproduire la boucle observée dans l'ancien firmware.
+
+**Prérequis**  
+Analyser `esp32OldTest.zip` dès que son contenu est accessible afin d'identifier la cause ou, à défaut, les conditions de reproduction du problème historique.
+
+**À tester**
+- découverte d'une seule instance `_touchdeck._tcp` ;
+- découverte de plusieurs instances et choix utilisateur ;
+- publication et lecture du libellé et de l'identifiant stable d'instance ;
+- mémorisation de l'identifiant choisi ;
+- redémarrage du device et reconnexion à la même instance après changement éventuel d'IP ;
+- indisponibilité du serveur mémorisé ;
+- exactement trois tentatives espacées de 30 secondes ;
+- retour au choix mDNS après le troisième échec ;
+- absence de bascule silencieuse vers une autre instance ;
+- disparition puis réapparition du serveur ;
+- absence de boucle découverte → sélection → reconnexion ;
+- perte du Wi-Fi sans ouverture automatique de l'AP de configuration ;
+- configuration Wi-Fi par AP, y compris SSID masqué et refus de persister une configuration dont le test de connexion échoue ;
+- fonctionnement DHCP uniquement.
+
+**Preuves attendues**
+- logs horodatés de la machine d'état ;
+- vidéo ou observation reproductible des transitions d'écran ;
+- redémarrages et coupures réseau/serveur reproduits sur matériel réel ;
+- conclusion explicite sur le problème de boucle de l'ancien firmware.
+
