@@ -349,3 +349,38 @@ La veille éventuelle est uniquement visuelle et agit sur le rétroéclairage. U
 Le serveur transforme la définition fonctionnelle des pages en une représentation directement exploitable par le firmware. Il résout notamment les coordonnées en pixels, les dimensions, les valeurs de bindings, les textes, les couleurs et les paramètres graphiques.
 
 Le firmware conserve uniquement la sémantique minimale nécessaire au rendu et aux interactions génériques. Il ne connaît pas les sources, les bindings, Bootstrap ni la logique des thèmes serveur.
+
+## Enrôlement, compatibilité et authentification des devices
+
+À la connexion, un device annonce son `firmwareVersion` et son `protocolVersion`. Le serveur n'envoie de contenu fonctionnel qu'aux versions de protocole compatibles.
+
+Un device inconnu apparaît d'abord dans l'administration comme non validé. Son enrôlement est une action explicite de l'administrateur. La V1 utilise ensuite un token aléatoire persistant associé à l'identité technique du device ; la MAC seule ne constitue pas une authentification. Aucun PIN, code d'appairage, certificat client ou PKI n'est introduit en V1.
+
+La suppression d'un client invalide son token et retire son enregistrement et son affectation. Une reconnexion ultérieure du même matériel recommence donc le processus d'enrôlement.
+
+Un firmware incompatible affiche un écran système local demandant une mise à jour et l'administration signale explicitement cet état.
+
+## Découverte serveur et réseau V1
+
+Les instances touchDeck publient le service mDNS `_touchdeck._tcp` avec :
+- un libellé d'instance lisible ;
+- un identifiant d'instance stable.
+
+Le device mémorise l'identifiant stable du serveur choisi et le retrouve par mDNS, ce qui évite de dépendre de son adresse IP. En présence de plusieurs serveurs, l'utilisateur choisit l'instance.
+
+Si le serveur mémorisé est indisponible, le device effectue trois tentatives espacées de 30 secondes. Après trois échecs, il revient à l'écran de découverte/choix mDNS. Il ne bascule pas silencieusement vers une autre instance.
+
+En cas de perte du Wi-Fi, le device affiche un écran système local et tente périodiquement de se reconnecter. Il n'ouvre jamais automatiquement l'AP de configuration.
+
+La configuration Wi-Fi se fait localement par AP temporaire et page Web. Les SSID visibles sont proposés et un SSID masqué peut être saisi manuellement. Une nouvelle configuration n'est conservée qu'après un test de connexion réussi. Le déclenchement distant du mode AP depuis l'administration est hors V1.
+
+Le réseau du device utilise DHCP uniquement. Une adresse stable éventuelle relève d'une réservation DHCP sur l'infrastructure.
+
+## Sobriété des écrans système
+
+Les écrans système locaux restent minimaux et fonctionnels. Aucun splash animé ni habillage lourd n'est prévu au démarrage.
+
+Pendant une OTA, un état minimal de mise à jour est affiché. Un pourcentage n'est utilisé que si le POC démontre qu'il est fiable et sans impact significatif sur cette phase critique.
+
+Après OTA réussie, le device redémarre et se reconnecte automatiquement en conservant Wi-Fi, serveur choisi, identité et token. En cas d'échec, la V1 s'appuie sur les mécanismes sûrs disponibles sur ESP32 plutôt que sur un rollback applicatif spécifique.
+
