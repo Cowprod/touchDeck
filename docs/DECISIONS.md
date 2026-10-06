@@ -424,3 +424,57 @@ Statut: VALIDÉE SOUS QUALIFICATION
 Décision: La V1 n'implémente pas de mécanisme applicatif sophistiqué de rollback OTA au-delà des mécanismes sûrs fournis par la plateforme ESP32. Si le firmware courant reste amorçable après un échec, le device repart dessus et signale l'échec au serveur.  
 Conséquences: QT-009 doit tester les interruptions de téléchargement/écriture et vérifier les scénarios de récupération, avec flash USB comme secours.
 
+## D-075
+Type: TECHNIQUE  
+Statut: VALIDÉE POUR V1  
+Décision: La configuration locale persistante de l'ESP reste minimale et utilise NVS/Preferences. Elle conserve uniquement les éléments nécessaires au fonctionnement technique local, notamment Wi-Fi, identité/deviceId, token d'enrôlement, serveur choisi et éventuels paramètres techniques locaux.  
+Conséquences: Les pages, composants, bindings, valeurs métier et états d'exécution ne sont jamais persistés sur l'ESP.
+
+## D-076
+Type: TECHNIQUE  
+Statut: VALIDÉE POUR V1  
+Décision: LittleFS est utilisé uniquement comme cache des icônes fonctionnelles fournies par le serveur. Les icônes nécessaires aux écrans système locaux restent embarquées dans le firmware.  
+Conséquences: Aucun autre type de ressource dynamique (image arbitraire, logo, police) n'est prévu en V1.
+
+## D-077
+Type: PRODUIT / TECHNIQUE  
+Statut: VALIDÉE POUR V1  
+Décision: L'ESP ne conserve qu'une seule page fonctionnelle en RAM et ne met aucune autre page en cache.  
+Conséquences: Un changement de page remplace intégralement la page courante. Le firmware ne précharge ni page précédente ni page suivante.
+
+## D-078
+Type: PRODUIT  
+Statut: VALIDÉE POUR V1  
+Décision: Aucun nombre maximal artificiel de composants par page n'est défini. La capacité pratique découle de la grille du profil device et de l'interdiction de chevauchement entre composants.  
+Conséquences: Le modèle produit n'introduit pas de `maxComponents` arbitraire.
+
+## D-079
+Type: PROTOCOLE  
+Statut: VALIDÉE POUR V1  
+Décision: Toute modification structurelle d'une page (ajout, suppression, déplacement, redimensionnement ou autre changement de structure) provoque l'envoi d'une page complète déjà résolue aux clients concernés. Les mises à jour différentielles sont réservées aux propriétés finales de composants existants.  
+Conséquences: Le firmware n'a pas à appliquer de patch structurel complexe.
+
+## D-080
+Type: PROTOCOLE  
+Statut: VALIDÉE POUR V1  
+Décision: Les mises à jour structurelles de page en attente suivent une logique dernière version gagnante. Une version intermédiaire devenue obsolète n'est pas conservée dans une file.  
+Conséquences: Après consolidation/debounce de l'éditeur, seule la version cohérente la plus récente doit être envoyée au device.
+
+## D-081
+Type: PROTOCOLE  
+Statut: VALIDÉE POUR V1  
+Décision: Chaque page complète porte un `pageRevision`. Les mises à jour différentielles destinées à cette page portent la même révision. Le firmware ignore simplement toute mise à jour dont la révision ne correspond plus à la page actuellement chargée.  
+Conséquences: Un update tardif ne peut pas modifier une page déjà remplacée, sans nécessiter d'historique ni de logique métier supplémentaire.
+
+## D-082
+Type: PROTOCOLE  
+Statut: VALIDÉE POUR V1  
+Décision: Aucun numéro de séquence, mécanisme de replay ou historique d'updates différentielles n'est ajouté en V1. L'ordre de la connexion temps réel suffit ; après reconnexion, le serveur renvoie la page complète courante.  
+Conséquences: La reconnexion recrée un état propre sans protocole de resynchronisation complexe.
+
+## D-083
+Type: PROTOCOLE  
+Statut: VALIDÉE POUR V1  
+Décision: Aucun mécanisme applicatif complexe d'ACK/retry n'est imposé pour les pages ou les updates de données en V1. Si le transport retenu fournit naturellement un ACK simple pour une page complète, il peut être utilisé à titre informatif, mais aucun retry applicatif spécifique n'est construit autour. Les updates différentielles de données ne nécessitent pas d'ACK.  
+Conséquences: La fiabilité repose d'abord sur la connexion temps réel et la reconnexion, qui entraîne le renvoi de la page complète courante.
+
