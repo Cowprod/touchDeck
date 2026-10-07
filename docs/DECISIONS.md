@@ -477,4 +477,3 @@ Type: PROTOCOLE
 Statut: VALIDÉE POUR V1  
 Décision: Aucun mécanisme applicatif complexe d'ACK/retry n'est imposé pour les pages ou les updates de données en V1. Si le transport retenu fournit naturellement un ACK simple pour une page complète, il peut être utilisé à titre informatif, mais aucun retry applicatif spécifique n'est construit autour. Les updates différentielles de données ne nécessitent pas d'ACK.  
 Conséquences: La fiabilité repose d'abord sur la connexion temps réel et la reconnexion, qui entraîne le renvoi de la page complète courante.
-<!-- connector-write-test: temporary -->
