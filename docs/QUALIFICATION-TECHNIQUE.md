@@ -222,3 +222,57 @@ Analyser `esp32OldTest.zip` dès que son contenu est accessible afin d'identifie
 - redémarrages et coupures réseau/serveur reproduits sur matériel réel ;
 - conclusion explicite sur le problème de boucle de l'ancien firmware.
 
+## Analyse historique — esp32OldTest.zip
+
+L'archive historique a été analysée avant le démarrage du nouveau POC. Elle constitue une source d'acquis techniques, mais son architecture applicative n'est pas reprise telle quelle.
+
+### Acquis démontrés par l'ancien firmware
+
+- le module a déjà été compilé et utilisé comme ESP32-C3 avec Arduino ESP32 ;
+- l'écran rond GC9A01 a été piloté avec `Arduino_GFX_Library` ;
+- le câblage historique utilisé était : SCLK 6, MOSI 7, DC 2, CS 10, rétroéclairage 3 ;
+- le tactile a fonctionné avec `bb_captouch`, I²C SDA 4, SCL 5, INT 0, RST 1, adresse 0x15 ;
+- le firmware a déjà utilisé Wi-Fi, mDNS, une liste tactile de serveurs et WebSocket ;
+- une notion de révision de page existait déjà côté ancien backend/firmware ;
+- le build conservé produit un firmware d'environ 1,3 Mo ;
+- le partitionnement historique 4 Mo contient NVS, otadata, deux partitions OTA de 0x140000 chacune, une partition de données de 0x160000 et une partition coredump. Cela rend l'OTA plausible, mais QT-009 reste nécessaire avec le nouveau firmware.
+
+Ces éléments réduisent les inconnues, mais doivent être revalidés dans le POC touchDeck avec la stack retenue.
+
+### Échec historique important : sélection mDNS / reconnexion
+
+Le code historique confirme une machine d'état de découverte et de connexion devenue complexe. Plusieurs mécanismes coexistent :
+- cible courante `serverHost/serverPort` ;
+- préférences `preferredServerName/preferredServerHost/preferredServerPort` ;
+- scans mDNS périodiques ;
+- reconnexion automatique du client WebSocket ;
+- transitions explicites vers le mode discovery ;
+- effacement conditionnel de la cible.
+
+Le handler WebSocket historique renvoie notamment vers `enterDiscoveryMode()` après certaines déconnexions/erreurs survenues après réception d'une page, tandis que d'autres chemins conservent ou reconstruisent la cible. Cette architecture est une cause plausible de la boucle observée après sélection d'un serveur, sans permettre d'attribuer définitivement le défaut à une seule ligne hors reproduction matérielle.
+
+### À ne pas refaire
+
+- ne pas faire cohabiter plusieurs politiques concurrentes de reconnexion ;
+- ne pas laisser la bibliothèque WebSocket reconnecter agressivement pendant que la machine d'état mDNS change elle-même de cible ;
+- ne pas confondre découverte, serveur sélectionné et connexion active ;
+- ne pas revenir immédiatement en découverte à la première déconnexion ;
+- ne pas multiplier les identités d'un même serveur (nom, hostname, IP) comme références concurrentes ;
+- ne pas intégrer les identifiants Wi-Fi dans le firmware ou dans le dépôt.
+
+Le nouveau modèle doit rester conforme aux décisions V1 : identifiant stable d'instance, serveur choisi persisté, trois tentatives espacées de 30 secondes, puis retour explicite au choix mDNS.
+
+### Inconnues restant à qualifier
+
+- référence matérielle exacte du module et caractéristiques réelles de flash/RAM ;
+- stabilité du câblage et du tactile avec les bibliothèques candidates du nouveau firmware ;
+- Socket.IO sur ESP32-C3 ou nécessité du fallback WebSocket standard ;
+- rotations et remappage tactile ;
+- LittleFS pour le cache d'icônes ;
+- comportement OTA réel du nouveau firmware et marge disponible ;
+- reproduction puis disparition du problème historique de boucle mDNS avec la nouvelle machine d'état.
+
+### Point de sécurité relevé dans l'archive
+
+L'archive historique contient des identifiants Wi-Fi en clair dans le source du firmware. Ils ne doivent pas être repris dans touchDeck ni documentés. Les secrets du POC doivent rester hors dépôt et la configuration V1 doit passer par le mécanisme local prévu.
+
