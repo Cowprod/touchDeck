@@ -224,3 +224,25 @@ test('single-source placeholders resolve and stream differential updates without
   assert.equal((await push({temperature:123})).status,400);
  }finally{socket?.close();await app.stop();await rm(dir,{recursive:true,force:true})}
 });
+
+test('parallel writes serialize revision checks and preserve a single winner',async()=>{
+ const {mkdtemp,rm}=await import('node:fs/promises');
+ const {tmpdir}=await import('node:os');
+ const {join}=await import('node:path');
+ const dir=await mkdtemp(join(tmpdir(),'touchdeck-parallel-'));
+ const app=createTouchDeckServer({port:0,host:'127.0.0.1',dataFile:join(dir,'config.json')});
+ const {port}=await app.start();
+ const url='http://127.0.0.1:'+port+'/api/admin/config';
+ try{
+  const base=await(await fetch(url)).json();
+  const a=structuredClone(base),b=structuredClone(base);
+  a.pageSets[0].pages[0].title='first';
+  b.pageSets[0].pages[0].title='second';
+  const put=config=>fetch(url,{method:'PUT',headers:{'content-type':'application/json'},body:JSON.stringify(config)});
+  const results=await Promise.all([put(a),put(b)]);
+  assert.deepEqual(results.map(r=>r.status).sort(),[200,409]);
+  const stored=await(await fetch(url)).json();
+  assert.equal(stored.revision,1);
+  assert.ok(['first','second'].includes(stored.pageSets[0].pages[0].title));
+ }finally{await app.stop();await rm(dir,{recursive:true,force:true})}
+});
