@@ -106,6 +106,8 @@ export function createTouchDeckServer({ port = 3000, host = '0.0.0.0', dataFile 
           const config = JSON.parse(body);
           if (!Array.isArray(config.groups) || !Array.isArray(config.pageSets) || config.groups.length > 100 || config.pageSets.length > 100) return json(400, { error: 'invalid_config' });
           const validId = id => typeof id === 'string' && /^[a-zA-Z0-9_-]{1,80}$/.test(id);
+          const themeTokens = new Set(['primary','secondary','success','warning','danger','info','light','dark']);
+          const validTheme = value => value === undefined || themeTokens.has(value);
           const sets = new Set();
           for (const set of config.pageSets) {
             if (!validId(set.id) || sets.has(set.id) || !profiles.has(set.profileId) || !Array.isArray(set.pages) || set.pages.length > 100) return json(400, { error: 'invalid_page_set' });
@@ -113,12 +115,12 @@ export function createTouchDeckServer({ port = 3000, host = '0.0.0.0', dataFile 
             const ids = new Set();
             const profile = profiles.get(set.profileId);
             for (const page of set.pages) {
-              if (!validId(page.id) || ids.has(page.id) || typeof page.title !== 'string' || page.title.length > 120 || typeof page.visible !== 'boolean' || !Array.isArray(page.components) || page.components.length > 100) return json(400, { error: 'invalid_page' });
+              if (!validId(page.id) || ids.has(page.id) || typeof page.title !== 'string' || page.title.length > 120 || typeof page.visible !== 'boolean' || !validTheme(page.background) || !Array.isArray(page.components) || page.components.length > 100) return json(400, { error: 'invalid_page' });
               ids.add(page.id);
               const components = new Set();
               const occupied = new Set();
               for (const item of page.components) {
-                if (!validId(item.id) || components.has(item.id) || !['Label','Button','Toggle','Icon','Gauge','Slider'].includes(item.type) || ![item.x,item.y,item.w,item.h].every(Number.isInteger) || item.x < 0 || item.y < 0 || item.w < 1 || item.h < 1 || item.x + item.w > profile.gridColumns || item.y + item.h > profile.gridRows || (item.text !== undefined && (typeof item.text !== 'string' || item.text.length > 250))) return json(400, { error: 'invalid_component' });
+                if (!validId(item.id) || components.has(item.id) || !validTheme(item.background) || !validTheme(item.color) || !['Label','Button','Toggle','Icon','Gauge','Slider'].includes(item.type) || ![item.x,item.y,item.w,item.h].every(Number.isInteger) || item.x < 0 || item.y < 0 || item.w < 1 || item.h < 1 || item.x + item.w > profile.gridColumns || item.y + item.h > profile.gridRows || (item.text !== undefined && (typeof item.text !== 'string' || item.text.length > 250))) return json(400, { error: 'invalid_component' });
                 components.add(item.id);
                 for (let yy = item.y; yy < item.y + item.h; yy++) for (let xx = item.x; xx < item.x + item.w; xx++) {
                   const cell = yy * profile.gridColumns + xx;
