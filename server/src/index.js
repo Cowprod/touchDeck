@@ -3,6 +3,7 @@ import { readFile } from 'node:fs/promises';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { WebSocketServer } from 'ws';
 import { createJsonStore } from './store.js';
+import { resolvePage, FONT_SIZES } from './theme.js';
 
 export function createTouchDeckServer({ port = 3000, host = '0.0.0.0', dataFile = process.env.TOUCHDECK_DATA_FILE ?? new URL('../data/config.json', import.meta.url) } = {}) {
   const store = createJsonStore(dataFile);
@@ -49,7 +50,7 @@ export function createTouchDeckServer({ port = 3000, host = '0.0.0.0', dataFile 
     const group = groups.get(client.groupId);
     const pageSet = pageSets.get(group?.pageSetId);
     const page = pageSet?.pages.find(item => item.id === client.pageId);
-    return { type: 'page', clientId: client.id, groupId: client.groupId, profile: profiles.get(pageSet?.profileId) ?? null, page: page ?? null };
+    return { type: 'page', clientId: client.id, groupId: client.groupId, profile: profiles.get(pageSet?.profileId) ?? null, page: resolvePage(page, profiles.get(pageSet?.profileId)) };
   }
   function send(client, payload) {
     const message = JSON.stringify(payload);
@@ -120,7 +121,7 @@ export function createTouchDeckServer({ port = 3000, host = '0.0.0.0', dataFile 
               const components = new Set();
               const occupied = new Set();
               for (const item of page.components) {
-                if (!validId(item.id) || components.has(item.id) || !validTheme(item.background) || !validTheme(item.color) || !['Label','Button','Toggle','Icon','Gauge','Slider'].includes(item.type) || ![item.x,item.y,item.w,item.h].every(Number.isInteger) || item.x < 0 || item.y < 0 || item.w < 1 || item.h < 1 || item.x + item.w > profile.gridColumns || item.y + item.h > profile.gridRows || (item.text !== undefined && (typeof item.text !== 'string' || item.text.length > 250))) return json(400, { error: 'invalid_component' });
+                if (!validId(item.id) || components.has(item.id) || !validTheme(item.background) || !validTheme(item.color) || (item.fontSize !== undefined && !Object.hasOwn(FONT_SIZES,item.fontSize)) || (item.active !== undefined && typeof item.active !== 'boolean') || (item.disabled !== undefined && typeof item.disabled !== 'boolean') || !['Label','Button','Toggle','Icon','Gauge','Slider'].includes(item.type) || ![item.x,item.y,item.w,item.h].every(Number.isInteger) || item.x < 0 || item.y < 0 || item.w < 1 || item.h < 1 || item.x + item.w > profile.gridColumns || item.y + item.h > profile.gridRows || (item.text !== undefined && (typeof item.text !== 'string' || item.text.length > 250))) return json(400, { error: 'invalid_component' });
                 components.add(item.id);
                 for (let yy = item.y; yy < item.y + item.h; yy++) for (let xx = item.x; xx < item.x + item.w; xx++) {
                   const cell = yy * profile.gridColumns + xx;
