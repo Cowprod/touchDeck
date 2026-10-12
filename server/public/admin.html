@@ -43,7 +43,7 @@ refreshGroup();refreshSet(selected.page);
 }
 function refreshGroup(){const g=currentGroup();$('groupName').value=g?.name??'';options($('groupSet'),config.pageSets.map(x=>({id:x.id,label:x.id})),g?.pageSetId)}
 function refreshSet(selectedPage){const s=currentSet();$('profile').value=s?.profileId??'round-240';options($('page'),(s?.pages??[]).map(x=>({id:x.id,label:x.title})),selectedPage);refreshPage()}
-function refreshPage(){const p=currentPage();$('pageTitle').value=p?.title??'';$('visible').checked=!!p?.visible;$('components').value=JSON.stringify(p?.components??[],null,2);renderPreview()}
+function refreshPage(){const p=currentPage();$('pageTitle').value=p?.title??'';$('visible').checked=!!p?.visible;$('components').value=JSON.stringify(p?.components??[],null,2);refreshComponents();renderPreview()}
 function currentComponent(){return currentPage()?.components.find(x=>x.id===$('component').value)}
 function refreshComponents(selected){const p=currentPage();options($('component'),(p?.components??[]).map(x=>({id:x.id,label:x.type+' — '+(x.text??x.id)})),selected??$('component').value);refreshComponent()}
 function refreshComponent(){const item=currentComponent();for(const div of $('preview').children)div.classList.toggle('selected',div.title==='Déplacer '+item?.id);for(const key of ['Type','Text','X','Y','W','H']){$('component'+key).value=item?.[key==='Type'?'type':key==='Text'?'text':key.toLowerCase()]??'';$('component'+key).disabled=!item}$('deleteComponent').disabled=!item}
