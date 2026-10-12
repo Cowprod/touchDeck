@@ -19,19 +19,22 @@ main{max-width:1280px}.preview{width:240px;height:240px;position:relative;overfl
 <div class="input-group mb-3"><span class="input-group-text field-label">Profil</span><select class="form-select" id="profile"><option value="round-240">Rond 240 × 240 — 8 × 8</option></select></div>
 <div class="input-group mb-3"><span class="input-group-text field-label">Page</span><select class="form-select" id="page"></select><button class="btn btn-success" id="addPage" title="Ajouter une page"><i class="fa-solid fa-plus"></i></button><button class="btn btn-danger" id="deletePage" title="Supprimer la page"><i class="fa-solid fa-trash"></i></button></div>
 <div class="input-group mb-3"><span class="input-group-text field-label">Titre</span><input class="form-control" id="pageTitle" maxlength="120"></div>
+<div class="input-group mb-3"><span class="input-group-text field-label">Fond de page</span><select class="form-select" id="pageBg"><option value="">Par défaut</option><option value="primary">primary</option><option value="secondary">secondary</option><option value="success">success</option><option value="warning">warning</option><option value="danger">danger</option><option value="info">info</option><option value="light">light</option><option value="dark">dark</option></select></div>
 <div class="input-group"><span class="input-group-text field-label">Visible</span><div class="form-check form-switch ms-3 align-self-center"><input class="form-check-input" type="checkbox" id="visible" aria-label="Page visible"></div></div>
 </div></div></section>
 <section class="col-lg-6"><div class="card h-100"><div class="card-header">Composants de la page</div><div class="card-body">
 <div class="input-group mb-3"><span class="input-group-text field-label">Composant</span><select class="form-select" id="component"></select><button class="btn btn-danger" id="deleteComponent" title="Supprimer le composant"><i class="fa-solid fa-trash"></i></button></div>
 <div class="input-group mb-3"><span class="input-group-text field-label">Type</span><input class="form-control" id="componentType" readonly></div>
 <div class="input-group mb-3"><span class="input-group-text field-label">Texte</span><input class="form-control" id="componentText" maxlength="250"></div>
+<div class="input-group mb-3"><span class="input-group-text field-label">Fond</span><select class="form-select" id="componentBg"><option value="">Par défaut</option><option value="primary">primary</option><option value="secondary">secondary</option><option value="success">success</option><option value="warning">warning</option><option value="danger">danger</option><option value="info">info</option><option value="light">light</option><option value="dark">dark</option></select></div>
+<div class="input-group mb-3"><span class="input-group-text field-label">Texte</span><select class="form-select" id="componentFg"><option value="">Par défaut</option><option value="primary">primary</option><option value="secondary">secondary</option><option value="success">success</option><option value="warning">warning</option><option value="danger">danger</option><option value="info">info</option><option value="light">light</option><option value="dark">dark</option></select></div>
 <div class="row g-2 mb-3"><div class="col-6"><div class="input-group"><span class="input-group-text">X</span><input class="form-control" type="number" id="componentX" min="0" max="7"></div></div><div class="col-6"><div class="input-group"><span class="input-group-text">Y</span><input class="form-control" type="number" id="componentY" min="0" max="7"></div></div><div class="col-6"><div class="input-group"><span class="input-group-text">Largeur</span><input class="form-control" type="number" id="componentW" min="1" max="8"></div></div><div class="col-6"><div class="input-group"><span class="input-group-text">Hauteur</span><input class="form-control" type="number" id="componentH" min="1" max="8"></div></div></div>
 <div class="btn-group"><button class="btn btn-success" id="addLabel"><i class="fa-solid fa-plus me-1"></i>Label</button><button class="btn btn-success" id="addButton"><i class="fa-solid fa-plus me-1"></i>Bouton</button><button class="btn btn-success" id="addToggle"><i class="fa-solid fa-plus me-1"></i>Toggle</button></div>
 <details class="mt-3"><summary class="small">JSON (diagnostic)</summary><textarea class="form-control mt-2" id="components" spellcheck="false"></textarea></details>
 </div></div></section>
 <section class="col-lg-6"><div class="card h-100"><div class="card-header">Aperçu</div><div class="card-body"><div id="preview" class="preview"></div><p class="small text-body-secondary">Aperçu local ; validation de la grille côté serveur.</p></div></div></section>
 </div>
-</main><script>let config=null;const $=id=>document.getElementById(id);const validId=id=>/^[a-zA-Z0-9_-]{1,80}$/.test(id);
+</main><script>let config=null;const $=id=>document.getElementById(id);const palette={primary:'#0d6efd',secondary:'#6c757d',success:'#198754',warning:'#ffc107',danger:'#dc3545',info:'#0dcaf0',light:'#f8f9fa',dark:'#212529'};const validId=id=>/^[a-zA-Z0-9_-]{1,80}$/.test(id);
 function newId(){const bytes=new Uint8Array(8);crypto.getRandomValues(bytes);return Array.from(bytes,b=>b.toString(16).padStart(2,'0')).join('')}
 function currentSet(){return config?.pageSets.find(x=>x.id===$('set').value)}
 function currentPage(){return currentSet()?.pages.find(x=>x.id===$('page').value)}
@@ -44,18 +47,18 @@ refreshGroup();refreshSet(selected.page);
 }
 function refreshGroup(){const g=currentGroup();$('groupName').value=g?.name??'';options($('groupSet'),config.pageSets.map(x=>({id:x.id,label:x.id})),g?.pageSetId)}
 function refreshSet(selectedPage){const s=currentSet();$('profile').value=s?.profileId??'round-240';options($('page'),(s?.pages??[]).map(x=>({id:x.id,label:x.title})),selectedPage);refreshPage()}
-function refreshPage(){const p=currentPage();$('pageTitle').value=p?.title??'';$('visible').checked=!!p?.visible;$('components').value=JSON.stringify(p?.components??[],null,2);refreshComponents();renderPreview()}
+function refreshPage(){const p=currentPage();$('pageTitle').value=p?.title??'';$('visible').checked=!!p?.visible;$('pageBg').value=p?.background??'';$('components').value=JSON.stringify(p?.components??[],null,2);refreshComponents();renderPreview()}
 function currentComponent(){return currentPage()?.components.find(x=>x.id===$('component').value)}
 function refreshComponents(selected){const p=currentPage();options($('component'),(p?.components??[]).map(x=>({id:x.id,label:x.type+' — '+(x.text??x.id)})),selected??$('component').value);refreshComponent()}
-function refreshComponent(){const item=currentComponent();for(const div of $('preview').children)div.classList.toggle('selected',div.title==='Déplacer ou redimensionner '+item?.id);for(const key of ['Type','Text','X','Y','W','H']){$('component'+key).value=item?.[key==='Type'?'type':key==='Text'?'text':key.toLowerCase()]??'';$('component'+key).disabled=!item}$('deleteComponent').disabled=!item}
+function refreshComponent(){const item=currentComponent();for(const div of $('preview').children)div.classList.toggle('selected',div.title==='Déplacer ou redimensionner '+item?.id);for(const key of ['Type','Text','X','Y','W','H']){$('component'+key).value=item?.[key==='Type'?'type':key==='Text'?'text':key.toLowerCase()]??'';$('component'+key).disabled=!item}$('componentBg').value=item?.background??'';$('componentFg').value=item?.color??'';$('componentBg').disabled=!item;$('componentFg').disabled=!item;$('deleteComponent').disabled=!item}
 function overlaps(page,candidate,exceptId){return (page?.components??[]).some(other=>other.id!==exceptId&&candidate.x<other.x+other.w&&candidate.x+candidate.w>other.x&&candidate.y<other.y+other.h&&candidate.y+candidate.h>other.y)}
 function freePlacement(page,w,h){for(let y=0;y<=8-h;y++)for(let x=0;x<=8-w;x++)if(!overlaps(page,{x,y,w,h}))return {x,y,w,h};return null}
 function renderPreview(){
- const view=$('preview');view.replaceChildren();
+ const view=$('preview');view.replaceChildren();view.style.backgroundColor=palette[currentPage()?.background]??'#111827';
  for(const item of currentPage()?.components??[]){
   const div=document.createElement('div');div.className='piece'+(item.id===$('component').value?' selected':'');
   const paint=()=>{div.style.left=item.x*12.5+'%';div.style.top=item.y*12.5+'%';div.style.width=item.w*12.5+'%';div.style.height=item.h*12.5+'%'};
-  paint();div.textContent=item.text??item.type;div.title='Déplacer ou redimensionner '+item.id;
+  paint();div.style.backgroundColor=palette[item.background]??'#334155';div.style.color=palette[item.color]??'#fff';div.textContent=item.text??item.type;div.title='Déplacer ou redimensionner '+item.id;
   div.onpointerdown=event=>{
    if(event.button!==0)return;event.preventDefault();
    $('component').value=item.id;refreshComponent();
@@ -108,6 +111,8 @@ $('group').onchange=refreshGroup;$('set').onchange=()=>refreshSet();$('page').on
 $('groupName').oninput=()=>{if(currentGroup()){currentGroup().name=$('groupName').value;dirty($('groupName'),650)}};
 $('groupSet').onchange=()=>{if(currentGroup()){currentGroup().pageSetId=$('groupSet').value;dirty($('groupSet'))}};
 $('pageTitle').oninput=()=>{if(currentPage()){currentPage().title=$('pageTitle').value;dirty($('pageTitle'),650)}};
+$('pageBg').onchange=()=>{const p=currentPage();if(!p)return;if($('pageBg').value)p.background=$('pageBg').value;else delete p.background;renderPreview();dirty($('pageBg'))};
+for(const [field,id] of [['background','componentBg'],['color','componentFg']])$(id).onchange=()=>{const item=currentComponent();if(!item)return;if($(id).value)item[field]=$(id).value;else delete item[field];$('components').value=JSON.stringify(currentPage().components,null,2);renderPreview();dirty($(id))};
 $('visible').onchange=()=>{if(currentPage()){currentPage().visible=$('visible').checked;dirty($('visible'))}};
 $('components').oninput=()=>{if(currentPage()){try{currentPage().components=JSON.parse($('components').value);refreshComponents();renderPreview();dirty($('components'),750)}catch(e){status('JSON invalide : '+e.message,true);$('components').classList.add('save-danger')}}};
 $('addGroup').onclick=()=>{if(!config||!config.pageSets.length)return status('Aucun jeu de pages disponible',true);const id='group-'+newId();config.groups.push({id,name:'Nouveau groupe',pageSetId:config.pageSets[0].id});refresh({group:id});dirty(null)};
