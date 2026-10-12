@@ -54,3 +54,12 @@ Dernière mise à jour : 2026-10-12 (UTC)
 - Tests automatiques renforcés : résolution graphique, API de configuration et collisions, visibilité, affectation de simulateurs, vérification de syntaxe JS des pages.
 - Mise en service : commit `7e2496ebf23df072481bf87951ca06d5e3ae516d` synchronisé, tests Node PASS ; service PM2 rechargé à l'étape précédente.
 - Reste : intégration des sources, enrolment des clients physiques, sécurité de l'administration (API actuellement sans authentification : usage POC LAN exclusivement), types complémentaires, validation dans un vrai navigateur et sur ESP32.
+
+## Suite du chantier serveur — 2026-10-12
+- Contrôle de concurrence : `revision` persistée avec la configuration, retour HTTP 409 `config_conflict` si un autre éditeur a sauvegardé entre-temps ; le client Web suit la nouvelle révision et affiche le conflit.
+- Gestion initiale des sources : modèle `id/name/origin/descriptor`, propriétés/actions/événements avec métadonnées conservées, création manuelle et import/réimport d'un descripteur JSON depuis l'administration. Une source importée n'est pas modifiable directement (D-042/043/044).
+- Les valeurs runtime des sources, le binding texte/valeurs/actions et les connecteurs push/polling ne sont **pas** encore implémentés. Le contrat JSON du descripteur est une première implémentation de développement ; ne pas l'appeler schéma V1 accepté.
+- Suite Node : 13 tests réussis, dont contrôle de versions, imports de descripteurs et diagnostic de références absentes.
+- Service PM2 rechargé et endpoint `/api/health` testé : HTTP 200, `healthy=true`.
+- Matériel : port `/dev/ttyACM0` présent (VID:PID 303A:1001) ; capture série passive 115200/5s sans sortie. Aucun flash effectué. Le dossier local non suivi `touchDeck/` contient README.md, docs/ et esp32OldTest.zip (inspection non destructive).
+- Frontend : panel et source editor toujours à qualifier dans un navigateur réel ; les tests Node ne simulent pas leurs interactions.
