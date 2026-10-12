@@ -133,10 +133,14 @@ for(const key of ['X','Y','W','H'])$('component'+key).onchange=()=>updateCompone
 $('profile').onchange=()=>{if(currentSet()){currentSet().profileId=$('profile').value;dirty($('profile'))}};
 
 const simulators=new Map();let nextSimulator=1;
+const SIM_KEY='touchdeck.admin.simulators.v1';
+function persistSimulators(){try{localStorage.setItem(SIM_KEY,JSON.stringify([...simulators.values()].map(s=>({id:s.id,groupId:s.select.value}))))}catch{}}
+function restoreSimulators(){try{const saved=JSON.parse(localStorage.getItem(SIM_KEY)||'[]');if(Array.isArray(saved))for(const entry of saved.slice(0,12))if(/^web-sim-[a-zA-Z0-9_-]{1,60}$/.test(entry.id))addSimulator(entry.id,entry.groupId)}catch{}}
+
 function simulatorGroups(){return (config?.groups??[]).map(group=>({id:group.id,label:group.name}))}
-function sortSimulators(){const selected=currentGroup()?.id,container=$('simulators');const cards=[...container.children];cards.sort((a,b)=>(a.dataset.group===selected?-1:a.dataset.group===b.dataset.group?0:1)-(b.dataset.group===selected?-1:0));for(const card of cards)container.append(card)}
-function addSimulator(){
- const id='web-sim-'+newId(),selected=currentGroup()?.id??'';
+function sortSimulators(){const selected=currentGroup()?.id,container=$('simulators');const cards=[...container.children];cards.sort((a,b)=>Number(b.dataset.group===selected)-Number(a.dataset.group===selected));for(const card of cards)container.append(card)}
+function addSimulator(existingId=null,existingGroup=null){
+ const id=existingId??'web-sim-'+newId(),selected=existingGroup??currentGroup()?.id??'';
  const card=document.createElement('div');card.className='col-lg-4 col-md-6';card.dataset.id=id;card.dataset.group=selected;
  const shell=document.createElement('div');shell.className='card h-100';
  const header=document.createElement('div');header.className='card-header d-flex gap-2 align-items-center';
@@ -150,15 +154,15 @@ function addSimulator(){
  frame.src='/?embedded=1&simId='+encodeURIComponent(id);
  const info=document.createElement('div');info.className='card-footer small text-body-secondary';info.textContent='Connexion…';
  header.append(name,select,remove);shell.append(header,frame,info);card.append(shell);$('simulators').append(card);
- simulators.set(id,{id,card,select,info,ready:false});
+ simulators.set(id,{id,card,select,info,ready:false});persistSimulators();
  select.onchange=()=>assignSimulator(id,select.value);
- remove.onclick=()=>{frame.src='about:blank';card.remove();simulators.delete(id)};
+ remove.onclick=()=>{frame.src='about:blank';card.remove();simulators.delete(id);persistSimulators()};
  sortSimulators();
 }
 async function assignSimulator(id,groupId){
  const sim=simulators.get(id);if(!sim)return;
  sim.card.dataset.group=groupId;
- sortSimulators();
+ sortSimulators();persistSimulators();
  if(!sim.ready)return;
  try{const response=await fetch('/api/admin/clients',{method:'PUT',headers:{'content-type':'application/json'},body:JSON.stringify({clientId:id,groupId:groupId||null})});const data=await response.json();if(!response.ok)throw Error(data.error??response.status);sim.info.textContent='Client '+id.slice(-8)+' · '+(groupId||'non affecté')}
  catch(error){sim.info.textContent='Erreur : '+error.message;status('Affectation impossible : '+error.message,true)}
@@ -169,6 +173,6 @@ window.addEventListener('message',event=>{
  if(!sim||event.source!==sim.card.querySelector('iframe').contentWindow)return;
  sim.ready=true;assignSimulator(sim.id,sim.select.value);
 });
-$('addSimulator').onclick=addSimulator;
-load();
+$('addSimulator').onclick=()=>addSimulator();
+load().then(()=>restoreSimulators());
 </script></body></html>
