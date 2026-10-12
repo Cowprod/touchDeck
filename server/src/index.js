@@ -145,10 +145,12 @@ export function createTouchDeckServer({ port = 3000, host = '0.0.0.0', dataFile 
           if (!Array.isArray(config.groups) || !Array.isArray(config.pageSets) || config.groups.length > 100 || config.pageSets.length > 100) return json(400, { error: 'invalid_config' });
           const requestedSources = config.sources===undefined?[...sources.values()]:config.sources;
           if(!Array.isArray(requestedSources)||requestedSources.length>100)return json(400,{error:'invalid_sources'});
+          if(!requestedSources.some(source=>source.id===CLOCK_SOURCE_ID))return json(409,{error:'built_in_source'});
           const sourceIds=new Set();
           for(const source of requestedSources){
             if(!validateSource(source)||sourceIds.has(source.id))return json(400,{error:'invalid_source'});
             sourceIds.add(source.id);
+            if(source.id===CLOCK_SOURCE_ID&&JSON.stringify(source)!==JSON.stringify(CLOCK_SOURCE))return json(403,{error:'built_in_source'});
             const prior=sources.get(source.id);
             if(source.origin==='imported'&&(!prior||JSON.stringify(prior.descriptor)!==JSON.stringify(source.descriptor)))
               return json(403,{error:'source_import_only',sourceId:source.id});
@@ -215,6 +217,7 @@ export function createTouchDeckServer({ port = 3000, host = '0.0.0.0', dataFile 
         const idOk=typeof data.id==='string'&&/^[a-zA-Z0-9_-]{1,80}$/.test(data.id);
         if(!idOk||!validateDescriptor(data.descriptor)||typeof data.name!=='string'||!data.name.length||data.name.length>120)return json(400,{error:'invalid_descriptor'});
         if(!sources.has(data.id)&&sources.size>=100)return json(400,{error:'source_limit'});
+        if(data.id===CLOCK_SOURCE_ID)return json(403,{error:'built_in_source'});
         const source={id:data.id,name:data.name,origin:'imported',descriptor:data.descriptor};
         const nextSources=[...sources.values()].filter(item=>item.id!==data.id).concat(source);
         await store.save({schemaVersion:1,revision:configRevision+1,groups:[...groups.values()],pageSets:[...pageSets.values()],sources:nextSources});
@@ -226,6 +229,7 @@ export function createTouchDeckServer({ port = 3000, host = '0.0.0.0', dataFile 
     if(sourcePushMatch&&request.method==='PUT'){
       const source=sources.get(sourcePushMatch[1]);
       if(!source)return json(404,{error:'source_not_found'});
+      if(source.id===CLOCK_SOURCE_ID)return json(403,{error:'built_in_source'});
       try{
         let body='';for await(const chunk of request){body+=chunk;if(body.length>32768)return json(413,{error:'too_large'})}
         const updates=JSON.parse(body);
