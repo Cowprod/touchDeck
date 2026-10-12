@@ -159,3 +159,38 @@ test('concurrent editors cannot silently overwrite a newer revision',async()=>{
     assert.equal((await(await fetch(url)).json()).pageSets[0].pages[0].title,'First editor');
   }finally{await app.stop();await rm(dir,{recursive:true,force:true})}
 });
+
+test('sources persist; imported descriptors require reimport and keep identity',async()=>{
+ const {mkdtemp,readFile,rm}=await import('node:fs/promises');
+ const {tmpdir}=await import('node:os');
+ const {join}=await import('node:path');
+ const dir=await mkdtemp(join(tmpdir(),'touchdeck-sources-'));
+ const file=join(dir,'config.json');
+ const app=createTouchDeckServer({port:0,host:'127.0.0.1',dataFile:file});
+ const {port}=await app.start();
+ const root='http://127.0.0.1:'+port+'/api/admin';
+ const put=(path,body)=>fetch(root+path,{method:'PUT',headers:{'content-type':'application/json'},body:JSON.stringify(body)});
+ try{
+  const first=await(await fetch(root+'/config')).json();
+  first.sources.push({id:'manual-1',name:'Manual source',origin:'manual',descriptor:{properties:{level:{type:'number',unit:'%' }},actions:{},events:{}}});
+  const manual=await put('/config',first);assert.equal(manual.status,200);
+  const revision=(await manual.json()).revision;
+  const descriptor={properties:{temperature:{type:'number',unit:'C'}},actions:{trigger:{input:{type:'boolean'}}},events:{alarm:{}}};
+  const imported=await put('/sources/import',{revision,id:'imported-1',name:'Imported source',descriptor});
+  assert.equal(imported.status,200);
+  const after=await(await fetch(root+'/config')).json();
+  assert.equal(after.sources.length,2);
+  assert.equal(after.sources[1].origin,'imported');
+  const changed=structuredClone(after);
+  changed.sources[1].descriptor.properties.temperature.type='string';
+  const blocked=await put('/config',changed);
+  assert.equal(blocked.status,403);
+  assert.equal((await blocked.json()).error,'source_import_only');
+  const newer={properties:{temperature:{type:'integer'}},actions:{},events:{}};
+  const reimport=await put('/sources/import',{revision:after.revision,id:'imported-1',name:'Imported source',descriptor:newer});
+  assert.equal(reimport.status,200);
+  const saved=JSON.parse(await readFile(file,'utf8'));
+  assert.equal(saved.sources.find(item=>item.id==='imported-1').descriptor.properties.temperature.type,'integer');
+  assert.equal(saved.sources.length,2);
+ }finally{await app.stop();await rm(dir,{recursive:true,force:true})}
+});
