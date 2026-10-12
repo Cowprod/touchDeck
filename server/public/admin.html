@@ -176,7 +176,18 @@ function persistSimulators(){try{localStorage.setItem(SIM_KEY,JSON.stringify([..
 function restoreSimulators(){try{const saved=JSON.parse(localStorage.getItem(SIM_KEY)||'[]');if(Array.isArray(saved))for(const entry of saved.slice(0,12))if(/^web-sim-[a-zA-Z0-9_-]{1,60}$/.test(entry.id))addSimulator(entry.id,entry.groupId)}catch{}}
 
 function simulatorGroups(){return (config?.groups??[]).map(group=>({id:group.id,label:group.name}))}
-function sortSimulators(){const selected=currentGroup()?.id,container=$('simulators');const cards=[...container.children];cards.sort((a,b)=>Number(b.dataset.group===selected)-Number(a.dataset.group===selected));for(const card of cards)container.append(card)}
+function sortSimulators(){
+ // Moving a live iframe in the DOM reloads its document. Reorder ONLY if the
+ // group priority has actually changed, never append every existing card.
+ const selected=currentGroup()?.id,container=$('simulators');
+ const cards=[...container.children];
+ const prioritized=cards.filter(card=>card.dataset.group===selected);
+ const others=cards.filter(card=>card.dataset.group!==selected);
+ const desired=[...prioritized,...others];
+ for(let i=0;i<desired.length;i++){
+  if(container.children[i]!==desired[i])container.insertBefore(desired[i],container.children[i]??null);
+ }
+}
 function addSimulator(existingId=null,existingGroup=null){
  const id=existingId??'web-sim-'+newId(),selected=existingGroup??currentGroup()?.id??'';
  const card=document.createElement('div');card.className='col-lg-4 col-md-6';card.dataset.id=id;card.dataset.group=selected;
@@ -194,7 +205,7 @@ function addSimulator(existingId=null,existingGroup=null){
  header.append(name,select,remove);shell.append(header,frame,info);card.append(shell);$('simulators').append(card);
  simulators.set(id,{id,card,select,info,ready:false});persistSimulators();
  select.onchange=()=>assignSimulator(id,select.value);
- remove.onclick=()=>{frame.src='about:blank';card.remove();simulators.delete(id);persistSimulators()};
+ remove.onclick=()=>{simulators.delete(id);card.remove();persistSimulators();frame.src='about:blank'};
  sortSimulators();
 }
 async function assignSimulator(id,groupId){
