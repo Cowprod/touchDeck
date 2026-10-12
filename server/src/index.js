@@ -5,6 +5,7 @@ import { WebSocketServer } from 'ws';
 import { createJsonStore } from './store.js';
 import { resolvePage, FONT_SIZES } from './theme.js';
 import { validateSource, validateDescriptor } from './sources.js';
+import { resolveText, typedValue } from './bindings.js';
 
 export function createTouchDeckServer({ port = 3000, host = '0.0.0.0', dataFile = process.env.TOUCHDECK_DATA_FILE ?? new URL('../data/config.json', import.meta.url) } = {}) {
   const store = createJsonStore(dataFile);
@@ -37,6 +38,7 @@ export function createTouchDeckServer({ port = 3000, host = '0.0.0.0', dataFile 
   const groups = new Map();
   const pageSets = new Map();
   const sources = new Map();
+  const sourceValues = new Map();
   const profiles = new Map([['round-240', { id: 'round-240', width: 240, height: 240, shape: 'round', gridColumns: 8, gridRows: 8 }]]);
   const exampleSet = { id: 'demo', profileId: 'round-240', pages: [
     { id: 'home', title: 'Accueil', visible: true, components: [
@@ -55,7 +57,8 @@ export function createTouchDeckServer({ port = 3000, host = '0.0.0.0', dataFile 
     const group = groups.get(client.groupId);
     const pageSet = pageSets.get(group?.pageSetId);
     const page = pageSet?.pages.find(item => item.id === client.pageId);
-    return { type: 'page', clientId: client.id, groupId: client.groupId, profile: profiles.get(pageSet?.profileId) ?? null, page: resolvePage(page, profiles.get(pageSet?.profileId)) };
+    const hydrated=page?{...page,components:page.components.map(item=>({...item,text:resolveText(item.text,item.sourceId,sources.get(item.sourceId),sourceValues.get(item.sourceId))}))}:null;
+    return { type: 'page', pageRevision:configRevision, clientId: client.id, groupId: client.groupId, profile: profiles.get(pageSet?.profileId) ?? null, page: resolvePage(hydrated, profiles.get(pageSet?.profileId)) };
   }
   function send(client, payload) {
     const message = JSON.stringify(payload);
@@ -138,7 +141,7 @@ export function createTouchDeckServer({ port = 3000, host = '0.0.0.0', dataFile 
               const components = new Set();
               const occupied = new Set();
               for (const item of page.components) {
-                if (!validId(item.id) || components.has(item.id) || !validTheme(item.background) || !validTheme(item.color) || (item.fontSize !== undefined && !Object.hasOwn(FONT_SIZES,item.fontSize)) || (item.active !== undefined && typeof item.active !== 'boolean') || (item.disabled !== undefined && typeof item.disabled !== 'boolean') || !['Label','Button','Toggle','Icon','Gauge','Slider'].includes(item.type) || ![item.x,item.y,item.w,item.h].every(Number.isInteger) || item.x < 0 || item.y < 0 || item.w < 1 || item.h < 1 || item.x + item.w > profile.gridColumns || item.y + item.h > profile.gridRows || (item.text !== undefined && (typeof item.text !== 'string' || item.text.length > 250))) return json(400, { error: 'invalid_component' });
+                if (!validId(item.id) || components.has(item.id) || (item.sourceId!==undefined&&!sourceIds.has(item.sourceId)) || !validTheme(item.background) || !validTheme(item.color) || (item.fontSize !== undefined && !Object.hasOwn(FONT_SIZES,item.fontSize)) || (item.active !== undefined && typeof item.active !== 'boolean') || (item.disabled !== undefined && typeof item.disabled !== 'boolean') || !['Label','Button','Toggle','Icon','Gauge','Slider'].includes(item.type) || ![item.x,item.y,item.w,item.h].every(Number.isInteger) || item.x < 0 || item.y < 0 || item.w < 1 || item.h < 1 || item.x + item.w > profile.gridColumns || item.y + item.h > profile.gridRows || (item.text !== undefined && (typeof item.text !== 'string' || item.text.length > 250))) return json(400, { error: 'invalid_component' });
                 components.add(item.id);
                 for (let yy = item.y; yy < item.y + item.h; yy++) for (let xx = item.x; xx < item.x + item.w; xx++) {
                   const cell = yy * profile.gridColumns + xx;
@@ -147,6 +150,10 @@ export function createTouchDeckServer({ port = 3000, host = '0.0.0.0', dataFile 
                 }
               }
             }
+          }
+          for(const priorSource of sources.values()){
+            if(!sourceIds.has(priorSource.id)&&config.pageSets.some(set=>set.pages.some(page=>page.components.some(item=>item.sourceId===priorSource.id))))
+              return json(409,{error:'source_in_use',sourceId:priorSource.id});
           }
           for (const group of groups.values()) {
             if (!config.groups.some(next => next.id === group.id) && [...clients.values()].some(client => client.groupId === group.id))
@@ -186,6 +193,29 @@ export function createTouchDeckServer({ port = 3000, host = '0.0.0.0', dataFile 
         await store.save({schemaVersion:1,revision:configRevision+1,groups:[...groups.values()],pageSets:[...pageSets.values()],sources:nextSources});
         configRevision+=1;sources.set(data.id,source);
         return json(200,{ok:true,revision:configRevision,source});
+      }catch{return json(400,{error:'invalid_request'})}
+    }
+    const sourcePushMatch=/^\/api\/sources\/([a-zA-Z0-9_-]{1,80})\/values$/.exec(url.pathname);
+    if(sourcePushMatch&&request.method==='PUT'){
+      const source=sources.get(sourcePushMatch[1]);
+      if(!source)return json(404,{error:'source_not_found'});
+      try{
+        let body='';for await(const chunk of request){body+=chunk;if(body.length>32768)return json(413,{error:'too_large'})}
+        const updates=JSON.parse(body);
+        if(!updates||typeof updates!=='object'||Array.isArray(updates))return json(400,{error:'invalid_values'});
+        for(const [name,value] of Object.entries(updates)){
+          const definition=source.descriptor.properties?.[name];
+          if(!definition||!typedValue(value,definition))return json(400,{error:'invalid_property',property:name});
+          if(typeof value==='number'&&((typeof definition.minimum==='number'&&value<definition.minimum)||(typeof definition.maximum==='number'&&value>definition.maximum)))return json(400,{error:'out_of_range',property:name});
+        }
+        const values={...(sourceValues.get(source.id)??{}),...updates};sourceValues.set(source.id,values);
+        for(const client of clients.values()){
+          const group=groups.get(client.groupId),set=pageSets.get(group?.pageSetId),page=set?.pages.find(item=>item.id===client.pageId);
+          if(!page)continue;
+          const changes=page.components.filter(item=>item.sourceId===source.id).map(item=>({id:item.id,text:resolveText(item.text,source.id,source,values)}));
+          if(changes.length)send(client,{type:'component_update',pageId:page.id,pageRevision:configRevision,changes});
+        }
+        return json(200,{ok:true,updated:Object.keys(updates).length});
       }catch{return json(400,{error:'invalid_request'})}
     }
     if (url.pathname === '/api/admin/clients') {
