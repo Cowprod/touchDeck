@@ -78,6 +78,11 @@ export function createTouchDeckServer({ port = 3000, host = '0.0.0.0', dataFile 
       catch { json(500, { error: 'ui_unavailable' }); }
       return;
     }
+    if (request.method === 'GET' && url.pathname === '/admin') {
+      try { const html = await readFile(fileURLToPath(new URL('../public/admin.html', import.meta.url))); response.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store', 'content-security-policy': "default-src 'self'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; connect-src 'self'" }); response.end(html); }
+      catch { json(500, { error: 'admin_ui_unavailable' }); }
+      return;
+    }
     if (request.method === 'GET' && url.pathname === '/api/health') return json(200, { ok: true, service: 'touchDeck' });
     if (url.pathname === '/api/admin/config') {
       if (!authorized(request)) return json(401, { error: 'admin_token_required' });
