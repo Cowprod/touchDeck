@@ -1,38 +1,42 @@
-# Serveur touchDeck — premier socle
+# TouchDeck — serveur et clients Web
 
-Prototype serveur et simulateur Web, indépendant du matériel ESP.
+Serveur Node.js 22, HTTP et WebSocket standard (qualification ESP à venir).
 
-## Prérequis
-Node.js 22 ou supérieur et npm. Les dépendances sont déclarées dans `server/package.json`.
+## Accès
 
-## Démarrage (depuis la VM)
+- Simulateur : `http://192.168.194.189:3000/`
+- Administration : `http://192.168.194.189:3000/admin`
+- Santé : `GET /api/health`
+- Configuration de démonstration : `GET /api/bootstrap`
+
+Le serveur écoute sur toutes les interfaces IPv4 pour permettre aux clients du LAN de se connecter. Restreindre le port 3000 au réseau de confiance : **pas d'exposition Internet**.
+
+## Administration
+
+`GET/PUT /api/admin/config` requiert l'en-tête `X-TouchDeck-Admin-Token` et un jeton non vide fourni par la variable d'environnement `TOUCHDECK_ADMIN_TOKEN` au processus Node/PM2.
+
+**Sans jeton configuré côté serveur, toute écriture et toute lecture de cette API sont refusées (401).** Le jeton ne doit jamais être commité dans Git ni exposé dans les logs.
+
+L'interface `/admin` permet de saisir ce jeton dans l'onglet, charger la configuration, gérer les groupes, jeux de pages et pages, modifier les composants au format JSON, prévisualiser et enregistrer. C'est une première interface fonctionnelle, pas encore l'éditeur visuel final.
+
+Les modifications sont validées avant sauvegarde et propagées par WebSocket. Les configurations sont persistées atomiquement dans `server/data/config.json` par défaut ; ce répertoire doit être sauvegardé et rester hors Git.
+
+## Développement
+
 ```sh
-cd /srv/devmcp-workspaces/touchDeck/server
-npm install
+cd server
+npm ci
 npm test
 npm start
 ```
 
-Le serveur écoute par défaut sur `127.0.0.1:3000`. Ouvrir `http://127.0.0.1:3000/` depuis la VM ou utiliser un tunnel SSH depuis le poste distant :
+Sur la VM, utiliser les actions bornées devMcp (`workspace.sync`, `node.test`, `service.restart`, `service.health`, `service.logs`). PM2 est géré par devMcp.
 
-```sh
-ssh -L 3000:127.0.0.1:3000 utilisateur@touchdeck
-```
+## Limites
 
-Puis ouvrir `http://127.0.0.1:3000/` sur le poste distant.
-
-**Important :** la synchronisation du workspace devMcp n'a pas encore été lancée : le dossier local non suivi `touchDeck/` doit être examiné auparavant. Ces commandes sont à exécuter uniquement une fois les fichiers `main` effectivement présents dans le bon répertoire.
-
-## Endpoints
-- `GET /` : simulateur Web
-- `GET /api/health` : état du serveur
-- `GET /api/bootstrap` : profils, groupes et jeux de pages de démonstration
-- `WS /ws` : `hello`, `assign` (uniquement en mode local), `navigate` (`next` / `previous`)
-
-## Limites de cette première itération
-- Données en mémoire, sans persistance.
-- Un profil et un groupe de démonstration, deux pages avec labels.
-- Aucun contrôle d'accès d'administration ; ne pas exposer le serveur sur Internet ou le LAN.
-- Pas encore d'éditeur, de gestion des sources, de rendu différentiel ni de support matériel.
-- Transport WebSocket standard provisoire ; choix Socket.IO vs ws pour l'ESP toujours soumis à QT-007.
-- Les tests sont versionnés, mais n'ont pas encore été exécutés sur la VM.
+- Enrôlement et authentification des clients matériels non implémentés.
+- Affectation de démonstration `demo` autorisée au simulateur ; l'affectation générale nécessite une future action admin.
+- Les états d'exécution (page courante, présence clients) ne sont pas persistés.
+- Édition des composants encore en JSON, sans drag-and-drop.
+- Sources, actions, tokens sémantiques, rendu différentiel et firmware ESP à développer.
+- Le jeton d'administration circule en HTTP sur le LAN de développement : HTTPS ou un tunnel sécurisé seront nécessaires avant tout usage sur réseau non fiable.
