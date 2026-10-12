@@ -60,3 +60,54 @@ test('POC admin API allows private-network edits and persists validated page con
     assert.equal(JSON.parse(await readFile(file, 'utf8')).pageSets[0].pages[0].title, 'Updated');
   } finally { await app.stop(); await rm(dir, { recursive: true, force: true }); }
 });
+
+test('admin rejects overlapping components and unsupported visual tokens',async()=>{
+  const { mkdtemp,rm }=await import('node:fs/promises');
+  const { tmpdir }=await import('node:os');
+  const { join }=await import('node:path');
+  const dir=await mkdtemp(join(tmpdir(),'touchdeck-validation-'));
+  const app=createTouchDeckServer({port:0,host:'127.0.0.1',dataFile:join(dir,'config.json')});
+  const {port}=await app.start();
+  const url='http://127.0.0.1:'+port+'/api/admin/config';
+  const put=body=>fetch(url,{method:'PUT',headers:{'content-type':'application/json'},body:JSON.stringify(body)});
+  try{
+    const config=await(await fetch(url)).json();
+    const page=config.pageSets[0].pages[0];
+    page.components[1].x=2;page.components[1].y=1;
+    const collision=await put(config);
+    assert.equal(collision.status,400);
+    assert.equal((await collision.json()).error,'component_overlap');
+    page.components[1].x=1;page.components[1].y=4;
+    page.components[0].color='not-a-token';
+    assert.equal((await put(config)).status,400);
+    page.components[0].color='warning';
+    page.components[0].fontSize='large';
+    page.components[0].disabled=true;
+    assert.equal((await put(config)).status,200);
+  }finally{await app.stop();await rm(dir,{recursive:true,force:true})}
+});
+
+test('invisible current page stays until client navigates',async()=>{
+  const { mkdtemp,rm }=await import('node:fs/promises');
+  const { tmpdir }=await import('node:os');
+  const { join }=await import('node:path');
+  const dir=await mkdtemp(join(tmpdir(),'touchdeck-visibility-'));
+  const app=createTouchDeckServer({port:0,host:'127.0.0.1',dataFile:join(dir,'config.json')});
+  const {port}=await app.start();
+  const url='http://127.0.0.1:'+port+'/api/admin/config';
+  let socket;
+  try{
+    ({socket}=await connect(port,'visibility-test'));
+    await waitPage(socket,{type:'assign',groupId:'demo'});
+    const config=await(await fetch(url)).json();
+    config.pageSets[0].pages[0].visible=false;
+    const updated=new Promise((resolve,reject)=>{
+      const timeout=setTimeout(()=>reject(Error('timeout')),2000);
+      const handler=raw=>{const payload=JSON.parse(raw.toString());if(payload.type==='page'){clearTimeout(timeout);socket.off('message',handler);resolve(payload)}};
+      socket.on('message',handler);
+    });
+    assert.equal((await fetch(url,{method:'PUT',headers:{'content-type':'application/json'},body:JSON.stringify(config)})).status,200);
+    assert.equal((await updated).page.id,'home');
+    assert.equal((await waitPage(socket,{type:'navigate',direction:'next'})).page.id,'second');
+  }finally{socket?.close();await app.stop();await rm(dir,{recursive:true,force:true})}
+});
