@@ -37,18 +37,18 @@ test('independent navigation, first visible page and wraparound', async () => {
   } finally { await app.stop(); }
 });
 
-test('admin API rejects anonymous changes and persists validated page configuration', async () => {
+test('POC admin API allows private-network edits and persists validated page configuration', async () => {
   const { mkdtemp, readFile, rm } = await import('node:fs/promises');
   const { tmpdir } = await import('node:os');
   const { join } = await import('node:path');
   const dir = await mkdtemp(join(tmpdir(), 'touchdeck-test-'));
   const file = join(dir, 'config.json');
-  const app = createTouchDeckServer({ port: 0, host: '127.0.0.1', dataFile: file, adminToken: 'test-secret' });
+  const app = createTouchDeckServer({ port: 0, host: '127.0.0.1', dataFile: file });
   const { port } = await app.start();
   const url = 'http://127.0.0.1:' + port + '/api/admin/config';
   try {
-    assert.equal((await fetch(url)).status, 401);
-    const headers = { 'x-touchdeck-admin-token': 'test-secret', 'content-type': 'application/json' };
+    assert.equal((await fetch(url)).status, 200);
+    const headers = { 'content-type': 'application/json' };
     const initial = await (await fetch(url, { headers })).json();
     const changed = structuredClone(initial);
     changed.pageSets[0].pages[0].title = 'Updated';
