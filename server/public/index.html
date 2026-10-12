@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>touchDeck · simulateur</title>
+<style>
+:root{font-family:system-ui,sans-serif;color-scheme:dark}body{margin:0;background:#111827;color:#f9fafb}main{max-width:760px;margin:36px auto;padding:0 20px}h1{font-size:1.5rem}.meta{color:#9ca3af}button{padding:10px 18px;background:#2563eb;border:0;border-radius:8px;color:white;cursor:pointer}button:disabled{opacity:.4;cursor:not-allowed}.device{width:240px;height:240px;border:12px solid #374151;border-radius:50%;background:#0f172a;position:relative;overflow:hidden;margin:28px auto;box-shadow:0 12px 40px #0008}.component{position:absolute;display:flex;align-items:center;justify-content:center;text-align:center;overflow:hidden;font-size:15px;overflow-wrap:anywhere}.controls{display:flex;justify-content:center;gap:12px}.status{margin-top:24px;text-align:center}.pill{font-size:12px;color:#9ca3af}
+</style></head><body><main><h1>touchDeck <span class="pill">simulateur Web</span></h1><p class="meta">Navigation indépendante · serveur autoritaire</p><div class="device" id="screen" aria-label="Écran simulé"></div><div class="controls"><button id="assign">Rejoindre la démo</button><button id="prev">← Précédente</button><button id="next">Suivante →</button></div><p class="status" id="status">Connexion…</p></main>
+<script>
+const key='touchdeck.clientId';let id=localStorage.getItem(key);if(!id){id=crypto.randomUUID();localStorage.setItem(key,id)}
+const screen=document.getElementById('screen'),status=document.getElementById('status');let socket;
+function send(message){if(socket?.readyState===WebSocket.OPEN)socket.send(JSON.stringify(message))}
+function render(data){screen.replaceChildren();if(!data.page||!data.profile){status.textContent='Client non affecté ou aucune page visible';return}
+const {width,height,gridColumns,gridRows}=data.profile;
+screen.style.width=width+'px';screen.style.height=height+'px';screen.style.borderRadius=data.profile.shape==='round'?'50%':'12px';
+for(const item of data.page.components){const element=document.createElement('div');element.className='component';element.style.left=(item.x/gridColumns*100)+'%';element.style.top=(item.y/gridRows*100)+'%';element.style.width=(item.w/gridColumns*100)+'%';element.style.height=(item.h/gridRows*100)+'%';element.textContent=item.text??'';screen.append(element)}
+status.textContent=data.page.title+' · '+id.slice(0,8)+' · groupe '+(data.groupId??'aucun');
+}
+function connect(){socket=new WebSocket((location.protocol==='https:'?'wss:':'ws:')+'//'+location.host+'/ws');
+socket.onopen=()=>{status.textContent='Connecté';send({type:'hello',clientId:id})};
+socket.onmessage=event=>{const data=JSON.parse(event.data);if(data.type==='page')render(data);if(data.type==='error')status.textContent='Erreur : '+data.code};
+socket.onclose=()=>{status.textContent='Déconnecté';setTimeout(connect,3000)}}
+document.getElementById('assign').onclick=()=>send({type:'assign',groupId:'demo'});
+document.getElementById('prev').onclick=()=>send({type:'navigate',direction:'previous'});
+document.getElementById('next').onclick=()=>send({type:'navigate',direction:'next'});
+let touchX=null;screen.addEventListener('touchstart',event=>{touchX=event.changedTouches[0].clientX},{passive:true});
+screen.addEventListener('touchend',event=>{if(touchX===null)return;const delta=event.changedTouches[0].clientX-touchX;touchX=null;if(Math.abs(delta)>35)send({type:'navigate',direction:delta<0?'next':'previous'})},{passive:true});
+connect();
+</script></body></html>
