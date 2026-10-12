@@ -43,3 +43,13 @@ Comparaison du code `server/src/index.js` et `server/public/admin.html` avec `do
 - Conservation de la page courante devenue invisible dans la diffusion des modifications (D-030) ; suppression et navigation conservent leurs comportements distincts.
 - Édition des tokens sémantiques de fond de page, de fond et de couleur de texte des composants ; aperçu et validation des huit tokens côté serveur. **Il reste à résoudre les couleurs en propriétés finales dans le contrat device, à traiter les niveaux typographiques et les états active/disabled.**
 - Les tests existants ne couvrent toujours pas les manipulations graphiques ; ne pas considérer l'éditeur comme qualifié.
+
+## Avancement complémentaire — résolution de rendu et tests
+- Nouveau module `server/src/theme.js`: conversion des tokens `primary`…`dark` en couleurs finales, de la grille en pixels, des niveaux `small`/`normal`/`large` en taille de police, et des états `active`/`disabled` en booléens effectifs, sur une copie non mutante.
+- `snapshot()` transmet désormais une page résolue, sans les tokens de présentation, à la place de la définition d'édition brute. Le simulateur Web rend les dimensions, couleurs, typographies et états finals.
+- L'administration propose les niveaux typographiques et les états des composants en plus des couleurs sémantiques.
+- Suppression de la relecture redondante des champs de sélection dans `sync()` au moment de l'autosave : les contrôles modifient déjà le modèle et la relecture pouvait écraser une modification d'une autre sélection.
+- Identité du simulateur Web corrigée pour les origines HTTP non sécurisées (identifiant aléatoire par `crypto.getRandomValues`).
+- Tests unitaires du résolveur et tests d'intégration API ajoutés (tokens invalides, chevauchements, navigation d'une page masquée).
+- Les simulateurs intégrés multi-groupes et l'affectation persistante des clients restent non implémentés. **Ne pas ouvrir un accès de changement de groupe non authentifié : le chemin actuel d'affectation est volontairement limité à `demo` en POC.**
+- Les tailles de police sont des niveaux serveur initiaux, à qualifier sur l'ESP32 physique ; l'absence de vraie police configurée sur ESP respecte D-019.
