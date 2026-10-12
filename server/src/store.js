@@ -1,8 +1,10 @@
 import { mkdir, readFile, rename, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { randomUUID } from 'node:crypto';
+import { fileURLToPath } from 'node:url';
 
 export function createJsonStore(path) {
+  if (path instanceof URL) path = fileURLToPath(path);
   let queue = Promise.resolve();
   async function load(fallback) {
     try { return JSON.parse(await readFile(path, 'utf8')); }
