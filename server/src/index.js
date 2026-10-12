@@ -2,9 +2,39 @@ import http from 'node:http';
 import { readFile } from 'node:fs/promises';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { WebSocketServer } from 'ws';
-import { randomUUID } from 'node:crypto';
+import { randomUUID, timingSafeEqual } from 'node:crypto';
+import { createJsonStore } from './store.js';
 
-export function createTouchDeckServer({ port = 3000, host = '0.0.0.0' } = {}) {
+export function createTouchDeckServer({ port = 3000, host = '0.0.0.0', dataFile = process.env.TOUCHDECK_DATA_FILE ?? new URL('../data/config.json', import.meta.url), adminToken = process.env.TOUCHDECK_ADMIN_TOKEN ?? '' } = {}) {
+  const store = createJsonStore(dataFile);
+  let ready = false;
+  async function initialize() {
+    if (ready) return;
+    const saved = await store.load(null);
+    if (saved) {
+      if (!Array.isArray(saved.groups) || !Array.isArray(saved.pageSets)) throw new Error('Invalid persisted configuration');
+      groups.clear(); pageSets.clear();
+      for (const group of saved.groups) groups.set(group.id, group);
+      for (const pageSet of saved.pageSets) pageSets.set(pageSet.id, pageSet);
+    }
+    ready = true;
+  }
+  function persist() { return store.save({ schemaVersion: 1, groups: [...groups.values()], pageSets: [...pageSets.values()] }); }
+  function authorized(request) {
+    if (!adminToken) return false;
+    const candidate = request.headers['x-touchdeck-admin-token'];
+    if (typeof candidate !== 'string') return false;
+    const a = Buffer.from(candidate), b = Buffer.from(adminToken);
+    return a.length === b.length && timingSafeEqual(a, b);
+  }
+  function broadcastConfig() {
+    for (const client of clients.values()) {
+      if (client.groupId && !groups.has(client.groupId)) { client.groupId = null; client.pageId = null; }
+      const pages = visiblePages(client.groupId);
+      if (!pages.some(page => page.id === client.pageId)) client.pageId = pages[0]?.id ?? null;
+      send(client, snapshot(client));
+    }
+  }
   const clients = new Map();
   const groups = new Map();
   const pageSets = new Map();
@@ -49,6 +79,47 @@ export function createTouchDeckServer({ port = 3000, host = '0.0.0.0' } = {}) {
       return;
     }
     if (request.method === 'GET' && url.pathname === '/api/health') return json(200, { ok: true, service: 'touchDeck' });
+    if (url.pathname === '/api/admin/config') {
+      if (!authorized(request)) return json(401, { error: 'admin_token_required' });
+      if (request.method === 'GET') return json(200, { groups: [...groups.values()], pageSets: [...pageSets.values()] });
+      if (request.method === 'PUT') {
+        try {
+          let body = '';
+          for await (const chunk of request) { body += chunk; if (body.length > 262144) return json(413, { error: 'too_large' }); }
+          const config = JSON.parse(body);
+          if (!Array.isArray(config.groups) || !Array.isArray(config.pageSets) || config.groups.length > 100 || config.pageSets.length > 100) return json(400, { error: 'invalid_config' });
+          const validId = id => typeof id === 'string' && /^[a-zA-Z0-9_-]{1,80}$/.test(id);
+          const sets = new Set();
+          for (const set of config.pageSets) {
+            if (!validId(set.id) || sets.has(set.id) || !profiles.has(set.profileId) || !Array.isArray(set.pages) || set.pages.length > 100) return json(400, { error: 'invalid_page_set' });
+            sets.add(set.id);
+            const ids = new Set();
+            const profile = profiles.get(set.profileId);
+            for (const page of set.pages) {
+              if (!validId(page.id) || ids.has(page.id) || typeof page.title !== 'string' || page.title.length > 120 || typeof page.visible !== 'boolean' || !Array.isArray(page.components) || page.components.length > 100) return json(400, { error: 'invalid_page' });
+              ids.add(page.id);
+              const components = new Set();
+              for (const item of page.components) {
+                if (!validId(item.id) || components.has(item.id) || !['Label','Button','Toggle','Icon','Gauge','Slider'].includes(item.type) || ![item.x,item.y,item.w,item.h].every(Number.isInteger) || item.x < 0 || item.y < 0 || item.w < 1 || item.h < 1 || item.x + item.w > profile.gridColumns || item.y + item.h > profile.gridRows || (item.text !== undefined && (typeof item.text !== 'string' || item.text.length > 250))) return json(400, { error: 'invalid_component' });
+                components.add(item.id);
+              }
+            }
+          }
+          const groupIds = new Set();
+          for (const group of config.groups) {
+            if (!validId(group.id) || groupIds.has(group.id) || typeof group.name !== 'string' || group.name.length > 120 || !sets.has(group.pageSetId)) return json(400, { error: 'invalid_group' });
+            groupIds.add(group.id);
+          }
+          await store.save({ schemaVersion: 1, groups: config.groups, pageSets: config.pageSets });
+          groups.clear(); pageSets.clear();
+          for (const set of config.pageSets) pageSets.set(set.id, set);
+          for (const group of config.groups) groups.set(group.id, group);
+          broadcastConfig();
+          return json(200, { ok: true });
+        } catch (error) { return json(400, { error: 'invalid_request' }); }
+      }
+      return json(405, { error: 'method_not_allowed' });
+    }
     if (request.method === 'GET' && url.pathname === '/api/bootstrap') return json(200, { profiles: [...profiles.values()], groups: [...groups.values()], pageSets: [...pageSets.values()] });
     return json(404, { error: 'not_found' });
   });
@@ -75,7 +146,7 @@ export function createTouchDeckServer({ port = 3000, host = '0.0.0.0' } = {}) {
         navigate(current, message.direction);
       } else if (message?.type === 'assign' && current && typeof message.groupId === 'string' && groups.has(message.groupId)) {
         // Temporary simulator-only assignment; authorization is required before exposing beyond local development.
-        if (host !== '127.0.0.1' && host !== '::1') { socket.send(JSON.stringify({ type: 'error', code: 'admin_required' })); return; }
+        if (message.groupId !== 'demo') { socket.send(JSON.stringify({ type: 'error', code: 'admin_required' })); return; }
         current.groupId = message.groupId;
         current.pageId = visiblePages(current.groupId)[0]?.id ?? null;
         send(current, snapshot(current));
@@ -87,7 +158,7 @@ export function createTouchDeckServer({ port = 3000, host = '0.0.0.0' } = {}) {
   });
   return {
     server, wss, clients,
-    async start() { await new Promise((resolve, reject) => { server.once('error', reject); server.listen(port, host, resolve); }); return server.address(); },
+    async start() { await initialize(); await new Promise((resolve, reject) => { server.once('error', reject); server.listen(port, host, resolve); }); return server.address(); },
     async stop() { for (const socket of wss.clients) socket.terminate(); await new Promise(resolve => wss.close(resolve)); await new Promise(resolve => server.close(resolve)); }
   };
 }
