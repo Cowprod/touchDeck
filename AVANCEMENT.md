@@ -21,7 +21,7 @@ Dernière mise à jour : 2026-10-12 (UTC)
 | TD-04 | Pages, navigation, rendu différentiel | NOT STARTED | QT-005 |
 | TD-05 | Ressources graphiques et cache | NOT STARTED | QT-006 |
 | TD-06 | OTA | NOT STARTED | QT-009 |
-| TD-07 | Serveur, administration et intégration V1 | NOT STARTED | Critères à détailler avant lancement |
+| TD-07 | Serveur, administration et intégration V1 | IN PROGRESS | API config persistante, navigation WS, autosave, thèmes résolus, panel multi-simulateurs, tests Node ; sources, enrolment et sécurisation admin à faire |
 
 ## Vérifications du 2026-10-12
 - Connecteur devMcp : projet `touchdeck` accessible ; 8 actions déclarées.
@@ -44,3 +44,13 @@ Dernière mise à jour : 2026-10-12 (UTC)
 - Inventorier sans altération le dossier local `touchDeck/`.
 - Définir ensuite TD-01 et son firmware de diagnostic minimal sur la base du matériel confirmé.
 - Conserver les logs de compilation, upload et série avec SHA exact et critères PASS/FAIL.
+
+## Réalisation serveur et administration — 2026-10-12
+- Audit détaillé des écarts dans `docs/AUDIT-CONFORMITE-2026-10-12.md`.
+- Grille : serveur rejette les chevauchements ; éditeur évite les collisions et recherche une place libre.
+- Rendu : résolution côté serveur des coordonnées en pixels, tokens de couleur, niveaux de police et états `active`/`disabled` (D-019/020/021/024).
+- Navigation : une page courante rendue invisible reste à l'écran jusqu'à la prochaine navigation.
+- Multi-simulateurs HTML intégrés à l'administration (D-026/027) : identités distinctes, affectation par groupe via API d'administration, navigation indépendante, ordre prioritaire des groupes en cours d'édition, mémorisation du panel en localStorage. **Affectation seulement runtime**, non persistée.
+- Tests automatiques renforcés : résolution graphique, API de configuration et collisions, visibilité, affectation de simulateurs, vérification de syntaxe JS des pages.
+- Mise en service : commit `7e2496ebf23df072481bf87951ca06d5e3ae516d` synchronisé, tests Node PASS ; service PM2 rechargé à l'étape précédente.
+- Reste : intégration des sources, enrolment des clients physiques, sécurité de l'administration (API actuellement sans authentification : usage POC LAN exclusivement), types complémentaires, validation dans un vrai navigateur et sur ESP32.
