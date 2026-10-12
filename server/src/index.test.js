@@ -246,3 +246,37 @@ test('parallel writes serialize revision checks and preserve a single winner',as
   assert.ok(['first','second'].includes(stored.pageSets[0].pages[0].title));
  }finally{await app.stop();await rm(dir,{recursive:true,force:true})}
 });
+
+test('built-in clock is available and streams independent fields to two labels',async()=>{
+ const {mkdtemp,rm}=await import('node:fs/promises');
+ const {tmpdir}=await import('node:os');
+ const {join}=await import('node:path');
+ const dir=await mkdtemp(join(tmpdir(),'touchdeck-clock-'));
+ const app=createTouchDeckServer({port:0,host:'127.0.0.1',dataFile:join(dir,'config.json')});
+ const {port}=await app.start();
+ const url='http://127.0.0.1:'+port+'/api/admin/config';
+ let socket;
+ try{
+  const config=await(await fetch(url)).json();
+  const clock=config.sources.find(source=>source.id==='clock');
+  assert.ok(clock);
+  assert.deepEqual(Object.keys(clock.descriptor.properties),['dd','mm','yyyy','hh','ii','ss']);
+  const page=config.pageSets[0].pages[0];
+  page.components[0].sourceId='clock';page.components[0].text='Heure ${hh}:${ii}:${ss}';
+  page.components[1].sourceId='clock';page.components[1].text='Date ${dd}/${mm}/${yyyy}';
+  assert.equal((await fetch(url,{method:'PUT',headers:{'content-type':'application/json'},body:JSON.stringify(config)})).status,200);
+  ({socket}=await connect(port,'web-sim-clock'));
+  const first=await waitPage(socket,{type:'assign',groupId:'demo'});
+  assert.match(first.page.components[0].text,/Heure \d{2}:\d{2}:\d{2}/);
+  assert.match(first.page.components[1].text,/Date \d{2}\/\d{2}\/\d{4}/);
+  const update=await new Promise((resolve,reject)=>{
+   const timer=setTimeout(()=>reject(Error('No clock tick')),2200);
+   const handle=raw=>{const msg=JSON.parse(raw.toString());if(msg.type==='component_update'&&msg.changes.length===2){clearTimeout(timer);socket.off('message',handle);resolve(msg)}};
+   socket.on('message',handle);
+  });
+  assert.match(update.changes[0].text,/Heure \d{2}:\d{2}:\d{2}/);
+  assert.match(update.changes[1].text,/Date \d{2}\/\d{2}\/\d{4}/);
+  const blocked=await fetch('http://127.0.0.1:'+port+'/api/sources/clock/values',{method:'PUT',headers:{'content-type':'application/json'},body:JSON.stringify({ss:'99'})});
+  assert.equal(blocked.status,403);
+ }finally{socket?.close();await app.stop();await rm(dir,{recursive:true,force:true})}
+});
