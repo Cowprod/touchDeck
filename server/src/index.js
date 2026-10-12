@@ -86,8 +86,13 @@ export function createTouchDeckServer({ port = 3000, host = '0.0.0.0', dataFile 
       return;
     }
     if (request.method === 'GET' && url.pathname === '/admin') {
-      try { const html = await readFile(fileURLToPath(new URL('../public/admin.html', import.meta.url))); response.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store', 'content-security-policy': "default-src 'self'; script-src 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; font-src 'self' https://cdnjs.cloudflare.com; connect-src 'self'" }); response.end(html); }
+      try { const html = await readFile(fileURLToPath(new URL('../public/admin.html', import.meta.url))); response.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store', 'content-security-policy': "default-src 'self'; script-src 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; font-src 'self' https://cdnjs.cloudflare.com; img-src 'self' data:; connect-src 'self' https://cdn.jsdelivr.net" }); response.end(html); }
       catch { json(500, { error: 'admin_ui_unavailable' }); }
+      return;
+    }
+    if (request.method === 'GET' && url.pathname === '/favicon.ico') {
+      response.writeHead(204, { 'cache-control': 'public, max-age=86400' });
+      response.end();
       return;
     }
     if (request.method === 'GET' && url.pathname === '/api/health') return json(200, { ok: true, service: 'touchDeck' });
