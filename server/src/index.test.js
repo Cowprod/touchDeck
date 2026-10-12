@@ -205,7 +205,7 @@ test('single-source placeholders resolve and stream differential updates without
  let socket;
  try{
   const config=await(await fetch(base+'/api/admin/config')).json();
-  config.sources=[{id:'sensor',name:'Sensor',origin:'manual',descriptor:{properties:{temperature:{type:'number',minimum:0,maximum:100}},actions:{},events:{}}}];
+  config.sources.push({id:'sensor',name:'Sensor',origin:'manual',descriptor:{properties:{temperature:{type:'number',minimum:0,maximum:100}},actions:{},events:{}}});
   const comp=config.pageSets[0].pages[0].components[0];comp.sourceId='sensor';comp.text='Temp: ${temperature} °C';
   const save=await fetch(base+'/api/admin/config',{method:'PUT',headers:{'content-type':'application/json'},body:JSON.stringify(config)});
   assert.equal(save.status,200);
