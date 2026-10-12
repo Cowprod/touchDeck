@@ -1,6 +1,6 @@
 import http from 'node:http';
 import { readFile } from 'node:fs/promises';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { WebSocketServer } from 'ws';
 import { randomUUID } from 'node:crypto';
 
@@ -91,7 +91,7 @@ export function createTouchDeckServer({ port = 3000, host = '127.0.0.1' } = {}) 
     async stop() { for (const socket of wss.clients) socket.terminate(); await new Promise(resolve => wss.close(resolve)); await new Promise(resolve => server.close(resolve)); }
   };
 }
-if (process.argv[1] && import.meta.url === new URL('file://' + process.argv[1]).href) {
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const app = createTouchDeckServer({ port: Number(process.env.PORT ?? 3000), host: process.env.HOST ?? '127.0.0.1' });
   app.start().then(address => console.log('touchDeck listening on', address)).catch(error => { console.error(error); process.exitCode = 1; });
 }
