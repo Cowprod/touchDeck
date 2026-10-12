@@ -53,6 +53,7 @@ test('POC admin API allows private-network edits and persists validated page con
     const changed = structuredClone(initial);
     changed.pageSets[0].pages[0].title = 'Updated';
     assert.equal((await fetch(url, { method: 'PUT', headers, body: JSON.stringify(changed) })).status, 200);
+    changed.revision+=1;
     const stored = JSON.parse(await readFile(file, 'utf8'));
     assert.equal(stored.pageSets[0].pages[0].title, 'Updated');
     changed.pageSets[0].pages[0].components[0].w = 99;
@@ -136,4 +137,25 @@ test('admin can assign two independent HTML simulators to existing groups',async
     assert.equal((await assign('web-sim-a','missing')).status,400);
     assert.equal((await assign('other-id','demo')).status,404);
   }finally{a?.close();b?.close();await app.stop();await rm(dir,{recursive:true,force:true})}
+});
+
+test('concurrent editors cannot silently overwrite a newer revision',async()=>{
+  const {mkdtemp,rm}=await import('node:fs/promises');
+  const {tmpdir}=await import('node:os');
+  const {join}=await import('node:path');
+  const dir=await mkdtemp(join(tmpdir(),'touchdeck-concurrency-'));
+  const app=createTouchDeckServer({port:0,host:'127.0.0.1',dataFile:join(dir,'config.json')});
+  const {port}=await app.start();
+  const url='http://127.0.0.1:'+port+'/api/admin/config';
+  try{
+    const stale=await(await fetch(url)).json();
+    const first=structuredClone(stale);first.pageSets[0].pages[0].title='First editor';
+    const put=body=>fetch(url,{method:'PUT',headers:{'content-type':'application/json'},body:JSON.stringify(body)});
+    assert.equal((await put(first)).status,200);
+    stale.pageSets[0].pages[0].title='Second editor';
+    const second=await put(stale);
+    assert.equal(second.status,409);
+    assert.equal((await second.json()).error,'config_conflict');
+    assert.equal((await(await fetch(url)).json()).pageSets[0].pages[0].title,'First editor');
+  }finally{await app.stop();await rm(dir,{recursive:true,force:true})}
 });
