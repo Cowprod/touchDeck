@@ -17,3 +17,11 @@ test('simulator sorting does not unconditionally reinsert live iframes',async()=
  assert.match(sort,/container\.children\[i\]!==desired\[i\]/);
  assert.doesNotMatch(sort,/for\s*\(const card of cards\)\s*container\.append\(card\)/);
 });
+
+test('simulator exposes native-scale zoom 1, 2, 3 without modifying device coordinates',async()=>{
+ const html=await readFile(new URL('../public/index.html',import.meta.url),'utf8');
+ for(const factor of [1,2,3])assert.match(html,new RegExp('<option value="'+factor+'">×'+factor+'</option>'));
+ assert.match(html,/screen\.style\.transform='scale\('/);
+ assert.match(html,/zoomStage\.style\.width=w\*scale/);
+ assert.match(html,/element\.style\.left=item\.x\+'px'/);
+});
