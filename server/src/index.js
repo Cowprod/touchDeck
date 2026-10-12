@@ -8,18 +8,20 @@ import { resolvePage, FONT_SIZES } from './theme.js';
 export function createTouchDeckServer({ port = 3000, host = '0.0.0.0', dataFile = process.env.TOUCHDECK_DATA_FILE ?? new URL('../data/config.json', import.meta.url) } = {}) {
   const store = createJsonStore(dataFile);
   let ready = false;
+  let configRevision = 0;
   async function initialize() {
     if (ready) return;
     const saved = await store.load(null);
     if (saved) {
       if (!Array.isArray(saved.groups) || !Array.isArray(saved.pageSets)) throw new Error('Invalid persisted configuration');
+      configRevision = Number.isSafeInteger(saved.revision) && saved.revision >= 0 ? saved.revision : 0;
       groups.clear(); pageSets.clear();
       for (const group of saved.groups) groups.set(group.id, group);
       for (const pageSet of saved.pageSets) pageSets.set(pageSet.id, pageSet);
     }
     ready = true;
   }
-  function persist() { return store.save({ schemaVersion: 1, groups: [...groups.values()], pageSets: [...pageSets.values()] }); }
+  function persist() { return store.save({ schemaVersion: 1, revision: configRevision, groups: [...groups.values()], pageSets: [...pageSets.values()] }); }
   function broadcastConfig() {
     for (const client of clients.values()) {
       if (client.groupId && !groups.has(client.groupId)) { client.groupId = null; client.pageId = null; }
@@ -99,12 +101,14 @@ export function createTouchDeckServer({ port = 3000, host = '0.0.0.0', dataFile 
     }
     if (request.method === 'GET' && url.pathname === '/api/health') return json(200, { ok: true, service: 'touchDeck' });
     if (url.pathname === '/api/admin/config') {
-      if (request.method === 'GET') return json(200, { groups: [...groups.values()], pageSets: [...pageSets.values()] });
+      if (request.method === 'GET') return json(200, { revision: configRevision, groups: [...groups.values()], pageSets: [...pageSets.values()] });
       if (request.method === 'PUT') {
         try {
           let body = '';
           for await (const chunk of request) { body += chunk; if (body.length > 262144) return json(413, { error: 'too_large' }); }
           const config = JSON.parse(body);
+          if (!Number.isSafeInteger(config.revision) || config.revision !== configRevision)
+            return json(409, { error: 'config_conflict', currentRevision: configRevision });
           if (!Array.isArray(config.groups) || !Array.isArray(config.pageSets) || config.groups.length > 100 || config.pageSets.length > 100) return json(400, { error: 'invalid_config' });
           const validId = id => typeof id === 'string' && /^[a-zA-Z0-9_-]{1,80}$/.test(id);
           const themeTokens = new Set(['primary','secondary','success','warning','danger','info','light','dark']);
@@ -144,12 +148,13 @@ export function createTouchDeckServer({ port = 3000, host = '0.0.0.0', dataFile 
             if (!validId(group.id) || groupIds.has(group.id) || typeof group.name !== 'string' || group.name.length > 120 || !sets.has(group.pageSetId)) return json(400, { error: 'invalid_group' });
             groupIds.add(group.id);
           }
-          await store.save({ schemaVersion: 1, groups: config.groups, pageSets: config.pageSets });
+          await store.save({ schemaVersion: 1, revision: configRevision + 1, groups: config.groups, pageSets: config.pageSets });
+          configRevision += 1;
           groups.clear(); pageSets.clear();
           for (const set of config.pageSets) pageSets.set(set.id, set);
           for (const group of config.groups) groups.set(group.id, group);
           broadcastConfig();
-          return json(200, { ok: true });
+          return json(200, { ok: true, revision: configRevision });
         } catch (error) { return json(400, { error: 'invalid_request' }); }
       }
       return json(405, { error: 'method_not_allowed' });
