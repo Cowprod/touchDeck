@@ -111,3 +111,29 @@ test('invisible current page stays until client navigates',async()=>{
     assert.equal((await waitPage(socket,{type:'navigate',direction:'next'})).page.id,'second');
   }finally{socket?.close();await app.stop();await rm(dir,{recursive:true,force:true})}
 });
+
+test('admin can assign two independent HTML simulators to existing groups',async()=>{
+  const {mkdtemp,rm}=await import('node:fs/promises');
+  const {tmpdir}=await import('node:os');
+  const {join}=await import('node:path');
+  const dir=await mkdtemp(join(tmpdir(),'touchdeck-simulators-'));
+  const app=createTouchDeckServer({port:0,host:'127.0.0.1',dataFile:join(dir,'config.json')});
+  const {port}=await app.start();
+  let a,b;
+  const assign=(id,groupId)=>fetch('http://127.0.0.1:'+port+'/api/admin/clients',{method:'PUT',headers:{'content-type':'application/json'},body:JSON.stringify({clientId:id,groupId})});
+  try{
+    a=(await connect(port,'web-sim-a')).socket;
+    b=(await connect(port,'web-sim-b')).socket;
+    const aAssigned=new Promise(resolve=>{const handle=raw=>{const msg=JSON.parse(raw.toString());if(msg.type==='page'&&msg.groupId==='demo'){a.off('message',handle);resolve(msg)}};a.on('message',handle)});
+    assert.equal((await assign('web-sim-a','demo')).status,200);
+    assert.equal((await aAssigned).page.id,'home');
+    assert.equal((await waitPage(a,{type:'navigate',direction:'next'})).page.id,'second');
+    assert.equal(app.clients.get('web-sim-b').pageId,null);
+    const bAssigned=new Promise(resolve=>{const handle=raw=>{const msg=JSON.parse(raw.toString());if(msg.type==='page'&&msg.groupId==='demo'){b.off('message',handle);resolve(msg)}};b.on('message',handle)});
+    assert.equal((await assign('web-sim-b','demo')).status,200);
+    assert.equal((await bAssigned).page.id,'home');
+    assert.equal(app.clients.get('web-sim-a').pageId,'second');
+    assert.equal((await assign('web-sim-a','missing')).status,400);
+    assert.equal((await assign('other-id','demo')).status,404);
+  }finally{a?.close();b?.close();await app.stop();await rm(dir,{recursive:true,force:true})}
+});
