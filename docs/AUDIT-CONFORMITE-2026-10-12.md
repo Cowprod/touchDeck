@@ -37,3 +37,9 @@ Comparaison du code `server/src/index.js` et `server/public/admin.html` avec `do
 3. Modèle de thème conforme aux D-019/D-020/D-021/D-024, résolution serveur et contrôles d'édition.
 4. Modèle clients/groupes et panel de simulateurs D-026/D-027/D-028.
 5. Sources, bindings, composants restants et validation sur ESP32.
+
+## Avancement complémentaire — 2026-10-12
+- Prévention des collisions dans l'éditeur lors des déplacements, redimensionnements et modifications de coordonnées ; insertion automatique dans un emplacement libre (ou refus si grille pleine).
+- Conservation de la page courante devenue invisible dans la diffusion des modifications (D-030) ; suppression et navigation conservent leurs comportements distincts.
+- Édition des tokens sémantiques de fond de page, de fond et de couleur de texte des composants ; aperçu et validation des huit tokens côté serveur. **Il reste à résoudre les couleurs en propriétés finales dans le contrat device, à traiter les niveaux typographiques et les états active/disabled.**
+- Les tests existants ne couvrent toujours pas les manipulations graphiques ; ne pas considérer l'éditeur comme qualifié.
