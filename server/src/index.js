@@ -92,6 +92,6 @@ export function createTouchDeckServer({ port = 3000, host = '0.0.0.0' } = {}) {
   };
 }
 if (process.env.pm_id !== undefined || (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href)) {
-  const app = createTouchDeckServer({ port: Number(process.env.PORT ?? 3000), host: process.env.HOST ?? '0.0.0.0' });
+  const app = createTouchDeckServer({ port: Number(process.env.PORT ?? 3000), host: '0.0.0.0' });
   app.start().then(address => console.log('touchDeck listening on', address)).catch(error => { console.error(error); process.exitCode = 1; });
 }
