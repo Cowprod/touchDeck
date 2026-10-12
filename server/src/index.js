@@ -154,6 +154,25 @@ export function createTouchDeckServer({ port = 3000, host = '0.0.0.0', dataFile 
       }
       return json(405, { error: 'method_not_allowed' });
     }
+    if (url.pathname === '/api/admin/clients') {
+      if (request.method === 'GET') return json(200,{ clients:[...clients.values()].map(client=>({id:client.id,groupId:client.groupId,pageId:client.pageId,online:client.sockets.size>0})) });
+      if (request.method === 'PUT') {
+        try {
+          let body='';for await(const chunk of request){body+=chunk;if(body.length>4096)return json(413,{error:'too_large'})}
+          const data=JSON.parse(body);
+          if(typeof data.clientId!=='string'||!Object.hasOwn(data,'groupId')||(data.groupId!==null&&!groups.has(data.groupId)))return json(400,{error:'invalid_assignment'});
+          const client=clients.get(data.clientId);
+          if(!client)return json(404,{error:'client_not_found'});
+          if(!client.id.startsWith('web-sim-'))return json(403,{error:'only_web_simulators_supported'});
+          client.groupId=data.groupId;
+          client.pageId=visiblePages(client.groupId)[0]?.id??null;
+          send(client,{type:'welcome',clientId:client.id,groupId:client.groupId});
+          send(client,snapshot(client));
+          return json(200,{ok:true});
+        }catch{return json(400,{error:'invalid_request'})}
+      }
+      return json(405,{error:'method_not_allowed'});
+    }
     if (request.method === 'GET' && url.pathname === '/api/bootstrap') return json(200, { profiles: [...profiles.values()], groups: [...groups.values()], pageSets: [...pageSets.values()] });
     return json(404, { error: 'not_found' });
   });
