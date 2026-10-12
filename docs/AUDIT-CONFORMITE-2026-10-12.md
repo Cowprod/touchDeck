@@ -60,3 +60,12 @@ Comparaison du code `server/src/index.js` et `server/public/admin.html` avec `do
 - Le WebSocket `assign` public reste limité à la démo ; le nouveau chemin d'affectation est côté API admin POC, **encore non authentifiée**. Ne pas exposer le serveur hors du LAN de développement tant que l'authentification/autorisation ne sont pas implémentées.
 - Test d'intégration des deux simulateurs et de leur navigation indépendante, tests de syntaxe JS des pages intégrés à la suite Node.
 - Pas de test d'interaction via un vrai navigateur : la fonctionnalité demeure à qualifier visuellement.
+
+## Avancement complémentaire — sécurité des écritures, sources et binding P0
+- Configuration persistée avec révision optimiste et mutations HTTP sérialisées jusqu'à l'écriture atomique. Une modification concurrente de l'administration reçoit `409 config_conflict` au lieu d'écraser une autre.
+- Sources manuelles/importées avec métadonnées `properties/actions/events`, réimport à identifiant stable ; UI et API initiales. Les sources importées sont en lecture seule hors réimport.
+- Composants liés à **une seule source** et variables de texte substituées côté serveur depuis l'état runtime ; valeurs manquantes vides. `component_update` par WebSocket uniquement vers les pages concernées et avec révision.
+- File FIFO D-037 testée séparément pour plusieurs clients, erreurs et timeouts ; **non connectée à un exécuteur d'actions externe**.
+- Contrat expérimental détaillé : `docs/CONTRAT-BINDINGS-P0.md`. La notation des placeholders constitue une convention d'implémentation de POC, pas une décision produit déjà acceptée.
+- Les accès administrateur et l'API de push restent **sans authentification** : usage strictement local/lab, pas de déploiement public.
+- Couverture serveur/JS syntax : 17 tests Node PASS ; tests navigateur réel et firmware encore absents.
