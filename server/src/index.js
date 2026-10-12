@@ -4,6 +4,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { WebSocketServer } from 'ws';
 import { createJsonStore } from './store.js';
 import { resolvePage, FONT_SIZES } from './theme.js';
+import { validateSource, validateDescriptor } from './sources.js';
 
 export function createTouchDeckServer({ port = 3000, host = '0.0.0.0', dataFile = process.env.TOUCHDECK_DATA_FILE ?? new URL('../data/config.json', import.meta.url) } = {}) {
   const store = createJsonStore(dataFile);
@@ -18,10 +19,11 @@ export function createTouchDeckServer({ port = 3000, host = '0.0.0.0', dataFile 
       groups.clear(); pageSets.clear();
       for (const group of saved.groups) groups.set(group.id, group);
       for (const pageSet of saved.pageSets) pageSets.set(pageSet.id, pageSet);
+      sources.clear();for(const source of saved.sources??[])sources.set(source.id,source);
     }
     ready = true;
   }
-  function persist() { return store.save({ schemaVersion: 1, revision: configRevision, groups: [...groups.values()], pageSets: [...pageSets.values()] }); }
+  function persist() { return store.save({ schemaVersion: 1, revision: configRevision, groups: [...groups.values()], pageSets: [...pageSets.values()], sources:[...sources.values()] }); }
   function broadcastConfig() {
     for (const client of clients.values()) {
       if (client.groupId && !groups.has(client.groupId)) { client.groupId = null; client.pageId = null; }
@@ -34,6 +36,7 @@ export function createTouchDeckServer({ port = 3000, host = '0.0.0.0', dataFile 
   const clients = new Map();
   const groups = new Map();
   const pageSets = new Map();
+  const sources = new Map();
   const profiles = new Map([['round-240', { id: 'round-240', width: 240, height: 240, shape: 'round', gridColumns: 8, gridRows: 8 }]]);
   const exampleSet = { id: 'demo', profileId: 'round-240', pages: [
     { id: 'home', title: 'Accueil', visible: true, components: [
@@ -101,7 +104,7 @@ export function createTouchDeckServer({ port = 3000, host = '0.0.0.0', dataFile 
     }
     if (request.method === 'GET' && url.pathname === '/api/health') return json(200, { ok: true, service: 'touchDeck' });
     if (url.pathname === '/api/admin/config') {
-      if (request.method === 'GET') return json(200, { revision: configRevision, groups: [...groups.values()], pageSets: [...pageSets.values()] });
+      if (request.method === 'GET') return json(200, { revision: configRevision, groups: [...groups.values()], pageSets: [...pageSets.values()], sources:[...sources.values()] });
       if (request.method === 'PUT') {
         try {
           let body = '';
@@ -110,6 +113,16 @@ export function createTouchDeckServer({ port = 3000, host = '0.0.0.0', dataFile 
           if (!Number.isSafeInteger(config.revision) || config.revision !== configRevision)
             return json(409, { error: 'config_conflict', currentRevision: configRevision });
           if (!Array.isArray(config.groups) || !Array.isArray(config.pageSets) || config.groups.length > 100 || config.pageSets.length > 100) return json(400, { error: 'invalid_config' });
+          const requestedSources = config.sources===undefined?[...sources.values()]:config.sources;
+          if(!Array.isArray(requestedSources)||requestedSources.length>100)return json(400,{error:'invalid_sources'});
+          const sourceIds=new Set();
+          for(const source of requestedSources){
+            if(!validateSource(source)||sourceIds.has(source.id))return json(400,{error:'invalid_source'});
+            sourceIds.add(source.id);
+            const prior=sources.get(source.id);
+            if(source.origin==='imported'&&(!prior||JSON.stringify(prior.descriptor)!==JSON.stringify(source.descriptor)))
+              return json(403,{error:'source_import_only',sourceId:source.id});
+          }
           const validId = id => typeof id === 'string' && /^[a-zA-Z0-9_-]{1,80}$/.test(id);
           const themeTokens = new Set(['primary','secondary','success','warning','danger','info','light','dark']);
           const validTheme = value => value === undefined || themeTokens.has(value);
@@ -148,16 +161,32 @@ export function createTouchDeckServer({ port = 3000, host = '0.0.0.0', dataFile 
             if (!validId(group.id) || groupIds.has(group.id) || typeof group.name !== 'string' || group.name.length > 120 || !sets.has(group.pageSetId)) return json(400, { error: 'invalid_group' });
             groupIds.add(group.id);
           }
-          await store.save({ schemaVersion: 1, revision: configRevision + 1, groups: config.groups, pageSets: config.pageSets });
+          await store.save({ schemaVersion: 1, revision: configRevision + 1, groups: config.groups, pageSets: config.pageSets, sources:requestedSources });
           configRevision += 1;
           groups.clear(); pageSets.clear();
           for (const set of config.pageSets) pageSets.set(set.id, set);
           for (const group of config.groups) groups.set(group.id, group);
+          sources.clear();for(const source of requestedSources)sources.set(source.id,source);
           broadcastConfig();
           return json(200, { ok: true, revision: configRevision });
         } catch (error) { return json(400, { error: 'invalid_request' }); }
       }
       return json(405, { error: 'method_not_allowed' });
+    }
+    if (url.pathname === '/api/admin/sources/import' && request.method === 'PUT') {
+      try {
+        let body='';for await(const chunk of request){body+=chunk;if(body.length>131072)return json(413,{error:'too_large'})}
+        const data=JSON.parse(body);
+        if(!Number.isSafeInteger(data.revision)||data.revision!==configRevision)return json(409,{error:'config_conflict',currentRevision:configRevision});
+        const idOk=typeof data.id==='string'&&/^[a-zA-Z0-9_-]{1,80}$/.test(data.id);
+        if(!idOk||!validateDescriptor(data.descriptor)||typeof data.name!=='string'||!data.name.length||data.name.length>120)return json(400,{error:'invalid_descriptor'});
+        if(!sources.has(data.id)&&sources.size>=100)return json(400,{error:'source_limit'});
+        const source={id:data.id,name:data.name,origin:'imported',descriptor:data.descriptor};
+        const nextSources=[...sources.values()].filter(item=>item.id!==data.id).concat(source);
+        await store.save({schemaVersion:1,revision:configRevision+1,groups:[...groups.values()],pageSets:[...pageSets.values()],sources:nextSources});
+        configRevision+=1;sources.set(data.id,source);
+        return json(200,{ok:true,revision:configRevision,source});
+      }catch{return json(400,{error:'invalid_request'})}
     }
     if (url.pathname === '/api/admin/clients') {
       if (request.method === 'GET') return json(200,{ clients:[...clients.values()].map(client=>({id:client.id,groupId:client.groupId,pageId:client.pageId,online:client.sockets.size>0})) });
