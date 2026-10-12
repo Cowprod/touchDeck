@@ -53,3 +53,10 @@ Comparaison du code `server/src/index.js` et `server/public/admin.html` avec `do
 - Tests unitaires du résolveur et tests d'intégration API ajoutés (tokens invalides, chevauchements, navigation d'une page masquée).
 - Les simulateurs intégrés multi-groupes et l'affectation persistante des clients restent non implémentés. **Ne pas ouvrir un accès de changement de groupe non authentifié : le chemin actuel d'affectation est volontairement limité à `demo` en POC.**
 - Les tailles de police sont des niveaux serveur initiaux, à qualifier sur l'ESP32 physique ; l'absence de vraie police configurée sur ESP respecte D-019.
+
+## Avancement complémentaire — simulateurs D-026/D-027
+- Panel multi-simulateurs ajouté dans `admin.html` avec un iframe/clientId distinct pour chaque simulateur, navigation indépendante, choix du groupe, priorisation des cartes relevant du groupe édité et mémorisation de la composition du panel en localStorage.
+- Endpoint d'administration `/api/admin/clients` pour lister les clients runtime et affecter **uniquement** les simulateurs HTML (`web-sim-*`) à un groupe ; les affectations runtime n'ont pas encore la persistance de l'inventaire client prévue pour la V1.
+- Le WebSocket `assign` public reste limité à la démo ; le nouveau chemin d'affectation est côté API admin POC, **encore non authentifiée**. Ne pas exposer le serveur hors du LAN de développement tant que l'authentification/autorisation ne sont pas implémentées.
+- Test d'intégration des deux simulateurs et de leur navigation indépendante, tests de syntaxe JS des pages intégrés à la suite Node.
+- Pas de test d'interaction via un vrai navigateur : la fonctionnalité demeure à qualifier visuellement.
