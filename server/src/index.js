@@ -11,6 +11,12 @@ export function createTouchDeckServer({ port = 3000, host = '0.0.0.0', dataFile 
   const store = createJsonStore(dataFile);
   let ready = false;
   let configRevision = 0;
+  let mutationTail=Promise.resolve();
+  function serializeMutation(operation){
+    const task=mutationTail.catch(()=>{}).then(operation);
+    mutationTail=task.catch(()=>{});
+    return task;
+  }
   async function initialize() {
     if (ready) return;
     const saved = await store.load(null);
@@ -108,7 +114,7 @@ export function createTouchDeckServer({ port = 3000, host = '0.0.0.0', dataFile 
     if (request.method === 'GET' && url.pathname === '/api/health') return json(200, { ok: true, service: 'touchDeck' });
     if (url.pathname === '/api/admin/config') {
       if (request.method === 'GET') return json(200, { revision: configRevision, groups: [...groups.values()], pageSets: [...pageSets.values()], sources:[...sources.values()] });
-      if (request.method === 'PUT') {
+      if (request.method === 'PUT') return serializeMutation(async()=>{
         try {
           let body = '';
           for await (const chunk of request) { body += chunk; if (body.length > 262144) return json(413, { error: 'too_large' }); }
@@ -177,10 +183,10 @@ export function createTouchDeckServer({ port = 3000, host = '0.0.0.0', dataFile 
           broadcastConfig();
           return json(200, { ok: true, revision: configRevision });
         } catch (error) { return json(400, { error: 'invalid_request' }); }
-      }
+      });
       return json(405, { error: 'method_not_allowed' });
     }
-    if (url.pathname === '/api/admin/sources/import' && request.method === 'PUT') {
+    if (url.pathname === '/api/admin/sources/import' && request.method === 'PUT') return serializeMutation(async()=>{
       try {
         let body='';for await(const chunk of request){body+=chunk;if(body.length>131072)return json(413,{error:'too_large'})}
         const data=JSON.parse(body);
@@ -194,7 +200,7 @@ export function createTouchDeckServer({ port = 3000, host = '0.0.0.0', dataFile 
         configRevision+=1;sources.set(data.id,source);sourceValues.delete(data.id);broadcastConfig();
         return json(200,{ok:true,revision:configRevision,source});
       }catch{return json(400,{error:'invalid_request'})}
-    }
+    });
     const sourcePushMatch=/^\/api\/sources\/([a-zA-Z0-9_-]{1,80})\/values$/.exec(url.pathname);
     if(sourcePushMatch&&request.method==='PUT'){
       const source=sources.get(sourcePushMatch[1]);
