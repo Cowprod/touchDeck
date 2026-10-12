@@ -4,7 +4,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { WebSocketServer } from 'ws';
 import { createJsonStore } from './store.js';
 
-export function createTouchDeckServer({ port = 3000, host = '0.0.0.0', dataFile = process.env.TOUCHDECK_DATA_FILE ?? new URL('../data/config.json', import.meta.url), } = {}) {
+export function createTouchDeckServer({ port = 3000, host = '0.0.0.0', dataFile = process.env.TOUCHDECK_DATA_FILE ?? new URL('../data/config.json', import.meta.url) } = {}) {
   const store = createJsonStore(dataFile);
   let ready = false;
   async function initialize() {
@@ -65,13 +65,28 @@ export function createTouchDeckServer({ port = 3000, host = '0.0.0.0', dataFile 
   const server = http.createServer(async (request, response) => {
     const url = new URL(request.url, 'http://localhost');
     const json = (status, body) => { response.writeHead(status, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' }); response.end(JSON.stringify(body)); };
+    if (request.method === 'GET' && url.pathname.startsWith('/assets/')) {
+      const assets = {
+        '/assets/quartz/bootstrap.min.css': ['../node_modules/bootswatch/dist/quartz/bootstrap.min.css', 'text/css; charset=utf-8'],
+        '/assets/fontawesome/css/all.min.css': ['../node_modules/@fortawesome/fontawesome-free/css/all.min.css', 'text/css; charset=utf-8']
+      };
+      const fontMatch = /^\/assets\/fontawesome\/webfonts\/(fa-(?:solid-900|regular-400|brands-400)\.(?:woff2|ttf))$/.exec(url.pathname);
+      const asset = assets[url.pathname] ?? (fontMatch ? ['../node_modules/@fortawesome/fontawesome-free/webfonts/' + fontMatch[1], fontMatch[1].endsWith('.woff2') ? 'font/woff2' : 'font/ttf'] : null);
+      if (!asset) return json(404, { error: 'asset_not_found' });
+      try {
+        const bytes = await readFile(fileURLToPath(new URL(asset[0], import.meta.url)));
+        response.writeHead(200, { 'content-type': asset[1], 'cache-control': 'public, max-age=86400', 'x-content-type-options': 'nosniff' });
+        response.end(bytes);
+      } catch { json(500, { error: 'asset_unavailable' }); }
+      return;
+    }
     if (request.method === 'GET' && url.pathname === '/') {
       try { const html = await readFile(fileURLToPath(new URL('../public/index.html', import.meta.url))); response.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store', 'content-security-policy': "default-src 'self'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; connect-src 'self' ws: wss:" }); response.end(html); }
       catch { json(500, { error: 'ui_unavailable' }); }
       return;
     }
     if (request.method === 'GET' && url.pathname === '/admin') {
-      try { const html = await readFile(fileURLToPath(new URL('../public/admin.html', import.meta.url))); response.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store', 'content-security-policy': "default-src 'self'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; connect-src 'self'" }); response.end(html); }
+      try { const html = await readFile(fileURLToPath(new URL('../public/admin.html', import.meta.url))); response.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store', 'content-security-policy': "default-src 'self'; script-src 'unsafe-inline'; style-src 'self' 'unsafe-inline'; font-src 'self'; connect-src 'self'" }); response.end(html); }
       catch { json(500, { error: 'admin_ui_unavailable' }); }
       return;
     }
