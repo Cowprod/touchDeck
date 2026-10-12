@@ -25,7 +25,9 @@ main{max-width:1280px}.preview{width:240px;height:240px;position:relative;overfl
 <section class="col-lg-6"><div class="card h-100"><div class="card-header">Composants de la page</div><div class="card-body">
 <div class="input-group mb-3"><span class="input-group-text field-label">Composant</span><select class="form-select" id="component"></select><button class="btn btn-danger" id="deleteComponent" title="Supprimer le composant"><i class="fa-solid fa-trash"></i></button></div>
 <div class="input-group mb-3"><span class="input-group-text field-label">Type</span><input class="form-control" id="componentType" readonly></div>
+<div class="input-group mb-3"><span class="input-group-text field-label">Source</span><select class="form-select" id="componentSource"></select></div>
 <div class="input-group mb-3"><span class="input-group-text field-label">Texte</span><input class="form-control" id="componentText" maxlength="250"></div>
+<div class="form-text mb-3">Texte dynamique : insérer des variables de cette source sous la forme ${variable}. Une valeur absente est affichée vide.</div>
 <div class="input-group mb-3"><span class="input-group-text field-label">Fond</span><select class="form-select" id="componentBg"><option value="">Par défaut</option><option value="primary">primary</option><option value="secondary">secondary</option><option value="success">success</option><option value="warning">warning</option><option value="danger">danger</option><option value="info">info</option><option value="light">light</option><option value="dark">dark</option></select></div>
 <div class="input-group mb-3"><span class="input-group-text field-label">Texte</span><select class="form-select" id="componentFg"><option value="">Par défaut</option><option value="primary">primary</option><option value="secondary">secondary</option><option value="success">success</option><option value="warning">warning</option><option value="danger">danger</option><option value="info">info</option><option value="light">light</option><option value="dark">dark</option></select></div>
 <div class="input-group mb-3"><span class="input-group-text field-label">Taille texte</span><select class="form-select" id="componentFont"><option value="">Normale</option><option value="small">Petite</option><option value="normal">Normale</option><option value="large">Grande</option></select></div>
@@ -66,7 +68,7 @@ function refreshSet(selectedPage){const s=currentSet();$('profile').value=s?.pro
 function refreshPage(){const p=currentPage();$('pageTitle').value=p?.title??'';$('visible').checked=!!p?.visible;$('pageBg').value=p?.background??'';$('components').value=JSON.stringify(p?.components??[],null,2);refreshComponents();renderPreview()}
 function currentComponent(){return currentPage()?.components.find(x=>x.id===$('component').value)}
 function refreshComponents(selected){const p=currentPage();options($('component'),(p?.components??[]).map(x=>({id:x.id,label:x.type+' — '+(x.text??x.id)})),selected??$('component').value);refreshComponent()}
-function refreshComponent(){const item=currentComponent();for(const div of $('preview').children)div.classList.toggle('selected',div.title==='Déplacer ou redimensionner '+item?.id);for(const key of ['Type','Text','X','Y','W','H']){$('component'+key).value=item?.[key==='Type'?'type':key==='Text'?'text':key.toLowerCase()]??'';$('component'+key).disabled=!item}$('componentBg').value=item?.background??'';$('componentFg').value=item?.color??'';$('componentBg').disabled=!item;$('componentFg').disabled=!item;$('componentFont').value=item?.fontSize??'';$('componentActive').checked=item?.active===true;$('componentDisabled').checked=item?.disabled===true;for(const id of ['componentFont','componentActive','componentDisabled'])$(id).disabled=!item;$('deleteComponent').disabled=!item}
+function refreshComponent(){const item=currentComponent();for(const div of $('preview').children)div.classList.toggle('selected',div.title==='Déplacer ou redimensionner '+item?.id);for(const key of ['Type','Text','X','Y','W','H']){$('component'+key).value=item?.[key==='Type'?'type':key==='Text'?'text':key.toLowerCase()]??'';$('component'+key).disabled=!item}$('componentBg').value=item?.background??'';$('componentFg').value=item?.color??'';$('componentBg').disabled=!item;$('componentFg').disabled=!item;$('componentFont').value=item?.fontSize??'';$('componentActive').checked=item?.active===true;$('componentDisabled').checked=item?.disabled===true;for(const id of ['componentFont','componentActive','componentDisabled'])$(id).disabled=!item;options($('componentSource'),[{id:'',label:'Statique (aucune source)'},...(config?.sources??[]).map(source=>({id:source.id,label:source.name}))],item?.sourceId??'');$('componentSource').disabled=!item;$('deleteComponent').disabled=!item}
 function overlaps(page,candidate,exceptId){return (page?.components??[]).some(other=>other.id!==exceptId&&candidate.x<other.x+other.w&&candidate.x+candidate.w>other.x&&candidate.y<other.y+other.h&&candidate.y+candidate.h>other.y)}
 function freePlacement(page,w,h){for(let y=0;y<=8-h;y++)for(let x=0;x<=8-w;x++)if(!overlaps(page,{x,y,w,h}))return {x,y,w,h};return null}
 function renderPreview(){
@@ -140,6 +142,7 @@ $('deletePage').onclick=()=>{const s=currentSet();if(!s)return status('Aucun jeu
 $('addLabel').onclick=()=>addComponent('Label');$('addButton').onclick=()=>addComponent('Button');$('addToggle').onclick=()=>addComponent('Toggle');
 $('component').onchange=refreshComponent;
 $('deleteComponent').onclick=()=>{const p=currentPage(),item=currentComponent();if(!p||!item)return status('Aucun composant sélectionné',true);p.components=p.components.filter(x=>x.id!==item.id);$('components').value=JSON.stringify(p.components,null,2);refreshComponents();renderPreview();dirty(null)};
+$('componentSource').onchange=()=>{const item=currentComponent();if(!item)return;if($('componentSource').value)item.sourceId=$('componentSource').value;else delete item.sourceId;$('components').value=JSON.stringify(currentPage().components,null,2);renderPreview();dirty($('componentSource'))};
 $('componentText').oninput=()=>updateComponent('text',$('componentText').value,$('componentText'));
 for(const key of ['X','Y','W','H'])$('component'+key).onchange=()=>updateComponent(key.toLowerCase(),Number($('component'+key).value),$('component'+key));
 $('profile').onchange=()=>{if(currentSet()){currentSet().profileId=$('profile').value;dirty($('profile'))}};
@@ -149,7 +152,7 @@ $('source').onchange=refreshSource;
 $('addSource').onclick=()=>{
  if(!config||!Array.isArray(config.sources))return status('Configuration des sources indisponible',true);
  const id='source-'+newId();config.sources.push({id,name:'Nouvelle source',origin:'manual',descriptor:{properties:{},actions:{},events:{}}});
- refreshSources(id);dirty(null);
+ refreshSources(id);refreshComponent();dirty(null);
 };
 $('saveSource').onclick=()=>{
  const source=currentSource();if(!source||source.origin!=='manual')return status('Source importée en lecture seule',true);
@@ -164,7 +167,7 @@ $('importSource').onclick=async()=>{
  try{
   const response=await fetch('/api/admin/sources/import',{method:'PUT',headers:{'content-type':'application/json'},body:JSON.stringify({id,name,descriptor,revision:config.revision})});
   const data=await response.json();if(!response.ok)throw Error(data.error??'HTTP '+response.status);
-  config.revision=data.revision;config.sources=config.sources.filter(source=>source.id!==id).concat(data.source);refreshSources(id);status('Descripteur importé et enregistré');
+  config.revision=data.revision;config.sources=config.sources.filter(source=>source.id!==id).concat(data.source);refreshSources(id);refreshComponent();status('Descripteur importé et enregistré');
  }catch(error){status('Import impossible : '+error.message,true)}
 };
 const simulators=new Map();let nextSimulator=1;
