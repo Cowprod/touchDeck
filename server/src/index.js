@@ -6,11 +6,13 @@ import { createJsonStore } from './store.js';
 import { resolvePage, FONT_SIZES } from './theme.js';
 import { validateSource, validateDescriptor } from './sources.js';
 import { resolveText, typedValue } from './bindings.js';
+import { CLOCK_SOURCE, CLOCK_SOURCE_ID, createClockTicker } from './clock-source.js';
 
 export function createTouchDeckServer({ port = 3000, host = '0.0.0.0', dataFile = process.env.TOUCHDECK_DATA_FILE ?? new URL('../data/config.json', import.meta.url) } = {}) {
   const store = createJsonStore(dataFile);
   let ready = false;
   let configRevision = 0;
+  let stopClock = null;
   let mutationTail=Promise.resolve();
   function serializeMutation(operation){
     const task=mutationTail.catch(()=>{}).then(operation);
@@ -27,6 +29,12 @@ export function createTouchDeckServer({ port = 3000, host = '0.0.0.0', dataFile 
       for (const group of saved.groups) groups.set(group.id, group);
       for (const pageSet of saved.pageSets) pageSets.set(pageSet.id, pageSet);
       sources.clear();for(const source of saved.sources??[])sources.set(source.id,source);
+    }
+    // Built-in test source: a regular imported descriptor, no second backend.
+    if(!sources.has(CLOCK_SOURCE_ID)){
+      sources.set(CLOCK_SOURCE_ID,CLOCK_SOURCE);
+      configRevision+=1;
+      await persist();
     }
     ready = true;
   }
@@ -77,6 +85,19 @@ export function createTouchDeckServer({ port = 3000, host = '0.0.0.0', dataFile 
     const delta = direction === 'next' ? 1 : -1;
     client.pageId = pages[index < 0 ? (delta > 0 ? 0 : pages.length - 1) : (index + delta + pages.length) % pages.length].id;
     send(client, snapshot(client));
+  }
+  function publishSourceValues(sourceId,updates){
+    const source=sources.get(sourceId);
+    if(!source)return false;
+    const values={...(sourceValues.get(sourceId)??{}),...updates};
+    sourceValues.set(sourceId,values);
+    for(const client of clients.values()){
+      const group=groups.get(client.groupId),set=pageSets.get(group?.pageSetId),page=set?.pages.find(item=>item.id===client.pageId);
+      if(!page)continue;
+      const changes=page.components.filter(item=>item.sourceId===sourceId).map(item=>({id:item.id,text:resolveText(item.text,sourceId,source,values)}));
+      if(changes.length)send(client,{type:'component_update',pageId:page.id,pageRevision:configRevision,changes});
+    }
+    return true;
   }
   const server = http.createServer(async (request, response) => {
     const url = new URL(request.url, 'http://localhost');
@@ -214,13 +235,7 @@ export function createTouchDeckServer({ port = 3000, host = '0.0.0.0', dataFile 
           if(!definition||!typedValue(value,definition))return json(400,{error:'invalid_property',property:name});
           if(typeof value==='number'&&((typeof definition.minimum==='number'&&value<definition.minimum)||(typeof definition.maximum==='number'&&value>definition.maximum)))return json(400,{error:'out_of_range',property:name});
         }
-        const values={...(sourceValues.get(source.id)??{}),...updates};sourceValues.set(source.id,values);
-        for(const client of clients.values()){
-          const group=groups.get(client.groupId),set=pageSets.get(group?.pageSetId),page=set?.pages.find(item=>item.id===client.pageId);
-          if(!page)continue;
-          const changes=page.components.filter(item=>item.sourceId===source.id).map(item=>({id:item.id,text:resolveText(item.text,source.id,source,values)}));
-          if(changes.length)send(client,{type:'component_update',pageId:page.id,pageRevision:configRevision,changes});
-        }
+        publishSourceValues(source.id,updates);
         return json(200,{ok:true,updated:Object.keys(updates).length});
       }catch{return json(400,{error:'invalid_request'})}
     }
@@ -281,8 +296,8 @@ export function createTouchDeckServer({ port = 3000, host = '0.0.0.0', dataFile 
   });
   return {
     server, wss, clients,
-    async start() { await initialize(); await new Promise((resolve, reject) => { server.once('error', reject); server.listen(port, host, resolve); }); return server.address(); },
-    async stop() { for (const socket of wss.clients) socket.terminate(); await new Promise(resolve => wss.close(resolve)); await new Promise(resolve => server.close(resolve)); }
+    async start() { await initialize(); await new Promise((resolve, reject) => { server.once('error', reject); server.listen(port, host, resolve); }); stopClock=createClockTicker(values=>publishSourceValues(CLOCK_SOURCE_ID,values)); return server.address(); },
+    async stop() { stopClock?.();stopClock=null;for (const socket of wss.clients) socket.terminate(); await new Promise(resolve => wss.close(resolve)); await new Promise(resolve => server.close(resolve)); }
   };
 }
 if (process.env.pm_id !== undefined || (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href)) {
