@@ -2,10 +2,9 @@ import http from 'node:http';
 import { readFile } from 'node:fs/promises';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { WebSocketServer } from 'ws';
-import { randomUUID, timingSafeEqual } from 'node:crypto';
 import { createJsonStore } from './store.js';
 
-export function createTouchDeckServer({ port = 3000, host = '0.0.0.0', dataFile = process.env.TOUCHDECK_DATA_FILE ?? new URL('../data/config.json', import.meta.url), adminToken = process.env.TOUCHDECK_ADMIN_TOKEN ?? '' } = {}) {
+export function createTouchDeckServer({ port = 3000, host = '0.0.0.0', dataFile = process.env.TOUCHDECK_DATA_FILE ?? new URL('../data/config.json', import.meta.url), } = {}) {
   const store = createJsonStore(dataFile);
   let ready = false;
   async function initialize() {
@@ -20,13 +19,6 @@ export function createTouchDeckServer({ port = 3000, host = '0.0.0.0', dataFile 
     ready = true;
   }
   function persist() { return store.save({ schemaVersion: 1, groups: [...groups.values()], pageSets: [...pageSets.values()] }); }
-  function authorized(request) {
-    if (!adminToken) return false;
-    const candidate = request.headers['x-touchdeck-admin-token'];
-    if (typeof candidate !== 'string') return false;
-    const a = Buffer.from(candidate), b = Buffer.from(adminToken);
-    return a.length === b.length && timingSafeEqual(a, b);
-  }
   function broadcastConfig() {
     for (const client of clients.values()) {
       if (client.groupId && !groups.has(client.groupId)) { client.groupId = null; client.pageId = null; }
@@ -85,7 +77,6 @@ export function createTouchDeckServer({ port = 3000, host = '0.0.0.0', dataFile 
     }
     if (request.method === 'GET' && url.pathname === '/api/health') return json(200, { ok: true, service: 'touchDeck' });
     if (url.pathname === '/api/admin/config') {
-      if (!authorized(request)) return json(401, { error: 'admin_token_required' });
       if (request.method === 'GET') return json(200, { groups: [...groups.values()], pageSets: [...pageSets.values()] });
       if (request.method === 'PUT') {
         try {
