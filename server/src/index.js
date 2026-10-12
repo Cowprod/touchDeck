@@ -191,7 +191,7 @@ export function createTouchDeckServer({ port = 3000, host = '0.0.0.0', dataFile 
         const source={id:data.id,name:data.name,origin:'imported',descriptor:data.descriptor};
         const nextSources=[...sources.values()].filter(item=>item.id!==data.id).concat(source);
         await store.save({schemaVersion:1,revision:configRevision+1,groups:[...groups.values()],pageSets:[...pageSets.values()],sources:nextSources});
-        configRevision+=1;sources.set(data.id,source);
+        configRevision+=1;sources.set(data.id,source);sourceValues.delete(data.id);broadcastConfig();
         return json(200,{ok:true,revision:configRevision,source});
       }catch{return json(400,{error:'invalid_request'})}
     }
