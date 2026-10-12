@@ -63,3 +63,12 @@ Dernière mise à jour : 2026-10-12 (UTC)
 - Service PM2 rechargé et endpoint `/api/health` testé : HTTP 200, `healthy=true`.
 - Matériel : port `/dev/ttyACM0` présent (VID:PID 303A:1001) ; capture série passive 115200/5s sans sortie. Aucun flash effectué. Le dossier local non suivi `touchDeck/` contient README.md, docs/ et esp32OldTest.zip (inspection non destructive).
 - Frontend : panel et source editor toujours à qualifier dans un navigateur réel ; les tests Node ne simulent pas leurs interactions.
+
+## Suite TD-07 : sources liées et messages différentiels
+- Convention JSON P0 des bindings documentée dans `docs/CONTRAT-BINDINGS-P0.md` (non acceptée comme schéma final).
+- Un composant peut référencer exactement une source par `sourceId`; `text` accepte `${identifiant}`, résolu côté serveur depuis la propriété déclarée de cette source. Un placeholder inconnu ou non alimenté donne la chaîne vide.
+- API de push POC `PUT /api/sources/:sourceId/values` : contrôles des propriétés/types/bornes, état volatile, diffusion WebSocket des textes concernés sous `component_update` avec révision de page, sans polling client.
+- Import de descripteur : abandon des valeurs runtime de l'ancienne définition et propagation de page renouvelée.
+- File d'actions FIFO par client avec erreur consommée et timeout 5 s implémentée/testée dans `server/src/action-queue.js`. Non raccordée aux actions source (transport encore non défini).
+- Mutex de validation/sauvegarde : la sérialisation couvre maintenant lecture de révision, validation et écriture atomique pour éviter le conflit de requêtes parallèles.
+- Tests Node : **17 PASS** au commit `eff8e4c5fb3ec89a84897ccf669e8a7701c4ab19`. La preuve est uniquement logicielle, aucun E2E navigateur ni test ESP.
