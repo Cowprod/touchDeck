@@ -9,17 +9,21 @@ const simId=params.get('simId'),key=embedded&&/^web-sim-[a-zA-Z0-9_-]{1,60}$/.te
 let id=embedded&&key!=='touchdeck.clientId'?simId:localStorage.getItem(key);
 if(!id){id='web-'+Array.from(crypto.getRandomValues(new Uint8Array(16)),b=>b.toString(16).padStart(2,'0')).join('');localStorage.setItem(key,id)}
 if(embedded){document.body.classList.add('embedded');document.querySelector('h1').textContent='Simulateur';document.getElementById('assign').style.display='none'}
-const screen=document.getElementById('screen'),status=document.getElementById('status');let socket;
+const screen=document.getElementById('screen'),status=document.getElementById('status');let socket;let currentPageId=null,currentPageRevision=null;
 function send(message){if(socket?.readyState===WebSocket.OPEN)socket.send(JSON.stringify(message))}
-function render(data){screen.replaceChildren();if(!data.page||!data.profile){status.textContent='Client non affecté ou aucune page visible';return}
+function render(data){screen.replaceChildren();currentPageId=data.page?.id??null;currentPageRevision=data.pageRevision;if(!data.page||!data.profile){status.textContent='Client non affecté ou aucune page visible';return}
 const {width,height}=data.profile;
 screen.style.width=width+'px';screen.style.height=height+'px';screen.style.borderRadius=data.profile.shape==='round'?'50%':'12px';screen.style.backgroundColor=data.page.backgroundColor??'#0f172a';
-for(const item of data.page.components){const element=document.createElement('div');element.className='component';element.style.left=item.x+'px';element.style.top=item.y+'px';element.style.width=item.w+'px';element.style.height=item.h+'px';element.style.backgroundColor=item.backgroundColor??'#334155';element.style.color=item.textColor??'#f9fafb';element.style.fontSize=(item.fontSize??15)+'px';element.style.opacity=item.disabled?'.45':'1';element.style.outline=item.active?'2px solid #f8f9fa':'none';element.textContent=item.text??'';screen.append(element)}
+for(const item of data.page.components){const element=document.createElement('div');element.className='component';element.dataset.componentId=item.id;element.style.left=item.x+'px';element.style.top=item.y+'px';element.style.width=item.w+'px';element.style.height=item.h+'px';element.style.backgroundColor=item.backgroundColor??'#334155';element.style.color=item.textColor??'#f9fafb';element.style.fontSize=(item.fontSize??15)+'px';element.style.opacity=item.disabled?'.45':'1';element.style.outline=item.active?'2px solid #f8f9fa':'none';element.textContent=item.text??'';screen.append(element)}
 status.textContent=data.page.title+' · '+id.slice(0,8)+' · groupe '+(data.groupId??'aucun');
 }
 function connect(){socket=new WebSocket((location.protocol==='https:'?'wss:':'ws:')+'//'+location.host+'/ws');
 socket.onopen=()=>{status.textContent='Connecté';send({type:'hello',clientId:id})};
-socket.onmessage=event=>{const data=JSON.parse(event.data);if(data.type==='welcome'&&embedded&&window.parent!==window)window.parent.postMessage({type:'touchdeck-sim-ready',clientId:id},location.origin);if(data.type==='page')render(data);if(data.type==='error')status.textContent='Erreur : '+data.code};
+socket.onmessage=event=>{const data=JSON.parse(event.data);if(data.type==='welcome'&&embedded&&window.parent!==window)window.parent.postMessage({type:'touchdeck-sim-ready',clientId:id},location.origin);if(data.type==='page')render(data);
+if(data.type==='component_update'&&data.pageId===currentPageId&&data.pageRevision===currentPageRevision){
+ for(const change of data.changes??[]){const element=[...screen.children].find(child=>child.dataset.componentId===change.id);if(element)element.textContent=change.text??''}
+}
+if(data.type==='error')status.textContent='Erreur : '+data.code};
 socket.onclose=()=>{status.textContent='Déconnecté';setTimeout(connect,3000)}}
 document.getElementById('assign').onclick=()=>send({type:'assign',groupId:'demo'});
 document.getElementById('prev').onclick=()=>send({type:'navigate',direction:'previous'});
