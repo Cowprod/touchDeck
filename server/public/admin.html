@@ -36,6 +36,14 @@ main{max-width:1280px}.preview{width:240px;height:240px;position:relative;overfl
 </div></div></section>
 <section class="col-lg-6"><div class="card h-100"><div class="card-header">Aperçu</div><div class="card-body"><div id="preview" class="preview"></div><p class="small text-body-secondary">Aperçu local ; validation de la grille côté serveur.</p></div></div></section>
 </div>
+<section class="col-12"><div class="card"><div class="card-header">Sources de données — D-038 / D-042 / D-043</div><div class="card-body">
+<div class="input-group mb-3"><span class="input-group-text field-label">Source</span><select class="form-select" id="source"></select><button class="btn btn-success" id="addSource" type="button" title="Nouvelle source manuelle"><i class="fa-solid fa-plus"></i></button></div>
+<div class="input-group mb-3"><span class="input-group-text field-label">Nom</span><input class="form-control" id="sourceName" maxlength="120"></div>
+<div class="input-group mb-3"><span class="input-group-text field-label">Origine</span><input class="form-control" id="sourceOrigin" readonly></div>
+<div class="mb-3"><label for="sourceDescriptor" class="form-label">Descripteur JSON : properties / actions / events</label><textarea class="form-control" id="sourceDescriptor" spellcheck="false"></textarea></div>
+<div class="btn-group"><button class="btn btn-success" id="saveSource" type="button">Enregistrer la source manuelle</button><button class="btn btn-secondary" id="importSource" type="button">Importer / réimporter ce JSON</button></div>
+<div class="form-text">Une source importée ne peut être modifiée que par réimportation ; son identifiant reste stable.</div>
+</div></div></section>
 <section class="col-12"><div class="card"><div class="card-header d-flex align-items-center justify-content-between"><span>Simulateurs HTML — D-026 / D-027</span><button class="btn btn-success btn-sm" id="addSimulator" type="button"><i class="fa-solid fa-plus me-1"></i>Simulateur</button></div><div class="card-body"><div class="row g-3" id="simulators"></div></div></div></section>
 </div>
 </main><script>let config=null;const $=id=>document.getElementById(id);const palette={primary:'#0d6efd',secondary:'#6c757d',success:'#198754',warning:'#ffc107',danger:'#dc3545',info:'#0dcaf0',light:'#f8f9fa',dark:'#212529'};const validId=id=>/^[a-zA-Z0-9_-]{1,80}$/.test(id);
@@ -43,11 +51,15 @@ function newId(){const bytes=new Uint8Array(8);crypto.getRandomValues(bytes);ret
 function currentSet(){return config?.pageSets.find(x=>x.id===$('set').value)}
 function currentPage(){return currentSet()?.pages.find(x=>x.id===$('page').value)}
 function currentGroup(){return config?.groups.find(x=>x.id===$('group').value)}
+function currentSource(){return config?.sources?.find(source=>source.id===$('source').value)}
+function refreshSource(){const source=currentSource();$('sourceName').value=source?.name??'';$('sourceOrigin').value=source?.origin??'';$('sourceDescriptor').value=JSON.stringify(source?.descriptor??{properties:{},actions:{},events:{}},null,2);$('saveSource').disabled=!source||source.origin!=='manual';$('sourceName').readOnly=!!source&&source.origin==='imported';}
+function refreshSources(selected){options($('source'),(config?.sources??[]).map(source=>({id:source.id,label:source.name})),selected??$('source').value);refreshSource()}
+
 function options(element,items,selected){element.replaceChildren();for(const item of items){const option=new Option(item.label,item.id);element.add(option)}if(selected&&items.some(x=>x.id===selected))element.value=selected}
 function refresh(selected={}){if(!config)return;
 options($('group'),config.groups.map(x=>({id:x.id,label:x.name})),selected.group??$('group').value);
 options($('set'),config.pageSets.map(x=>({id:x.id,label:x.id})),selected.set??$('set').value);
-refreshGroup();refreshSet(selected.page);if(typeof sortSimulators==='function')sortSimulators();
+refreshGroup();refreshSet(selected.page);refreshSources();if(typeof sortSimulators==='function')sortSimulators();
 }
 function refreshGroup(){const g=currentGroup();$('groupName').value=g?.name??'';options($('groupSet'),config.pageSets.map(x=>({id:x.id,label:x.id})),g?.pageSetId)}
 function refreshSet(selectedPage){const s=currentSet();$('profile').value=s?.profileId??'round-240';options($('page'),(s?.pages??[]).map(x=>({id:x.id,label:x.title})),selectedPage);refreshPage()}
@@ -132,6 +144,29 @@ $('componentText').oninput=()=>updateComponent('text',$('componentText').value,$
 for(const key of ['X','Y','W','H'])$('component'+key).onchange=()=>updateComponent(key.toLowerCase(),Number($('component'+key).value),$('component'+key));
 $('profile').onchange=()=>{if(currentSet()){currentSet().profileId=$('profile').value;dirty($('profile'))}};
 
+
+$('source').onchange=refreshSource;
+$('addSource').onclick=()=>{
+ if(!config||!Array.isArray(config.sources))return status('Configuration des sources indisponible',true);
+ const id='source-'+newId();config.sources.push({id,name:'Nouvelle source',origin:'manual',descriptor:{properties:{},actions:{},events:{}}});
+ refreshSources(id);dirty(null);
+};
+$('saveSource').onclick=()=>{
+ const source=currentSource();if(!source||source.origin!=='manual')return status('Source importée en lecture seule',true);
+ try{const descriptor=JSON.parse($('sourceDescriptor').value);if(!descriptor||typeof descriptor!=='object'||Array.isArray(descriptor))throw Error('Descripteur non valide');
+ source.name=$('sourceName').value;source.descriptor=descriptor;refreshSources(source.id);dirty($('sourceDescriptor'))}
+ catch(error){status('Descripteur JSON invalide : '+error.message,true)}
+};
+$('importSource').onclick=async()=>{
+ if(!config)return;
+ let descriptor;try{descriptor=JSON.parse($('sourceDescriptor').value)}catch(error){return status('JSON invalide : '+error.message,true)}
+ const old=currentSource(),id=old?.id??'source-'+newId(),name=$('sourceName').value.trim()||old?.name||'Source importée';
+ try{
+  const response=await fetch('/api/admin/sources/import',{method:'PUT',headers:{'content-type':'application/json'},body:JSON.stringify({id,name,descriptor,revision:config.revision})});
+  const data=await response.json();if(!response.ok)throw Error(data.error??'HTTP '+response.status);
+  config.revision=data.revision;config.sources=config.sources.filter(source=>source.id!==id).concat(data.source);refreshSources(id);status('Descripteur importé et enregistré');
+ }catch(error){status('Import impossible : '+error.message,true)}
+};
 const simulators=new Map();let nextSimulator=1;
 const SIM_KEY='touchdeck.admin.simulators.v1';
 function persistSimulators(){try{localStorage.setItem(SIM_KEY,JSON.stringify([...simulators.values()].map(s=>({id:s.id,groupId:s.select.value}))))}catch{}}
