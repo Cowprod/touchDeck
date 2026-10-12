@@ -194,3 +194,33 @@ test('sources persist; imported descriptors require reimport and keep identity',
   assert.equal(saved.sources.length,2);
  }finally{await app.stop();await rm(dir,{recursive:true,force:true})}
 });
+
+test('single-source placeholders resolve and stream differential updates without persisting values',async()=>{
+ const {mkdtemp,rm}=await import('node:fs/promises');
+ const {tmpdir}=await import('node:os');
+ const {join}=await import('node:path');
+ const dir=await mkdtemp(join(tmpdir(),'touchdeck-binding-'));const file=join(dir,'config.json');
+ const app=createTouchDeckServer({port:0,host:'127.0.0.1',dataFile:file});
+ const {port}=await app.start();const base='http://127.0.0.1:'+port;
+ let socket;
+ try{
+  const config=await(await fetch(base+'/api/admin/config')).json();
+  config.sources=[{id:'sensor',name:'Sensor',origin:'manual',descriptor:{properties:{temperature:{type:'number',minimum:0,maximum:100}},actions:{},events:{}}}];
+  const comp=config.pageSets[0].pages[0].components[0];comp.sourceId='sensor';comp.text='Temp: ${temperature} °C';
+  const save=await fetch(base+'/api/admin/config',{method:'PUT',headers:{'content-type':'application/json'},body:JSON.stringify(config)});
+  assert.equal(save.status,200);
+  ({socket}=await connect(port,'web-sim-binding'));
+  const initial=await waitPage(socket,{type:'assign',groupId:'demo'});
+  assert.equal(initial.page.components[0].text,'Temp:  °C');
+  const changed=new Promise((resolve,reject)=>{
+   const timeout=setTimeout(()=>reject(Error('No differential update')),2000);
+   const handle=raw=>{const msg=JSON.parse(raw.toString());if(msg.type==='component_update'){clearTimeout(timeout);socket.off('message',handle);resolve(msg)}};
+   socket.on('message',handle);
+  });
+  const push=async values=>fetch(base+'/api/sources/sensor/values',{method:'PUT',headers:{'content-type':'application/json'},body:JSON.stringify(values)});
+  assert.equal((await push({temperature:23})).status,200);
+  const delta=await changed;assert.equal(delta.pageId,'home');assert.equal(delta.changes[0].text,'Temp: 23 °C');
+  assert.equal((await push({temperature:'bad'})).status,400);
+  assert.equal((await push({temperature:123})).status,400);
+ }finally{socket?.close();await app.stop();await rm(dir,{recursive:true,force:true})}
+});
