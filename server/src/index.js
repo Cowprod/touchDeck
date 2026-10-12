@@ -115,11 +115,25 @@ export function createTouchDeckServer({ port = 3000, host = '0.0.0.0', dataFile 
               if (!validId(page.id) || ids.has(page.id) || typeof page.title !== 'string' || page.title.length > 120 || typeof page.visible !== 'boolean' || !Array.isArray(page.components) || page.components.length > 100) return json(400, { error: 'invalid_page' });
               ids.add(page.id);
               const components = new Set();
+              const occupied = new Set();
               for (const item of page.components) {
                 if (!validId(item.id) || components.has(item.id) || !['Label','Button','Toggle','Icon','Gauge','Slider'].includes(item.type) || ![item.x,item.y,item.w,item.h].every(Number.isInteger) || item.x < 0 || item.y < 0 || item.w < 1 || item.h < 1 || item.x + item.w > profile.gridColumns || item.y + item.h > profile.gridRows || (item.text !== undefined && (typeof item.text !== 'string' || item.text.length > 250))) return json(400, { error: 'invalid_component' });
                 components.add(item.id);
+                for (let yy = item.y; yy < item.y + item.h; yy++) for (let xx = item.x; xx < item.x + item.w; xx++) {
+                  const cell = yy * profile.gridColumns + xx;
+                  if (occupied.has(cell)) return json(400, { error: 'component_overlap', pageId: page.id, componentId: item.id });
+                  occupied.add(cell);
+                }
               }
             }
+          }
+          for (const group of groups.values()) {
+            if (!config.groups.some(next => next.id === group.id) && [...clients.values()].some(client => client.groupId === group.id))
+              return json(409, { error: 'group_has_clients', groupId: group.id });
+          }
+          for (const set of pageSets.values()) {
+            if (!sets.has(set.id) && config.groups.some(group => group.pageSetId === set.id))
+              return json(409, { error: 'page_set_in_use', pageSetId: set.id });
           }
           const groupIds = new Set();
           for (const group of config.groups) {
