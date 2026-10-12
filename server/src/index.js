@@ -31,7 +31,7 @@ export function createTouchDeckServer({ port = 3000, host = '0.0.0.0', dataFile 
       sources.clear();for(const source of saved.sources??[])sources.set(source.id,source);
     }
     // Built-in test source: a regular imported descriptor, no second backend.
-    if(!sources.has(CLOCK_SOURCE_ID)){
+    if(JSON.stringify(sources.get(CLOCK_SOURCE_ID))!==JSON.stringify(CLOCK_SOURCE)){
       sources.set(CLOCK_SOURCE_ID,CLOCK_SOURCE);
       configRevision+=1;
       await persist();
