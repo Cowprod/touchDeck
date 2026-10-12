@@ -22,8 +22,9 @@ export function createTouchDeckServer({ port = 3000, host = '0.0.0.0', dataFile 
   function broadcastConfig() {
     for (const client of clients.values()) {
       if (client.groupId && !groups.has(client.groupId)) { client.groupId = null; client.pageId = null; }
-      const pages = visiblePages(client.groupId);
-      if (!pages.some(page => page.id === client.pageId)) client.pageId = pages[0]?.id ?? null;
+      const group = groups.get(client.groupId);
+      const allPages = pageSets.get(group?.pageSetId)?.pages ?? [];
+      if (!allPages.some(page => page.id === client.pageId)) client.pageId = visiblePages(client.groupId)[0]?.id ?? null;
       send(client, snapshot(client));
     }
   }
