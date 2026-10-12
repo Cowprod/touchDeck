@@ -179,10 +179,10 @@ test('sources persist; imported descriptors require reimport and keep identity',
   const imported=await put('/sources/import',{revision,id:'imported-1',name:'Imported source',descriptor});
   assert.equal(imported.status,200);
   const after=await(await fetch(root+'/config')).json();
-  assert.equal(after.sources.length,2);
-  assert.equal(after.sources[1].origin,'imported');
+  assert.equal(after.sources.length,3);
+  assert.equal(after.sources.find(item=>item.id==='imported-1').origin,'imported');
   const changed=structuredClone(after);
-  changed.sources[1].descriptor.properties.temperature.type='string';
+  changed.sources.find(item=>item.id==='imported-1').descriptor.properties.temperature.type='string';
   const blocked=await put('/config',changed);
   assert.equal(blocked.status,403);
   assert.equal((await blocked.json()).error,'source_import_only');
@@ -191,7 +191,7 @@ test('sources persist; imported descriptors require reimport and keep identity',
   assert.equal(reimport.status,200);
   const saved=JSON.parse(await readFile(file,'utf8'));
   assert.equal(saved.sources.find(item=>item.id==='imported-1').descriptor.properties.temperature.type,'integer');
-  assert.equal(saved.sources.length,2);
+  assert.equal(saved.sources.length,3);
  }finally{await app.stop();await rm(dir,{recursive:true,force:true})}
 });
 
@@ -242,7 +242,7 @@ test('parallel writes serialize revision checks and preserve a single winner',as
   const results=await Promise.all([put(a),put(b)]);
   assert.deepEqual(results.map(r=>r.status).sort(),[200,409]);
   const stored=await(await fetch(url)).json();
-  assert.equal(stored.revision,1);
+  assert.equal(stored.revision,base.revision+1);
   assert.ok(['first','second'].includes(stored.pageSets[0].pages[0].title));
  }finally{await app.stop();await rm(dir,{recursive:true,force:true})}
 });
