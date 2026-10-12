@@ -4,7 +4,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { WebSocketServer } from 'ws';
 import { randomUUID } from 'node:crypto';
 
-export function createTouchDeckServer({ port = 3000, host = '127.0.0.1' } = {}) {
+export function createTouchDeckServer({ port = 3000, host = '0.0.0.0' } = {}) {
   const clients = new Map();
   const groups = new Map();
   const pageSets = new Map();
@@ -92,6 +92,6 @@ export function createTouchDeckServer({ port = 3000, host = '127.0.0.1' } = {}) 
   };
 }
 if (process.env.pm_id !== undefined || (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href)) {
-  const app = createTouchDeckServer({ port: Number(process.env.PORT ?? 3000), host: process.env.HOST ?? '127.0.0.1' });
+  const app = createTouchDeckServer({ port: Number(process.env.PORT ?? 3000), host: process.env.HOST ?? '0.0.0.0' });
   app.start().then(address => console.log('touchDeck listening on', address)).catch(error => { console.error(error); process.exitCode = 1; });
 }
