@@ -2,6 +2,7 @@ import http from 'node:http';
 import os from 'node:os';
 
 import { readFile } from 'node:fs/promises';
+import { iconSource, iconManifest, validIcon } from './icons.js';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { WebSocketServer } from 'ws';
 import { createJsonStore } from './store.js';
@@ -159,6 +160,22 @@ export function createTouchDeckServer({ port = 3000, host = '0.0.0.0', dataFile 
       response.end();
       return;
     }
+    if (request.method === 'GET' && url.pathname.startsWith('/api/icons/source/')) {
+      const name = url.pathname.slice('/api/icons/source/'.length);
+      if (!validIcon(name)) return json(400, { error: 'invalid_icon' });
+      const icon = await iconSource(name);
+      if (!icon) return json(404, { error: 'icon_not_found' });
+      response.writeHead(200, { 'content-type': 'image/svg+xml', 'etag': '"' + icon.sha256 + '"', 'cache-control': 'public, max-age=86400', 'x-content-type-options': 'nosniff' });
+      response.end(icon.bytes);
+      return;
+    }
+    if (request.method === 'GET' && url.pathname.startsWith('/api/icons/manifest/')) {
+      const groupId = url.pathname.slice('/api/icons/manifest/'.length);
+      const group = groups.get(groupId);
+      if (!group) return json(404, { error: 'group_not_found' });
+      try { return json(200, { groupId, ...await iconManifest(pageSets.get(group.pageSetId)) }); }
+      catch { return json(500, { error: 'icon_manifest_unavailable' }); }
+    }
     if (request.method === 'GET' && url.pathname === '/api/health') return json(200, { ok: true, service: 'touchDeck' });
     if (url.pathname === '/api/admin/config') {
       if (request.method === 'GET') return json(200, { revision: configRevision, groups: [...groups.values()], pageSets: [...pageSets.values()], sources:[...sources.values()] });
@@ -197,7 +214,7 @@ export function createTouchDeckServer({ port = 3000, host = '0.0.0.0', dataFile 
               const components = new Set();
               const occupied = new Set();
               for (const item of page.components) {
-                if (!validId(item.id) || components.has(item.id) || (item.sourceId!==undefined&&!sourceIds.has(item.sourceId)) || !validTheme(item.background) || !validTheme(item.color) || (item.fontSize !== undefined && !Object.hasOwn(FONT_SIZES,item.fontSize)) || (item.radius !== undefined && ![0,1,2].includes(item.radius)) || (item.active !== undefined && typeof item.active !== 'boolean') || (item.disabled !== undefined && typeof item.disabled !== 'boolean') || !['Label','Button','Toggle','Icon','Gauge','Slider'].includes(item.type) || ![item.x,item.y,item.w,item.h].every(Number.isInteger) || item.x < 0 || item.y < 0 || item.w < 1 || item.h < 1 || item.x + item.w > profile.gridColumns || item.y + item.h > profile.gridRows || (item.text !== undefined && (typeof item.text !== 'string' || item.text.length > 250))) return json(400, { error: 'invalid_component' });
+                if (!validId(item.id) || components.has(item.id) || (item.sourceId!==undefined&&!sourceIds.has(item.sourceId)) || !validTheme(item.background) || !validTheme(item.color) || (item.fontSize !== undefined && !Object.hasOwn(FONT_SIZES,item.fontSize)) || (item.radius !== undefined && ![0,1,2].includes(item.radius)) || (item.active !== undefined && typeof item.active !== 'boolean') || (item.disabled !== undefined && typeof item.disabled !== 'boolean') || !['Label','Button','Toggle','Icon','Gauge','Slider'].includes(item.type) || ![item.x,item.y,item.w,item.h].every(Number.isInteger) || item.x < 0 || item.y < 0 || item.w < 1 || item.h < 1 || item.x + item.w > profile.gridColumns || item.y + item.h > profile.gridRows || (item.text !== undefined && (typeof item.text !== 'string' || item.text.length > 250)) || (item.icon !== undefined && (item.type !== 'Icon' || !validIcon(item.icon)))) return json(400, { error: 'invalid_component' });
                 components.add(item.id);
                 for (let yy = item.y; yy < item.y + item.h; yy++) for (let xx = item.x; xx < item.x + item.w; xx++) {
                   const cell = yy * profile.gridColumns + xx;
