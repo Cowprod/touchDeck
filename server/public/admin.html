@@ -72,8 +72,8 @@ main.container-fluid{padding-left:0!important;padding-top:0!important}
 .td-workspace{gap:12px!important;grid-template-columns:250px minmax(0,1fr)!important}
 .td-live-column{border-radius:0!important;padding:0!important;margin:0!important;width:250px!important;max-width:250px!important;position:sticky!important;top:var(--td-nav-height,72px)!important;grid-column:1!important;grid-row:1!important;max-height:calc(100dvh - var(--td-nav-height,72px))!important;overflow-y:auto!important}
 .td-edit-column{grid-column:2!important;grid-row:1!important;padding-right:12px!important;min-width:0}
-.td-live-column #simulators>div{width:240px!important;max-width:240px!important}
-.td-live-column #simulators{align-items:flex-start}
+.td-live-column #simulators>div{width:100%!important;min-width:0!important;max-width:100%!important}
+.td-live-column #simulators{align-items:stretch}
 .td-edit-column>section{margin:0 0 12px!important;padding:0!important}
 .td-edit-column>section>.card{height:auto!important}
 @media(max-width:550px){.td-workspace{grid-template-columns:250px minmax(0,1fr)!important;overflow-x:auto}.td-edit-column{min-width:300px}.td-live-column{position:sticky!important;left:0!important}}
