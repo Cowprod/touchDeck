@@ -90,7 +90,11 @@ void onWs(WStype_t event,uint8_t *payload,size_t len){
     if(String(component["id"]|"")==String(update["id"]|"")){
      component["text"]=update["text"].as<String>();changed=true;
     }
-  if(millis()-lastUpdateLog>3000){Serial.printf("update_received count=%u matched=%d heap=%u\n",(unsigned)doc["changes"].as<JsonArrayConst>().size(),changed,(unsigned)ESP.getFreeHeap());lastUpdateLog=millis();}
+  if(millis()-lastUpdateLog>3000){
+   Serial.printf("update_received count=%u matched=%d heap=%u local_components=%u incoming_id=%s\n",(unsigned)doc["changes"].as<JsonArrayConst>().size(),changed,(unsigned)ESP.getFreeHeap(),(unsigned)state["page"]["components"].as<JsonArrayConst>().size(),doc["changes"][0]["id"]|"");
+   for(JsonVariantConst component:state["page"]["components"].as<JsonArrayConst>())Serial.printf("local_component=%s\n",component["id"]|"");
+   lastUpdateLog=millis();
+  }
   if(changed)draw();
  }else if(type=="error")Serial.printf("ws_error=%s\n",doc["code"]|"unknown");
 }
