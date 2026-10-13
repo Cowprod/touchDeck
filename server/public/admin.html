@@ -61,6 +61,11 @@ main{max-width:1800px!important;padding-top:1rem!important}
 @media(max-width:1100px){.td-workspace{grid-template-columns:250px minmax(0,1fr)!important}.td-live-column{position:sticky;top:5.8rem;max-height:calc(100vh - 6.5rem);overflow-y:auto;grid-column:1;grid-row:1}.td-edit-column{grid-column:2;grid-row:1}}
 @media(max-width:550px){.td-workspace{grid-template-columns:minmax(0,1fr)!important}.td-edit-column{grid-column:1;grid-row:1}.td-live-column{position:static;grid-column:1;grid-row:2;width:250px;max-width:250px}}
 
+/* Le rail conserve un bord gauche affleurant ; seuls les coins droits sont arrondis. */
+.td-live-column.rounded-end{border-top-right-radius:var(--bs-border-radius-lg, .5rem)!important;border-bottom-right-radius:var(--bs-border-radius-lg, .5rem)!important;border-top-left-radius:0!important;border-bottom-left-radius:0!important}
+.td-live-column #simulators>div{width:100%!important;min-width:0!important;max-width:100%!important}
+.td-live-column #simulators>div>.card{width:100%!important}
+.td-live-column #simulators>div iframe{width:100%!important;max-width:100%!important}
 /* Atelier : rail affleurant à gauche, aperçu dans l'éditeur avant les composants. */
 main.container-fluid{padding-left:0!important;padding-top:0!important}
 #td-editor>.td-section-heading,#td-editor>.td-help{display:none}
@@ -380,7 +385,7 @@ document.addEventListener('visibilitychange',()=>{if(!document.hidden)refreshFir
  const help=document.createElement('p');help.className='td-help';help.textContent='Simulateurs à gauche ; édition, aperçu et composants à droite.';
  editor.append(title,help,workspace);workspace.append(live,controls);
  for(const panel of [pagePanel,previewPanel,componentPanel]){panel.classList.remove('col-lg-6','col-12');controls.append(panel)}
- simPanel.classList.remove('col-lg-6','col-12');live.append(simPanel)
+ simPanel.classList.remove('col-lg-6','col-12');live.classList.add('rounded-end','overflow-hidden','bg-dark');live.append(simPanel)
  const groups=document.createElement('div');groups.id='td-groups';groups.className='td-section';groups.hidden=true;
  groups.innerHTML='<h1 class="td-section-heading">Groupes</h1><p class="td-help">Affectation des groupes aux jeux de pages.</p>';
  groupPanel.classList.remove('col-lg-6');groups.append(groupPanel);
