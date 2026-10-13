@@ -310,3 +310,35 @@ test('component interaction validates page, type and explicitly rejects unconfig
   assert.equal((await request('action-button',-1)).code,'stale_page');
  }finally{socket?.close();await app.stop();await rm(dir,{recursive:true,force:true})}
 });
+
+test('bound button dispatches POST to source and acknowledges only after HTTP success',async()=>{
+ const http=await import('node:http');
+ const {mkdtemp,rm}=await import('node:fs/promises');
+ const {tmpdir}=await import('node:os');
+ const {join}=await import('node:path');
+ const received=[];
+ const target=http.createServer(async(req,res)=>{let body='';for await(const chunk of req)body+=chunk;received.push({url:req.url,body:JSON.parse(body)});res.writeHead(204);res.end()});
+ await new Promise(resolve=>target.listen(0,'127.0.0.1',resolve));
+ const dir=await mkdtemp(join(tmpdir(),'touchdeck-actions-'));
+ const app=createTouchDeckServer({port:0,host:'127.0.0.1',dataFile:join(dir,'config.json')});
+ let socket;
+ try{
+  const {port}=await app.start();
+  const data=await (await fetch('http://127.0.0.1:'+port+'/api/admin/config')).json();
+  data.sources.push({id:'relay',name:'Relay',origin:'manual',endpoint:'http://127.0.0.1:'+target.address().port+'/',descriptor:{properties:{},actions:{fire:{input:{properties:{level:{type:'integer'}}}}},events:{}}});
+  data.pageSets[0].pages[0].components.push({id:'fire',type:'Button',sourceId:'relay',action:'fire',parameters:{level:3},x:0,y:6,w:2,h:1,text:'Fire'});
+  const saved=await fetch('http://127.0.0.1:'+port+'/api/admin/config',{method:'PUT',headers:{'content-type':'application/json'},body:JSON.stringify(data)});
+  assert.equal(saved.status,200);
+  const connected=await connect(port,'action-test');socket=connected.socket;
+  const page=await waitPage(socket,{type:'assign',groupId:'demo'});
+  const messages=[];
+  const done=new Promise((resolve,reject)=>{
+   const timer=setTimeout(()=>reject(new Error('action timeout')),2000);
+   socket.on('message',raw=>{const msg=JSON.parse(raw.toString());if(msg.type==='interaction_result'){messages.push(msg);if(msg.status==='acknowledged'){clearTimeout(timer);resolve()}}});
+  });
+  socket.send(JSON.stringify({type:'interact',pageId:'home',pageRevision:page.pageRevision,componentId:'fire',requestId:'fire-1'}));
+  await done;
+  assert.deepEqual(messages.map(m=>m.status),['pending','acknowledged']);
+  assert.deepEqual(received,[{url:'/actions/fire',body:{level:3}}]);
+ }finally{socket?.close();await app.stop();await new Promise(resolve=>target.close(resolve));await rm(dir,{recursive:true,force:true})}
+});
