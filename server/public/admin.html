@@ -344,7 +344,7 @@ document.addEventListener('visibilitychange',()=>{if(!document.hidden)refreshFir
  devices.innerHTML='<h1 class="td-section-heading">Appareils connectés</h1><p class="td-help">État des clients et versions du firmware.</p>';
  devices.append(firmwarePanel);
  if(legacySources){legacySources.hidden=true;legacySources.style.display='none'}
- row.replaceWith(editor,groups,devices);
+ row.replaceWith(editor,groups,devices,...(legacySources?[legacySources]:[]));
  const sections={editor,groups,devices};
  function show(view){
   if(!sections[view])view='editor';
