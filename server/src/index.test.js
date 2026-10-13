@@ -32,8 +32,9 @@ test('independent navigation, first visible page and wraparound', async () => {
     assert.equal(bInitial.page.id, 'home');
     assert.equal((await waitPage(a.socket, { type: 'navigate', direction: 'next' })).page.id, 'second');
     assert.equal(app.clients.get('browser-b').pageId, 'home');
+    assert.equal((await waitPage(a.socket, { type: 'navigate', direction: 'next' })).page.id, 'stopwatch');
     assert.equal((await waitPage(a.socket, { type: 'navigate', direction: 'next' })).page.id, 'home');
-    assert.equal((await waitPage(b.socket, { type: 'navigate', direction: 'previous' })).page.id, 'second');
+    assert.equal((await waitPage(b.socket, { type: 'navigate', direction: 'previous' })).page.id, 'stopwatch');
   } finally { await app.stop(); }
 });
 
@@ -260,7 +261,7 @@ test('built-in clock is available and streams independent fields to two labels',
   const config=await(await fetch(url)).json();
   const clock=config.sources.find(source=>source.id==='clock');
   assert.ok(clock);
-  assert.deepEqual(Object.keys(clock.descriptor.properties),['dd','mm','yyyy','hh','ii','ss']);
+  assert.deepEqual(Object.keys(clock.descriptor.properties),['dd','mm','yyyy','hh','ii','ss','elapsed','running']);
   const page=config.pageSets[0].pages[0];
   page.components[0].sourceId='clock';page.components[0].text='Heure ${hh}:${ii}:${ss}';
   page.components[1].sourceId='clock';page.components[1].text='Date ${dd}/${mm}/${yyyy}';
