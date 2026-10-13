@@ -1,6 +1,6 @@
 import http from 'node:http';
 import os from 'node:os';
-import { Bonjour } from 'bonjour-service';
+
 import { readFile } from 'node:fs/promises';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { WebSocketServer } from 'ws';
@@ -310,6 +310,7 @@ export function createTouchDeckServer({ port = 3000, host = '0.0.0.0', dataFile 
       await new Promise((resolve, reject) => { server.once('error', reject); server.listen(port, host, resolve); });
       stopClock=createClockTicker(values=>publishSourceValues(CLOCK_SOURCE_ID,values));
       try {
+        const { Bonjour } = await import('bonjour-service');
         bonjour=new Bonjour();
         advertised=bonjour.publish({name:'TouchDeck '+instanceId,type:'touchdeck',protocol:'tcp',port:server.address().port,txt:{id:instanceId,ver:'1',path:'/ws'}});
         console.log('touchDeck mDNS published:',instanceId,'port',server.address().port);
