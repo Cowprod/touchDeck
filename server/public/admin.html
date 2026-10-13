@@ -12,6 +12,7 @@ main{max-width:1280px}.editor-viewport{max-width:100%;overflow:auto}.editor-stag
 <div class="row g-3">
 <section class="col-lg-6"><div class="card h-100"><div class="card-header">Groupes</div><div class="card-body">
 <div class="input-group mb-3"><span class="input-group-text field-label">Groupe</span><select class="form-select" id="group"></select><button class="btn btn-success" id="addGroup" title="Ajouter un groupe"><i class="fa-solid fa-plus"></i></button><button class="btn btn-danger" id="deleteGroup" title="Supprimer le groupe"><i class="fa-solid fa-trash"></i></button></div>
+<div class="input-group mb-3"><span class="input-group-text field-label">Identifiant</span><input class="form-control" id="sourceId" placeholder="host_rtx" maxlength="80"><span class="input-group-text">Stable, utilisé par les publications HTTP</span></div>
 <div class="input-group mb-3"><span class="input-group-text field-label">Nom</span><input class="form-control" id="groupName" maxlength="120"></div>
 <div class="input-group"><span class="input-group-text field-label">Jeu de pages</span><select class="form-select" id="groupSet"></select></div>
 </div></div></section>
@@ -45,9 +46,9 @@ main{max-width:1280px}.editor-viewport{max-width:100%;overflow:auto}.editor-stag
 <div class="input-group mb-3"><span class="input-group-text field-label">Source</span><select class="form-select" id="source"></select><button class="btn btn-success" id="addSource" type="button" title="Nouvelle source manuelle"><i class="fa-solid fa-plus"></i></button></div>
 <div class="input-group mb-3"><span class="input-group-text field-label">Nom</span><input class="form-control" id="sourceName" maxlength="120"></div>
 <div class="input-group mb-3"><span class="input-group-text field-label">Origine</span><input class="form-control" id="sourceOrigin" readonly></div>
-<div class="input-group mb-3"><span class="input-group-text field-label">Endpoint HTTP</span><input class="form-control" id="sourceEndpoint" placeholder="http://serveur/api/source/"></div><div class="mb-3"><label for="sourceDescriptor" class="form-label">Descripteur JSON : properties / actions / events</label><textarea class="form-control" id="sourceDescriptor" spellcheck="false"></textarea></div>
-<div class="btn-group"><button class="btn btn-success" id="saveSource" type="button">Enregistrer la source manuelle</button><button class="btn btn-secondary" id="importSource" type="button">Importer / réimporter ce JSON</button></div>
-<div class="form-text">Une source importée ne peut être modifiée que par réimportation ; son identifiant reste stable.</div>
+<div class="input-group mb-3"><span class="input-group-text field-label">Endpoint HTTP</span><input class="form-control" id="sourceEndpoint" placeholder="http://serveur/api/source/"></div><div class="mb-3"><label for="sourceDescriptor" class="form-label">JSON de la source (complet avec id/name/descriptor, ou descripteur seul)</label><textarea class="form-control" id="sourceDescriptor" spellcheck="false"></textarea></div>
+<div class="btn-group"><button class="btn btn-success" id="saveSource" type="button">Enregistrer la source manuelle</button><button class="btn btn-secondary" id="importSource" type="button">Importer la source JSON</button></div>
+<div class="form-text">Pour RTX : coller le JSON complet de source.json, puis cliquer sur « Importer la source JSON ». Le champ Endpoint HTTP est inutile pour une source push.</div>
 </div></div></section>
 <section class="col-12"><div class="card"><div class="card-header d-flex align-items-center justify-content-between"><span>Simulateurs HTML — D-026 / D-027</span><button class="btn btn-success btn-sm" id="addSimulator" type="button"><i class="fa-solid fa-plus me-1"></i>Simulateur</button></div><div class="card-body"><div class="row g-3" id="simulators"></div></div></div></section>
 </div>
@@ -57,7 +58,7 @@ function currentSet(){return config?.pageSets.find(x=>x.id===$('set').value)}
 function currentPage(){return currentSet()?.pages.find(x=>x.id===$('page').value)}
 function currentGroup(){return config?.groups.find(x=>x.id===$('group').value)}
 function currentSource(){return config?.sources?.find(source=>source.id===$('source').value)}
-function refreshSource(){const source=currentSource();$('sourceName').value=source?.name??'';$('sourceOrigin').value=source?.origin??'';$('sourceEndpoint').value=source?.endpoint??'';$('sourceDescriptor').value=JSON.stringify(source?.descriptor??{properties:{},actions:{},events:{}},null,2);$('saveSource').disabled=!source||source.origin!=='manual';$('sourceName').readOnly=!!source&&source.origin==='imported';}
+function refreshSource(){const source=currentSource();$('sourceId').value=source?.id??'';$('sourceId').readOnly=!!source&&source.origin==='imported';$('sourceName').value=source?.name??'';$('sourceOrigin').value=source?.origin??'';$('sourceEndpoint').value=source?.endpoint??'';$('sourceDescriptor').value=JSON.stringify(source?.descriptor??{properties:{},actions:{},events:{}},null,2);$('saveSource').disabled=!source||source.origin!=='manual';$('sourceName').readOnly=!!source&&source.origin==='imported';}
 function refreshSources(selected){options($('source'),(config?.sources??[]).map(source=>({id:source.id,label:source.name})),selected??$('source').value);refreshSource()}
 
 function options(element,items,selected){element.replaceChildren();for(const item of items){const option=new Option(item.label,item.id);element.add(option)}if(selected&&items.some(x=>x.id===selected))element.value=selected}
@@ -182,12 +183,19 @@ $('saveSource').onclick=()=>{
 };
 $('importSource').onclick=async()=>{
  if(!config)return;
- let descriptor;try{descriptor=JSON.parse($('sourceDescriptor').value)}catch(error){return status('JSON invalide : '+error.message,true)}
- const old=currentSource(),id=old?.id??'source-'+newId(),name=$('sourceName').value.trim()||old?.name||'Source importée';
+ let parsed;try{parsed=JSON.parse($('sourceDescriptor').value)}catch(error){return status('JSON invalide : '+error.message,true)}
+ const complete=parsed&&typeof parsed==='object'&&!Array.isArray(parsed)&&parsed.descriptor&&typeof parsed.descriptor==='object';
+ const descriptor=complete?parsed.descriptor:parsed;
+ const id=complete?parsed.id:$('sourceId').value.trim();
+ const name=complete?parsed.name:$('sourceName').value.trim();
+ if(!validId(id))return status('Identifiant invalide : utiliser par exemple host_rtx',true);
+ if(typeof name!=='string'||!name.trim())return status('Nom de source manquant',true);
+ const existing=config.sources.find(source=>source.id===id);
+ if(existing?.origin==='manual')return status('Cet identifiant appartient déjà à une source manuelle. Choisir un autre identifiant.',true);
  try{
   const response=await fetch('/api/admin/sources/import',{method:'PUT',headers:{'content-type':'application/json'},body:JSON.stringify({id,name,descriptor,revision:config.revision})});
   const data=await response.json();if(!response.ok)throw Error(data.error??'HTTP '+response.status);
-  config.revision=data.revision;config.sources=config.sources.filter(source=>source.id!==id).concat(data.source);refreshSources(id);refreshComponent();status('Descripteur importé et enregistré');
+  config.revision=data.revision;config.sources=config.sources.filter(source=>source.id!==id).concat(data.source);refreshSources(id);refreshComponent();status('Source '+id+' importée et enregistrée');
  }catch(error){status('Import impossible : '+error.message,true)}
 };
 const simulators=new Map();let nextSimulator=1;
