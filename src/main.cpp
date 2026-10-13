@@ -9,6 +9,7 @@
 #include <ESPmDNS.h>
 Arduino_DataBus *bus = new Arduino_ESP32SPI(2,10,6,7,GFX_NOT_DEFINED);
 Arduino_GFX *lcd = new Arduino_GC9A01(bus,GFX_NOT_DEFINED,0,true);
+#define TOUCHDECK_FIRMWARE_VERSION "0.1.0+" __DATE__ " " __TIME__
 WebSocketsClient ws;
 WebServer web(80);
 Preferences prefs;
@@ -57,7 +58,7 @@ void send(const char *type,const char *key,const String &value){
 }
 void onWs(WStype_t event,uint8_t *payload,size_t len){
  if(event==WStype_DISCONNECTED){wsReady=false;if(!disconnectedAt)disconnectedAt=millis();status("Serveur deconnecte",host+":"+String(port));Serial.printf("ws_disconnected endpoint=%s:%u wifi=%s\n",host.c_str(),port,WiFi.localIP().toString().c_str());return;}
- if(event==WStype_CONNECTED){disconnectedAt=0;wsReady=true;send("hello","clientId",id);Serial.println("ws_connected");return;}
+ if(event==WStype_CONNECTED){disconnectedAt=0;wsReady=true;StaticJsonDocument<256> hello;hello["type"]="hello";hello["clientId"]=id;hello["firmwareVersion"]=TOUCHDECK_FIRMWARE_VERSION;hello["deviceType"]="esp32c3";String out;serializeJson(hello,out);ws.sendTXT(out);Serial.printf("ws_connected firmware=%s\n",TOUCHDECK_FIRMWARE_VERSION);return;}
  if(event!=WStype_TEXT||len>22000)return;
  DynamicJsonDocument doc(24000);
  DeserializationError parseError=deserializeJson(doc,payload,len);
