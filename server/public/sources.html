@@ -33,7 +33,23 @@ $('filter').oninput=render;$('new').onclick=()=>{if(dirty&&!confirm('Abandonner 
 for(const id of ['id','name','origin','endpoint','descriptor'])$(id).addEventListener('input',()=>dirty=true);
 $('import').onclick=async()=>{try{const v=parse();if(source()&&v.id!==selected)throw Error('L’identifiant d’une source existante est immuable. Créer une nouvelle source.');const response=await api('/api/admin/sources/import',{method:'PUT',headers:{'content-type':'application/json'},body:JSON.stringify({...v,revision:config.revision})});await reload(response.source.id);msg('Source importée : '+response.source.id)}catch(e){msg('Import impossible : '+e.message,true)}};
 $('save').onclick=async()=>{try{const v=parse();if(source()?.origin==='imported')throw Error('Une source externe se met à jour par Importer le JSON.');if(source()&&v.id!==selected)throw Error('Identifiant immuable.');if(config.sources.some(x=>x.id===v.id&&x.id!==selected))throw Error('Identifiant déjà utilisé.');const item={...v,origin:'manual'};if($('endpoint').value.trim())item.endpoint=$('endpoint').value.trim();const sources=config.sources.filter(x=>x.id!==selected).concat(item);await api('/api/admin/config',{method:'PUT',headers:{'content-type':'application/json'},body:JSON.stringify({...config,sources})});creating=false;await reload(v.id);msg('Source manuelle enregistrée : '+v.id)}catch(e){msg('Enregistrement impossible : '+e.message,true)}};
-$('delete').onclick=async()=>{const s=source();if(!s||!confirm('Supprimer définitivement la source '+s.id+' ?'))return;try{await api('/api/admin/config',{method:'PUT',headers:{'content-type':'application/json'},body:JSON.stringify({...config,sources:config.sources.filter(x=>x.id!==s.id)})});selected=null;creating=false;await reload(null);msg('Source supprimée')}catch(e){msg('Suppression impossible : '+e.message,true)}};
+$('delete').onclick=async()=>{
+ const s=source();if(!s)return;
+ const linked=[];
+ const pageSets=config.pageSets.map(set=>({...set,pages:set.pages.map(page=>({...page,components:page.components.map(item=>{
+  if(item.sourceId!==s.id)return item;
+  linked.push(set.id+' / '+page.title+' / '+item.id);
+  const detached={...item};
+  delete detached.sourceId;delete detached.action;delete detached.writeAction;delete detached.property;delete detached.parameters;
+  return detached;
+ })}))}));
+ const note=linked.length?'\\n'+linked.length+' composant(s) lié(s) seront conservés mais dissociés de cette source :\\n'+linked.join('\\n'):'';
+ if(!confirm('Supprimer définitivement la source '+s.id+' ?'+note))return;
+ try{
+  await api('/api/admin/config',{method:'PUT',headers:{'content-type':'application/json'},body:JSON.stringify({...config,pageSets,sources:config.sources.filter(x=>x.id!==s.id)})});
+  selected=null;creating=false;await reload(null);msg('Source supprimée'+(linked.length?' ; '+linked.length+' composant(s) dissocié(s).':''));
+ }catch(e){msg('Suppression impossible : '+e.message,true)}
+};
 (async()=>{try{await reload();msg('Catalogue chargé. Les mesures sont actualisées toutes les 5 secondes.')}catch(e){msg('Chargement impossible : '+e.message,true)}})();
 setInterval(async()=>{try{telemetry=await api('/api/admin/sources/status');render()}catch{}},5000);
 </script></body></html>
