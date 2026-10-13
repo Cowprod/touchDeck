@@ -30,6 +30,27 @@ export function rasterSvg(svg, size = 48) {
         const steps=Math.max(4,Math.min(64,Math.ceil(Math.hypot(ex-x,ey-y)/12)));
         for(let s=1;s<=steps;s++){const t=s/steps,u=1-t;add(u*u*u*oldX+3*u*u*t*c1x+3*u*t*t*c2x+t*t*t*ex,u*u*u*oldY+3*u*u*t*c1y+3*u*t*t*c2y+t*t*t*ey)}
         if(op==='C'||op==='S'){px=c2x;py=c2y}
+      }else if(op==='A'){
+        let rx=Math.abs(n()),ry=Math.abs(n()),rotation=n()*Math.PI/180,large=n(),sweep=n(),a=n(),b=n();
+        const ex=relative?x+a:a,ey=relative?y+b:b;
+        if(rx===0||ry===0){add(ex,ey)}
+        else{
+          const cos=Math.cos(rotation),sin=Math.sin(rotation);
+          const dx=(x-ex)/2,dy=(y-ey)/2;
+          const x1=cos*dx+sin*dy,y1=-sin*dx+cos*dy;
+          const lambda=x1*x1/(rx*rx)+y1*y1/(ry*ry);
+          if(lambda>1){const k=Math.sqrt(lambda);rx*=k;ry*=k}
+          const factor=(large===sweep?-1:1)*Math.sqrt(Math.max(0,(rx*rx*ry*ry-rx*rx*y1*y1-ry*ry*x1*x1)/(rx*rx*y1*y1+ry*ry*x1*x1)));
+          const cx1=factor*rx*y1/ry,cy1=-factor*ry*x1/rx;
+          const cx=cos*cx1-sin*cy1+(x+ex)/2,cy=sin*cx1+cos*cy1+(y+ey)/2;
+          const angle=(ux,uy,vx,vy)=>Math.atan2(ux*vy-uy*vx,ux*vx+uy*vy);
+          const ux=(x1-cx1)/rx,uy=(y1-cy1)/ry,vx=(-x1-cx1)/rx,vy=(-y1-cy1)/ry;
+          const start=Math.atan2(uy,ux);let delta=angle(ux,uy,vx,vy);
+          if(!sweep&&delta>0)delta-=2*Math.PI;
+          if(sweep&&delta<0)delta+=2*Math.PI;
+          const steps=Math.max(6,Math.ceil(Math.abs(delta)*Math.max(rx,ry)/12));
+          for(let s=1;s<=steps;s++){const t=start+delta*s/steps;add(cx+cos*rx*Math.cos(t)-sin*ry*Math.sin(t),cy+sin*rx*Math.cos(t)+cos*ry*Math.sin(t))}
+        }
       }else throw Error('unsupported_svg_command:'+op);
       if(!['C','S','Q','T'].includes(op)){px=x;py=y}
       last=op;
