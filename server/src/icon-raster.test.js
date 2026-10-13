@@ -4,7 +4,7 @@ import { iconSource } from './icons.js';
 import { rasterSvg } from './icon-raster.js';
 
 test('Font Awesome masks are deterministic, packed and nonempty', async () => {
-  for (const name of ['solid/house','solid/heart','solid/gear','solid/circle-check','brands/github']) {
+  for (const name of ['solid/house','solid/heart','solid/gear','solid/circle-check','brands/github','solid/user-injured']) {
     const icon = await iconSource(name);
     assert.ok(icon, name);
     const mask = rasterSvg(icon.bytes.toString('utf8'));
