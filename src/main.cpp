@@ -143,7 +143,11 @@ void setup(){
 void loop(){
  if(provision){web.handleClient();delay(5);return;}
  if(WiFi.status()!=WL_CONNECTED){
-  if(millis()-wifiStarted>30000)ESP.restart();
+  if(millis()-wifiStarted>30000){
+   Serial.println("wifi_timeout_entering_portal");
+   WiFi.disconnect(true);
+   portal();provision=true;return;
+  }
   delay(20);return;
  }
  if(!wsStarted){
