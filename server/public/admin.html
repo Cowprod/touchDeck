@@ -43,12 +43,12 @@ main{max-width:1280px}.editor-viewport{max-width:100%;overflow:auto}.editor-stag
 </div>
 <section class="col-12"><div class="card"><div class="card-header">Sources de données — D-038 / D-042 / D-043</div><div class="card-body">
 <div class="input-group mb-3"><span class="input-group-text field-label">Source</span><select class="form-select" id="source"></select><button class="btn btn-success" id="addSource" type="button" title="Nouvelle source manuelle"><i class="fa-solid fa-plus"></i></button></div>
-<div class="input-group mb-3"><span class="input-group-text field-label">Identifiant</span><input class="form-control" id="sourceId" placeholder="host_rtx" maxlength="80"><span class="input-group-text">Stable, utilisé par les publications HTTP</span></div>
+<div class="input-group mb-3"><span class="input-group-text field-label">Identifiant</span><input class="form-control" id="sourceId" placeholder="ma_source" maxlength="80"><span class="input-group-text">Stable, utilisé par les publications HTTP</span></div>
 <div class="input-group mb-3"><span class="input-group-text field-label">Nom</span><input class="form-control" id="sourceName" maxlength="120"></div>
 <div class="input-group mb-3"><span class="input-group-text field-label">Origine</span><input class="form-control" id="sourceOrigin" readonly></div>
 <div class="input-group mb-3"><span class="input-group-text field-label">Endpoint HTTP</span><input class="form-control" id="sourceEndpoint" placeholder="http://serveur/api/source/"></div><div class="mb-3"><label for="sourceDescriptor" class="form-label">JSON de la source (complet avec id/name/descriptor, ou descripteur seul)</label><textarea class="form-control" id="sourceDescriptor" spellcheck="false"></textarea></div>
 <div class="btn-group"><button class="btn btn-success" id="saveSource" type="button">Enregistrer la source manuelle</button><button class="btn btn-secondary" id="importSource" type="button">Importer la source JSON</button></div>
-<div class="form-text">Pour RTX : coller le JSON complet de source.json, puis cliquer sur « Importer la source JSON ». Le champ Endpoint HTTP est inutile pour une source push.</div>
+<div class="form-text">Pour importer une source, coller son JSON complet (id, name, descriptor), puis cliquer sur « Importer la source JSON ». Le champ Endpoint HTTP est inutile pour une source push.</div>
 </div></div></section>
 <section class="col-12"><div class="card"><div class="card-header d-flex align-items-center justify-content-between"><span>Simulateurs HTML — D-026 / D-027</span><button class="btn btn-success btn-sm" id="addSimulator" type="button"><i class="fa-solid fa-plus me-1"></i>Simulateur</button></div><div class="card-body"><div class="row g-3" id="simulators"></div></div></div></section>
 </div>
@@ -188,7 +188,7 @@ $('importSource').onclick=async()=>{
  const descriptor=complete?parsed.descriptor:parsed;
  const id=complete?parsed.id:$('sourceId').value.trim();
  const name=complete?parsed.name:$('sourceName').value.trim();
- if(!validId(id))return status('Identifiant invalide : utiliser par exemple host_rtx',true);
+ if(!validId(id))return status('Identifiant invalide : utiliser par exemple ma_source',true);
  if(typeof name!=='string'||!name.trim())return status('Nom de source manquant',true);
  const existing=config.sources.find(source=>source.id===id);
  if(existing?.origin==='manual')return status('Cet identifiant appartient déjà à une source manuelle. Choisir un autre identifiant.',true);
