@@ -10,6 +10,7 @@ import { createJsonStore } from './store.js';
 import { resolvePage, FONT_SIZES } from './theme.js';
 import { validateSource, validateDescriptor } from './sources.js';
 import { resolveText, typedValue } from './bindings.js';
+import { fontManifest, glyphBitmap, parseGlyphId } from './font-glyphs.js';
 import { CLOCK_SOURCE, CLOCK_SOURCE_ID, createClockTicker, createStopwatch } from './clock-source.js';
 
 export function createTouchDeckServer({ port = 3000, host = '0.0.0.0', dataFile = process.env.TOUCHDECK_DATA_FILE ?? new URL('../data/config.json', import.meta.url) } = {}) {
@@ -298,6 +299,25 @@ export function createTouchDeckServer({ port = 3000, host = '0.0.0.0', dataFile 
       response.writeHead(200, { 'content-type': 'image/svg+xml', 'etag': '"' + icon.sha256 + '"', 'cache-control': 'public, max-age=86400', 'x-content-type-options': 'nosniff' });
       response.end(icon.bytes);
       return;
+    }
+    if (request.method === 'GET' && url.pathname.startsWith('/api/fonts/glyph/')) {
+      const parsed=parseGlyphId(url.pathname.slice('/api/fonts/glyph/'.length));
+      if(!parsed)return json(400,{error:'invalid_glyph'});
+      try {
+        const raster=await glyphBitmap(parsed.size,parsed.codepoint);
+        response.writeHead(200,{'content-type':'application/octet-stream','cache-control':'public, max-age=86400','x-content-type-options':'nosniff','etag':'"'+raster.sha256+'"'});
+        response.end(raster.bytes);
+      }catch(error){console.error('font glyph error',error);return json(500,{error:'glyph_unavailable'});}
+      return;
+    }
+    if (request.method === 'GET' && url.pathname.startsWith('/api/fonts/manifest/')) {
+      const groupId=url.pathname.slice('/api/fonts/manifest/'.length);
+      const group=groups.get(groupId);
+      if(!group)return json(404,{error:'group_not_found'});
+      try{
+        const sourceLookup=(sourceId,key)=>sources.get(sourceId)?.descriptor?.properties?.[key]?.type??null;
+        return json(200,{groupId,...await fontManifest(pageSets.get(group.pageSetId),sourceLookup)});
+      }catch(error){console.error('font manifest error',error);return json(500,{error:'font_manifest_unavailable'});}
     }
     if (request.method === 'GET' && url.pathname.startsWith('/api/icons/manifest/')) {
       const groupId = url.pathname.slice('/api/icons/manifest/'.length);
