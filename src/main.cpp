@@ -4,12 +4,55 @@
 #include <esp_chip_info.h>
 #include <esp_flash.h>
 #include <Arduino_GFX_Library.h>
+#include <Wire.h>
 
 // Pins recovered from the previous round ESP32-C3 prototype.
 static Arduino_DataBus *displayBus = new Arduino_ESP32SPI(2, 10, 6, 7, GFX_NOT_DEFINED);
 static Arduino_GFX *display = new Arduino_GC9A01(displayBus, GFX_NOT_DEFINED, 0, true);
 static bool displayReady = false;
 static uint32_t screenCounter = 0;
+static constexpr uint8_t TOUCH_ADDR = 0x15;
+static bool touchFound = false;
+static uint32_t lastTouchAt = 0;
+static uint16_t lastX = 0, lastY = 0;
+
+static bool touchRead(uint8_t reg, uint8_t *data, size_t count) {
+  Wire.beginTransmission(TOUCH_ADDR);
+  Wire.write(reg);
+  if (Wire.endTransmission(false) != 0) return false;
+  if (Wire.requestFrom(TOUCH_ADDR, (uint8_t)count) != count) return false;
+  for (size_t i = 0; i < count; ++i) data[i] = Wire.read();
+  return true;
+}
+static void initTouch() {
+  pinMode(1, OUTPUT);
+  digitalWrite(1, LOW);
+  delay(15);
+  digitalWrite(1, HIGH);
+  delay(80);
+  Wire.begin(4, 5);
+  Wire.setClock(100000);
+  Wire.beginTransmission(TOUCH_ADDR);
+  touchFound = Wire.endTransmission() == 0;
+  Serial.printf("touch_i2c_0x15=%s\n", touchFound ? "FOUND" : "MISSING");
+}
+static void pollTouch() {
+  if (!touchFound || millis() - lastTouchAt < 45) return;
+  uint8_t packet[6];
+  if (!touchRead(0x01, packet, sizeof(packet))) return;
+  const uint8_t fingers = packet[1] & 0x0f;
+  if (fingers != 1) return;
+  const uint16_t x = ((packet[2] & 0x0f) << 8) | packet[3];
+  const uint16_t y = ((packet[4] & 0x0f) << 8) | packet[5];
+  if (x >= 240 || y >= 240) return;
+  if (millis() - lastTouchAt < 150 && abs((int)x - (int)lastX) < 3 && abs((int)y - (int)lastY) < 3) return;
+  lastTouchAt = millis();
+  lastX = x;
+  lastY = y;
+  Serial.printf("touch x=%u y=%u gesture=%u\n", x, y, packet[0]);
+  if (displayReady) display->fillCircle(x, y, 4, YELLOW);
+}
+
 static void drawScreen() {
   if (!displayReady) return;
   display->fillScreen(BLACK);
@@ -56,8 +99,10 @@ void setup() {
   displayReady = display->begin();
   Serial.printf("display_begin=%s\\n", displayReady ? "OK" : "FAILED");
   drawScreen();
+  initTouch();
 }
 void loop() {
+  pollTouch();
   static uint32_t previous = 0;
   if (millis() - previous >= 10000) {
     previous = millis();
