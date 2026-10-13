@@ -14,9 +14,9 @@ main{max-width:1800px!important;padding-top:1rem!important}
 .td-nav .td-tab:hover,.td-nav .td-tab.active{background:#2364d9;color:#fff}
 .td-nav .td-external{color:#d6e0f4;text-decoration:none;padding:.65rem 1rem;border-radius:.65rem;font-weight:600}
 .td-nav .td-external:hover{background:#2364d9;color:#fff}
-.td-workspace{display:grid;grid-template-columns:minmax(370px,1fr) minmax(340px,480px);gap:1rem;align-items:start}
+.td-workspace{display:grid;grid-template-columns:minmax(320px,440px) minmax(460px,1fr);gap:1rem;align-items:start}
 .td-edit-column{min-width:0}
-.td-live-column{position:sticky;top:5.8rem;max-height:calc(100vh - 6.5rem);overflow:auto;min-width:0;padding-right:.25rem}
+.td-live-column{position:sticky;top:5.8rem;max-height:calc(100vh - 6.5rem);overflow:auto;min-width:0;padding-right:.25rem;grid-column:1;grid-row:1}.td-edit-column{grid-column:2;grid-row:1}
 .td-live-column .card{margin-bottom:1rem}
 .td-live-column .preview{max-width:100%}
 .td-live-column #simulators>.col-lg-4{width:100%;flex:0 0 100%;max-width:100%}
@@ -26,7 +26,7 @@ main{max-width:1800px!important;padding-top:1rem!important}
 .td-section-heading{font-size:1.5rem;font-weight:700;margin:0 0 1rem}
 .td-help{color:#d3dbea;margin-bottom:1rem}
 #state{position:relative;z-index:1}
-@media(max-width:1050px){.td-workspace{grid-template-columns:minmax(0,1fr)}.td-live-column{position:static;max-height:none;overflow:visible}.td-live-column #simulators>.col-lg-4{width:50%;flex:0 0 50%}}
+@media(max-width:850px){.td-workspace{grid-template-columns:minmax(0,1fr)}.td-live-column{position:static;max-height:none;overflow:visible;grid-column:1;grid-row:1}.td-edit-column{grid-column:1;grid-row:2}.td-live-column #simulators>.col-lg-4{width:50%;flex:0 0 50%}}
 @media(max-width:650px){.td-nav .container-fluid{padding:.5rem}.td-nav .td-tab,.td-nav .td-external{padding:.5rem .65rem;font-size:.88rem}.td-workspace{display:block}.td-live-column #simulators>.col-lg-4{width:100%;flex:0 0 100%}.input-group-text.field-label{width:30%}}
 </style></head><body>
 <nav class="td-nav" aria-label="Navigation principale"><div class="container-fluid">
@@ -333,10 +333,10 @@ document.addEventListener('visibilitychange',()=>{if(!document.hidden)refreshFir
  const controls=document.createElement('div');controls.className='td-edit-column';
  const live=document.createElement('aside');live.className='td-live-column';live.setAttribute('aria-label','Aperçu et simulateurs toujours visibles');
  const title=document.createElement('h1');title.className='td-section-heading';title.textContent='Éditeur de pages';
- const help=document.createElement('p');help.className='td-help';help.textContent='Modifiez les pages et les composants à gauche ; l’aperçu et les simulateurs restent visibles à droite.';
- editor.append(title,help,workspace);workspace.append(controls,live);
+ const help=document.createElement('p');help.className='td-help';help.textContent='Simulateurs et aperçu à gauche, paramètres de la page et des composants à droite.';
+ editor.append(title,help,workspace);workspace.append(live,controls);
  for(const panel of [pagePanel,componentPanel]){panel.classList.remove('col-lg-6');controls.append(panel)}
- for(const panel of [previewPanel,simPanel]){panel.classList.remove('col-lg-6','col-12');live.append(panel)}
+ for(const panel of [simPanel,previewPanel]){panel.classList.remove('col-lg-6','col-12');live.append(panel)}
  const groups=document.createElement('div');groups.id='td-groups';groups.className='td-section';groups.hidden=true;
  groups.innerHTML='<h1 class="td-section-heading">Groupes</h1><p class="td-help">Affectation des groupes aux jeux de pages.</p>';
  groupPanel.classList.remove('col-lg-6');groups.append(groupPanel);
