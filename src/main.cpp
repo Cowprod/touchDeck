@@ -1,116 +1,155 @@
 #include <Arduino.h>
-#include <WiFi.h>
-#include <esp_system.h>
-#include <esp_chip_info.h>
-#include <esp_flash.h>
 #include <Arduino_GFX_Library.h>
+#include <ArduinoJson.h>
+#include <WebSocketsClient.h>
+#include <WiFi.h>
+#include <WebServer.h>
+#include <Preferences.h>
 #include <Wire.h>
-
-// Pins recovered from the previous round ESP32-C3 prototype.
-static Arduino_DataBus *displayBus = new Arduino_ESP32SPI(2, 10, 6, 7, GFX_NOT_DEFINED);
-static Arduino_GFX *display = new Arduino_GC9A01(displayBus, GFX_NOT_DEFINED, 0, true);
-static bool displayReady = false;
-static uint32_t screenCounter = 0;
-static constexpr uint8_t TOUCH_ADDR = 0x15;
-static bool touchFound = false;
-static uint32_t lastTouchAt = 0;
-static uint16_t lastX = 0, lastY = 0;
-
-static bool touchRead(uint8_t reg, uint8_t *data, size_t count) {
-  Wire.beginTransmission(TOUCH_ADDR);
-  Wire.write(reg);
-  if (Wire.endTransmission(false) != 0) return false;
-  if (Wire.requestFrom(TOUCH_ADDR, (uint8_t)count) != count) return false;
-  for (size_t i = 0; i < count; ++i) data[i] = Wire.read();
-  return true;
+Arduino_DataBus *bus = new Arduino_ESP32SPI(2,10,6,7,GFX_NOT_DEFINED);
+Arduino_GFX *lcd = new Arduino_GC9A01(bus,GFX_NOT_DEFINED,0,true);
+WebSocketsClient ws;
+WebServer web(80);
+Preferences prefs;
+DynamicJsonDocument state(16000);
+String id, host, pageId;
+uint16_t port = 3000;
+uint32_t revision=0, wifiStarted=0;
+bool provision=false, wsReady=false, wsStarted=false;
+int startX=-1, lastX=0, lastY=0;
+bool pressed=false;
+uint32_t started=0, lastPoll=0;
+uint16_t rgb(const char *hex, uint16_t fallback) {
+ if(!hex || strlen(hex)!=7 || hex[0]!='#')return fallback;
+ unsigned long v=strtoul(hex+1,nullptr,16);
+ return lcd->color565((v>>16)&255,(v>>8)&255,v&255);
 }
-static void initTouch() {
-  pinMode(1, OUTPUT);
-  digitalWrite(1, LOW);
-  delay(15);
-  digitalWrite(1, HIGH);
-  delay(80);
-  Wire.begin(4, 5);
-  Wire.setClock(100000);
-  Wire.beginTransmission(TOUCH_ADDR);
-  touchFound = Wire.endTransmission() == 0;
-  Serial.printf("touch_i2c_0x15=%s\n", touchFound ? "FOUND" : "MISSING");
+void label(String s,int x,int y,int w,int h,uint16_t color,int size){
+ lcd->setTextSize(size);lcd->setTextColor(color);
+ if(s.length()>100)s=s.substring(0,100);
+ lcd->setCursor(x+max(0,(w-(int)s.length()*6*size)/2),y+max(0,(h-8*size)/2));lcd->print(s);
 }
-static void pollTouch() {
-  if (!touchFound || millis() - lastTouchAt < 45) return;
-  uint8_t packet[6];
-  if (!touchRead(0x01, packet, sizeof(packet))) return;
-  const uint8_t fingers = packet[1] & 0x0f;
-  if (fingers != 1) return;
-  const uint16_t x = ((packet[2] & 0x0f) << 8) | packet[3];
-  const uint16_t y = ((packet[4] & 0x0f) << 8) | packet[5];
-  if (x >= 240 || y >= 240) return;
-  if (millis() - lastTouchAt < 150 && abs((int)x - (int)lastX) < 3 && abs((int)y - (int)lastY) < 3) return;
-  lastTouchAt = millis();
-  lastX = x;
-  lastY = y;
-  Serial.printf("touch x=%u y=%u gesture=%u\n", x, y, packet[0]);
-  if (displayReady) display->fillCircle(x, y, 4, YELLOW);
+void status(String a,String b){
+ lcd->fillScreen(BLACK);lcd->drawCircle(120,120,112,CYAN);
+ label("TouchDeck",25,55,190,30,WHITE,2);
+ label(a,20,104,200,20,YELLOW,1);
+ label(b,20,132,200,30,WHITE,1);
 }
-
-static void drawScreen() {
-  if (!displayReady) return;
-  display->fillScreen(BLACK);
-  display->drawCircle(120, 120, 112, CYAN);
-  display->setTextColor(WHITE);
-  display->setTextSize(2);
-  display->setCursor(49, 66);
-  display->print("TouchDeck");
-  display->setTextSize(1);
-  display->setCursor(60, 107);
-  display->print("ESP32-C3 / GC9A01");
-  display->setCursor(65, 131);
-  display->print("SCREEN TEST");
-  display->setCursor(77, 154);
-  display->printf("tick %lu", (unsigned long)screenCounter);
+void draw(){
+ JsonVariantConst page=state["page"];
+ if(page.isNull()){status("Non affecte","Attente du serveur");return;}
+ lcd->fillScreen(rgb(page["backgroundColor"]|"",BLACK));
+ for(JsonVariantConst c:page["components"].as<JsonArrayConst>()){
+  int x=c["x"]|0,y=c["y"]|0,w=c["w"]|30,h=c["h"]|30;
+  if(x<0||y<0||w<4||h<4||x+w>240||y+h>240)continue;
+  String type=c["type"]|"Label";
+  if(type!="Label")lcd->fillRoundRect(x+1,y+1,w-2,h-2,4,rgb(c["backgroundColor"]|"",0x3186));
+  label(c["text"]|"",x+2,y+2,w-4,h-4,rgb(c["textColor"]|"",WHITE),(c["fontSize"]|15)>=19?2:1);
+ }
 }
-
-
-// Safe, serial-only diagnostic. Does not initialize display, touch, Wi-Fi,
-// change NVS, or attempt network connections. No credentials are embedded.
-static void report() {
-  esp_chip_info_t chip;
-  esp_chip_info(&chip);
-  uint32_t flashBytes = 0;
-  esp_flash_get_size(nullptr, &flashBytes);
-  Serial.println("\nTOUCHDECK_DIAGNOSTIC_V1");
-  Serial.printf("chip_model=%s\n", ESP.getChipModel());
-  Serial.printf("chip_revision=%u\n", chip.revision);
-  Serial.printf("cpu_cores=%u\n", chip.cores);
-  Serial.printf("flash_bytes=%lu\n", (unsigned long)flashBytes);
-  Serial.printf("heap_total=%lu\n", (unsigned long)ESP.getHeapSize());
-  Serial.printf("heap_free=%lu\n", (unsigned long)ESP.getFreeHeap());
-  Serial.printf("psram_bytes=%lu\n", (unsigned long)ESP.getPsramSize());
-  Serial.printf("sdk=%s\n", ESP.getSdkVersion());
-  Serial.printf("wifi_sta_mac=%s\n", WiFi.macAddress().c_str());
-  Serial.println("diagnostic_ready=1");
+void send(const char *type,const char *key,const String &value){
+ StaticJsonDocument<256> d;d["type"]=type;d[key]=value;
+ String out;serializeJson(d,out);ws.sendTXT(out);
 }
-void setup() {
-  Serial.begin(115200);
-  delay(1500);
-  report();
-  pinMode(3, OUTPUT);
-  digitalWrite(3, HIGH);
-  displayReady = display->begin();
-  Serial.printf("display_begin=%s\\n", displayReady ? "OK" : "FAILED");
-  drawScreen();
-  initTouch();
+void onWs(WStype_t event,uint8_t *payload,size_t len){
+ if(event==WStype_DISCONNECTED){wsReady=false;status("Serveur deconnecte","Reconnexion...");return;}
+ if(event==WStype_CONNECTED){wsReady=true;send("hello","clientId",id);Serial.println("ws_connected");return;}
+ if(event!=WStype_TEXT||len>22000)return;
+ DynamicJsonDocument doc(24000);
+ if(deserializeJson(doc,payload,len))return;
+ String type=doc["type"]|"";
+ if(type=="welcome"){
+  String group=doc["groupId"]|"";
+  Serial.printf("welcome group=%s\n",group.c_str());
+  if(group.isEmpty())send("assign","groupId","demo");
+ }else if(type=="page"){
+  state.clear();state["page"]=doc["page"];
+  pageId=doc["page"]["id"]|"";
+  revision=doc["pageRevision"]|0;
+  Serial.printf("page=%s revision=%lu\n",pageId.c_str(),(unsigned long)revision);
+  draw();
+ }else if(type=="component_update"){
+  if(pageId!=(doc["pageId"]|"")||revision!=(doc["pageRevision"]|0))return;
+  bool changed=false;
+  for(JsonVariantConst update:doc["changes"].as<JsonArrayConst>())
+   for(JsonVariant component:state["page"]["components"].as<JsonArray>())
+    if(String(component["id"]|"")==String(update["id"]|"")){
+     component["text"]=update["text"].as<String>();changed=true;
+    }
+  if(changed)draw();
+ }else if(type=="error")Serial.printf("ws_error=%s\n",doc["code"]|"unknown");
 }
-void loop() {
-  pollTouch();
-  static uint32_t previous = 0;
-  if (millis() - previous >= 10000) {
-    previous = millis();
-    report();
-    screenCounter++;
-    Serial.printf("display_ready=%u screen_tick=%lu\\n", displayReady ? 1u : 0u, (unsigned long)screenCounter);
-    drawScreen();
-    Serial.printf("heartbeat_ms=%lu free_heap=%lu\n",
-      (unsigned long)millis(), (unsigned long)ESP.getFreeHeap());
+bool touch(int &x,int &y){
+ Wire.beginTransmission(0x15);Wire.write((uint8_t)0x01);
+ if(Wire.endTransmission(false)!=0||Wire.requestFrom((uint8_t)0x15,(uint8_t)6)!=6)return false;
+ uint8_t p[6];for(int i=0;i<6;i++)p[i]=Wire.read();
+ if((p[1]&15)!=1)return false;
+ x=((p[2]&15)<<8)|p[3];y=((p[4]&15)<<8)|p[5];
+ return x>=0&&x<240&&y>=0&&y<240;
+}
+void poll(){
+ if(millis()-lastPoll<35)return;lastPoll=millis();
+ int x=0,y=0;bool down=touch(x,y);
+ if(down){
+  if(!pressed){startX=x;started=millis();}
+  lastX=x;lastY=y;
+ }else if(pressed&&startX>=0){
+  int dx=lastX-startX;
+  if(abs(dx)>=35&&millis()-started<1000&&wsReady){
+   send("navigate","direction",dx<0?"next":"previous");
+   Serial.printf("swipe=%d\n",dx);
   }
+  startX=-1;
+ }
+ pressed=down;
+}
+void portal(){
+ WiFi.mode(WIFI_AP);
+ String ssid="TouchDeck-"+id.substring(id.length()-6);
+ WiFi.softAP(ssid.c_str());
+ status("Configuration Wi-Fi",ssid);
+ web.on("/",HTTP_GET,[](){
+  web.send(200,"text/html","<meta name='viewport' content='width=device-width'><h2>TouchDeck</h2><form method='post' action='/save'>SSID<input name='ssid' required><br>Mot de passe<input type='password' name='pass'><br>Serveur<input name='host' value='192.168.194.189'><br>Port<input name='port' value='3000' type='number'><br><button>Enregistrer</button></form>");
+ });
+ web.on("/save",HTTP_POST,[](){
+  String ssid=web.arg("ssid"),target=web.arg("host");
+  int p=web.arg("port").toInt();
+  if(ssid.length()<1||ssid.length()>32||target.length()<1||target.length()>120||p<1||p>65535){
+   web.send(400,"text/plain","Invalid");return;
+  }
+  prefs.begin("touchdeck",false);
+  prefs.putString("ssid",ssid);prefs.putString("pass",web.arg("pass"));
+  prefs.putString("host",target);prefs.putUShort("port",p);prefs.end();
+  web.send(200,"text/plain","Enregistre. Redemarrage...");delay(300);ESP.restart();
+ });
+ web.begin();Serial.printf("ap=%s ip=%s\n",ssid.c_str(),WiFi.softAPIP().toString().c_str());
+}
+void setup(){
+ Serial.begin(115200);delay(400);
+ id="esp-"+WiFi.macAddress();id.replace(":","");id.toLowerCase();
+ pinMode(3,OUTPUT);digitalWrite(3,HIGH);lcd->begin();
+ pinMode(1,OUTPUT);digitalWrite(1,LOW);delay(15);digitalWrite(1,HIGH);delay(80);
+ Wire.begin(4,5);Wire.setClock(100000);
+ status("Demarrage",id);
+ prefs.begin("touchdeck",true);
+ String ssid=prefs.getString("ssid",""),pass=prefs.getString("pass","");
+ host=prefs.getString("host","192.168.194.189");
+ port=prefs.getUShort("port",3000);prefs.end();
+ Serial.printf("client=%s\n",id.c_str());
+ if(ssid.isEmpty()){portal();provision=true;return;}
+ WiFi.mode(WIFI_STA);WiFi.begin(ssid.c_str(),pass.c_str());
+ status("Connexion Wi-Fi",ssid);wifiStarted=millis();
+}
+void loop(){
+ if(provision){web.handleClient();delay(5);return;}
+ if(WiFi.status()!=WL_CONNECTED){
+  if(millis()-wifiStarted>30000)ESP.restart();
+  delay(20);return;
+ }
+ if(!wsStarted){
+  ws.begin(host.c_str(),port,"/ws");
+  ws.onEvent(onWs);ws.setReconnectInterval(5000);wsStarted=true;
+  Serial.printf("wifi_ip=%s server=%s:%u\n",WiFi.localIP().toString().c_str(),host.c_str(),port);
+ }
+ ws.loop();poll();delay(2);
 }
