@@ -8,6 +8,7 @@ main{max-width:1280px}.editor-viewport{max-width:100%;overflow:auto}.editor-stag
 <nav class="navbar navbar-expand-lg bg-dark"><div class="container-fluid"><span class="navbar-brand"><i class="fa-solid fa-sliders me-2"></i>TouchDeck <small class="text-body-secondary">Administration</small></span><a class="btn btn-secondary" href="/"><i class="fa-solid fa-display me-1"></i>Simulateur</a></div></nav>
 <main class="container-fluid py-4">
 <div class="alert alert-info" id="state" role="status">Chargement de la configuration…</div>
+<div class="card mb-3"><div class="card-header d-flex justify-content-between align-items-center">Appareils connectés · Firmware <button type="button" class="btn btn-secondary btn-sm" id="refreshFirmware">Actualiser</button></div><div class="card-body"><div id="firmwareDevices" class="small">Chargement…</div></div></div>
 <div class="row g-3">
 <section class="col-lg-6"><div class="card h-100"><div class="card-header">Groupes</div><div class="card-body">
 <div class="input-group mb-3"><span class="input-group-text field-label">Groupe</span><select class="form-select" id="group"></select><button class="btn btn-success" id="addGroup" title="Ajouter un groupe"><i class="fa-solid fa-plus"></i></button><button class="btn btn-danger" id="deleteGroup" title="Supprimer le groupe"><i class="fa-solid fa-trash"></i></button></div>
@@ -227,4 +228,28 @@ window.addEventListener('message',event=>{
 });
 $('addSimulator').onclick=()=>addSimulator();
 load().then(()=>restoreSimulators());
+async function refreshFirmware(){
+ const target=document.getElementById('firmwareDevices');
+ try{
+  const response=await fetch('/api/admin/clients',{cache:'no-store'});
+  if(!response.ok)throw Error('HTTP '+response.status);
+  const data=await response.json();
+  const clients=(data.clients??[]).filter(client=>client.deviceType==='esp32c3'||client.id.startsWith('esp-'));
+  target.replaceChildren();
+  if(!clients.length){target.textContent='Aucun ESP32 enregistré depuis le démarrage du serveur.';return;}
+  const table=document.createElement('table');table.className='table table-sm mb-0';
+  const head=document.createElement('thead');head.innerHTML='<tr><th>Appareil</th><th>État</th><th>Version firmware</th></tr>';table.append(head);
+  const body=document.createElement('tbody');
+  for(const client of clients){
+   const tr=document.createElement('tr');
+   for(const value of [client.id,client.online?'Connecté':'Déconnecté',client.firmwareVersion??'Non communiquée']){
+    const td=document.createElement('td');td.textContent=value;tr.append(td);
+   }
+   body.append(tr);
+  }
+  table.append(body);target.append(table);
+ }catch(error){target.textContent='Lecture impossible : '+error.message;}
+}
+document.getElementById('refreshFirmware').addEventListener('click',refreshFirmware);
+refreshFirmware();setInterval(refreshFirmware,10000);
 </script></body></html>
