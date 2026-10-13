@@ -247,7 +247,8 @@ export function createTouchDeckServer({ port = 3000, host = '0.0.0.0', dataFile 
     if (request.method === 'GET' && url.pathname.startsWith('/assets/')) {
       const assets = {
         '/assets/quartz/bootstrap.min.css': ['../node_modules/bootswatch/dist/quartz/bootstrap.min.css', 'text/css; charset=utf-8'],
-        '/assets/fontawesome/css/all.min.css': ['../node_modules/@fortawesome/fontawesome-free/css/all.min.css', 'text/css; charset=utf-8']
+        '/assets/fontawesome/css/all.min.css': ['../node_modules/@fortawesome/fontawesome-free/css/all.min.css', 'text/css; charset=utf-8'],
+        '/assets/fonts/ibm-plex-mono.woff2': ['../node_modules/@fontsource/ibm-plex-mono/files/ibm-plex-mono-latin-400-normal.woff2', 'font/woff2']
       };
       const fontMatch = /^\/assets\/fontawesome\/webfonts\/(fa-(?:solid-900|regular-400|brands-400)\.(?:woff2|ttf))$/.exec(url.pathname);
       const asset = assets[url.pathname] ?? (fontMatch ? ['../node_modules/@fortawesome/fontawesome-free/webfonts/' + fontMatch[1], fontMatch[1].endsWith('.woff2') ? 'font/woff2' : 'font/ttf'] : null);
