@@ -194,11 +194,7 @@ void onWs(WStype_t event,uint8_t *payload,size_t len){
     if(strcmp(component["id"]|"",updateId)!=0)continue;
     if(String(component["text"]|"")==nextText)break;
     component["text"]=nextText;
-    if(state.overflowed()){
-     Serial.printf("state_overflow update=%s heap=%u\\n",updateId,(unsigned)ESP.getFreeHeap());
-     state.garbageCollect();
-     component["text"]=nextText;
-    }
+    if(state.overflowed())Serial.printf("state_overflow update=%s heap=%u\\n",updateId,(unsigned)ESP.getFreeHeap());
     drawComponent(component.as<JsonVariantConst>(),true);
     changed++;
     break;
