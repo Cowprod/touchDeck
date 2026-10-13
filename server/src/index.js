@@ -58,6 +58,28 @@ export function createTouchDeckServer({ port = 3000, host = '0.0.0.0', dataFile 
   const pageSets = new Map();
   const sources = new Map();
   const sourceValues = new Map();
+  const latestFirmwareVersion=process.env.TOUCHDECK_FIRMWARE_VERSION??'0.1.0';
+  const deviceSourceId=id=>'device_'+id.slice(0,73);
+  function deviceSource(id){
+    const sourceId=deviceSourceId(id);
+    if(!sources.has(sourceId)){
+      sources.set(sourceId,{id:sourceId,name:'Appareil '+id,origin:'imported',descriptor:{
+        title:'État système de '+id,description:'Informations publiées par le serveur pour cet appareil',
+        properties:Object.fromEntries(['firmwareVersion','latestVersion','updateAvailable','connected','lastSeen','deviceType'].map(key=>[key,{type:key==='updateAvailable'||key==='connected'?'boolean':'string',readOnly:true}])),
+        actions:{},events:{}
+      }});
+    }
+    return sourceId;
+  }
+  function publishDevice(client,connected){
+    if(!client.deviceType)return;
+    const sourceId=deviceSource(client.id);
+    const installed=client.firmwareVersion??'';
+    const version=installed.split('+')[0];
+    publishSourceValues(sourceId,{firmwareVersion:installed,latestVersion:latestFirmwareVersion,
+      updateAvailable:version!==''&&version!==latestFirmwareVersion,connected,
+      lastSeen:new Date().toISOString(),deviceType:client.deviceType});
+  }
   const profiles = new Map([['round-240', { id: 'round-240', width: 240, height: 240, shape: 'round', gridColumns: 8, gridRows: 8 }]]);
   const exampleSet = { id: 'demo', profileId: 'round-240', pages: [
     { id: 'home', title: 'Accueil', visible: true, components: [
@@ -208,6 +230,7 @@ export function createTouchDeckServer({ port = 3000, host = '0.0.0.0', dataFile 
           for (const set of config.pageSets) pageSets.set(set.id, set);
           for (const group of config.groups) groups.set(group.id, group);
           sources.clear();for(const source of requestedSources)sources.set(source.id,source);
+          for(const client of clients.values())publishDevice(client,client.sockets.size>0);
           broadcastConfig();
           return json(200, { ok: true, revision: configRevision });
         } catch (error) { return json(400, { error: 'invalid_request' }); }
@@ -222,7 +245,7 @@ export function createTouchDeckServer({ port = 3000, host = '0.0.0.0', dataFile 
         const idOk=typeof data.id==='string'&&/^[a-zA-Z0-9_-]{1,80}$/.test(data.id);
         if(!idOk||!validateDescriptor(data.descriptor)||typeof data.name!=='string'||!data.name.length||data.name.length>120)return json(400,{error:'invalid_descriptor'});
         if(!sources.has(data.id)&&sources.size>=100)return json(400,{error:'source_limit'});
-        if(data.id===CLOCK_SOURCE_ID)return json(403,{error:'built_in_source'});
+        if(data.id===CLOCK_SOURCE_ID||data.id.startsWith('device_'))return json(403,{error:'built_in_source'});
         const source={id:data.id,name:data.name,origin:'imported',descriptor:data.descriptor};
         const nextSources=[...sources.values()].filter(item=>item.id!==data.id).concat(source);
         await store.save({schemaVersion:1,revision:configRevision+1,groups:[...groups.values()],pageSets:[...pageSets.values()],sources:nextSources});
@@ -234,7 +257,7 @@ export function createTouchDeckServer({ port = 3000, host = '0.0.0.0', dataFile 
     if(sourcePushMatch&&request.method==='PUT'){
       const source=sources.get(sourcePushMatch[1]);
       if(!source)return json(404,{error:'source_not_found'});
-      if(source.id===CLOCK_SOURCE_ID)return json(403,{error:'built_in_source'});
+      if(source.id===CLOCK_SOURCE_ID||source.id.startsWith('device_'))return json(403,{error:'built_in_source'});
       try{
         let body='';for await(const chunk of request){body+=chunk;if(body.length>32768)return json(413,{error:'too_large'})}
         const updates=JSON.parse(body);
@@ -249,7 +272,7 @@ export function createTouchDeckServer({ port = 3000, host = '0.0.0.0', dataFile 
       }catch{return json(400,{error:'invalid_request'})}
     }
     if (url.pathname === '/api/admin/clients') {
-      if (request.method === 'GET') return json(200,{ clients:[...clients.values()].map(client=>({id:client.id,groupId:client.groupId,pageId:client.pageId,online:client.sockets.size>0,firmwareVersion:client.firmwareVersion??null,deviceType:client.deviceType??null})) });
+      if (request.method === 'GET') return json(200,{ clients:[...clients.values()].map(client=>({id:client.id,groupId:client.groupId,pageId:client.pageId,online:client.sockets.size>0,firmwareVersion:sourceValues.get(deviceSourceId(client.id))?.firmwareVersion??null,latestVersion:sourceValues.get(deviceSourceId(client.id))?.latestVersion??null,updateAvailable:sourceValues.get(deviceSourceId(client.id))?.updateAvailable??null,deviceType:client.deviceType??null})) });
       if (request.method === 'PUT') {
         try {
           let body='';for await(const chunk of request){body+=chunk;if(body.length>4096)return json(413,{error:'too_large'})}
@@ -289,6 +312,7 @@ export function createTouchDeckServer({ port = 3000, host = '0.0.0.0', dataFile 
         current.sockets.add(socket);
         current.firmwareVersion=typeof message.firmwareVersion==='string'&&message.firmwareVersion.length<=100?message.firmwareVersion:null;
         current.deviceType=typeof message.deviceType==='string'&&message.deviceType.length<=40?message.deviceType:null;
+        publishDevice(current,true);
         send(current, { type: 'welcome', clientId: current.id, groupId: current.groupId });
         send(current, snapshot(current));
       } else if (message?.type === 'navigate' && current && ['next', 'previous'].includes(message.direction)) {
@@ -303,7 +327,7 @@ export function createTouchDeckServer({ port = 3000, host = '0.0.0.0', dataFile 
         socket.send(JSON.stringify({ type: 'error', code: 'invalid_message' }));
       }
     });
-    socket.on('close', () => { if (current) current.sockets.delete(socket); });
+    socket.on('close', () => { if (current){current.sockets.delete(socket);publishDevice(current,current.sockets.size>0);} });
   });
   return {
     server, wss, clients,
