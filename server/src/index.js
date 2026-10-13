@@ -249,7 +249,7 @@ export function createTouchDeckServer({ port = 3000, host = '0.0.0.0', dataFile 
       }catch{return json(400,{error:'invalid_request'})}
     }
     if (url.pathname === '/api/admin/clients') {
-      if (request.method === 'GET') return json(200,{ clients:[...clients.values()].map(client=>({id:client.id,groupId:client.groupId,pageId:client.pageId,online:client.sockets.size>0})) });
+      if (request.method === 'GET') return json(200,{ clients:[...clients.values()].map(client=>({id:client.id,groupId:client.groupId,pageId:client.pageId,online:client.sockets.size>0,firmwareVersion:client.firmwareVersion??null,deviceType:client.deviceType??null})) });
       if (request.method === 'PUT') {
         try {
           let body='';for await(const chunk of request){body+=chunk;if(body.length>4096)return json(413,{error:'too_large'})}
@@ -287,6 +287,8 @@ export function createTouchDeckServer({ port = 3000, host = '0.0.0.0', dataFile 
           clients.set(current.id, current);
         }
         current.sockets.add(socket);
+        current.firmwareVersion=typeof message.firmwareVersion==='string'&&message.firmwareVersion.length<=100?message.firmwareVersion:null;
+        current.deviceType=typeof message.deviceType==='string'&&message.deviceType.length<=40?message.deviceType:null;
         send(current, { type: 'welcome', clientId: current.id, groupId: current.groupId });
         send(current, snapshot(current));
       } else if (message?.type === 'navigate' && current && ['next', 'previous'].includes(message.direction)) {
