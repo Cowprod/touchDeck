@@ -60,7 +60,8 @@ void onWs(WStype_t event,uint8_t *payload,size_t len){
  if(event==WStype_CONNECTED){disconnectedAt=0;wsReady=true;send("hello","clientId",id);Serial.println("ws_connected");return;}
  if(event!=WStype_TEXT||len>22000)return;
  DynamicJsonDocument doc(24000);
- if(deserializeJson(doc,payload,len))return;
+ DeserializationError parseError=deserializeJson(doc,payload,len);
+ if(parseError){Serial.printf("ws_json_error=%s len=%u\n",parseError.c_str(),(unsigned)len);return;}
  String type=doc["type"]|"";
  if(type=="welcome"){
   String group=doc["groupId"]|"";
@@ -70,16 +71,26 @@ void onWs(WStype_t event,uint8_t *payload,size_t len){
   state.clear();state["page"]=doc["page"];
   pageId=doc["page"]["id"]|"";
   revision=doc["pageRevision"]|0;
-  Serial.printf("page=%s revision=%lu\n",pageId.c_str(),(unsigned long)revision);
+  Serial.printf("page=%s revision=%lu components=%u bg=%s\n",pageId.c_str(),(unsigned long)revision,(unsigned)state["page"]["components"].as<JsonArrayConst>().size(),state["page"]["backgroundColor"]|"missing");
   draw();
  }else if(type=="component_update"){
-  if(pageId!=(doc["pageId"]|"")||revision!=(doc["pageRevision"]|0))return;
+  String incomingPage=doc["pageId"]|"";
+  uint32_t incomingRevision=doc["pageRevision"]|0;
+  static uint32_t lastUpdateLog=0;
+  if(pageId!=incomingPage||revision!=incomingRevision){
+   if(millis()-lastUpdateLog>3000){
+    Serial.printf("update_rejected local=%s/%lu incoming=%s/%lu\n",pageId.c_str(),(unsigned long)revision,incomingPage.c_str(),(unsigned long)incomingRevision);
+    lastUpdateLog=millis();
+   }
+   return;
+  }
   bool changed=false;
   for(JsonVariantConst update:doc["changes"].as<JsonArrayConst>())
    for(JsonVariant component:state["page"]["components"].as<JsonArray>())
     if(String(component["id"]|"")==String(update["id"]|"")){
      component["text"]=update["text"].as<String>();changed=true;
     }
+  if(millis()-lastUpdateLog>3000){Serial.printf("update_received count=%u matched=%d heap=%u\n",(unsigned)doc["changes"].as<JsonArrayConst>().size(),changed,(unsigned)ESP.getFreeHeap());lastUpdateLog=millis();}
   if(changed)draw();
  }else if(type=="error")Serial.printf("ws_error=%s\n",doc["code"]|"unknown");
 }
