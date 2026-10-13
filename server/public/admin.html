@@ -12,7 +12,6 @@ main{max-width:1280px}.editor-viewport{max-width:100%;overflow:auto}.editor-stag
 <div class="row g-3">
 <section class="col-lg-6"><div class="card h-100"><div class="card-header">Groupes</div><div class="card-body">
 <div class="input-group mb-3"><span class="input-group-text field-label">Groupe</span><select class="form-select" id="group"></select><button class="btn btn-success" id="addGroup" title="Ajouter un groupe"><i class="fa-solid fa-plus"></i></button><button class="btn btn-danger" id="deleteGroup" title="Supprimer le groupe"><i class="fa-solid fa-trash"></i></button></div>
-<div class="input-group mb-3"><span class="input-group-text field-label">Identifiant</span><input class="form-control" id="sourceId" placeholder="host_rtx" maxlength="80"><span class="input-group-text">Stable, utilisé par les publications HTTP</span></div>
 <div class="input-group mb-3"><span class="input-group-text field-label">Nom</span><input class="form-control" id="groupName" maxlength="120"></div>
 <div class="input-group"><span class="input-group-text field-label">Jeu de pages</span><select class="form-select" id="groupSet"></select></div>
 </div></div></section>
@@ -44,6 +43,7 @@ main{max-width:1280px}.editor-viewport{max-width:100%;overflow:auto}.editor-stag
 </div>
 <section class="col-12"><div class="card"><div class="card-header">Sources de données — D-038 / D-042 / D-043</div><div class="card-body">
 <div class="input-group mb-3"><span class="input-group-text field-label">Source</span><select class="form-select" id="source"></select><button class="btn btn-success" id="addSource" type="button" title="Nouvelle source manuelle"><i class="fa-solid fa-plus"></i></button></div>
+<div class="input-group mb-3"><span class="input-group-text field-label">Identifiant</span><input class="form-control" id="sourceId" placeholder="host_rtx" maxlength="80"><span class="input-group-text">Stable, utilisé par les publications HTTP</span></div>
 <div class="input-group mb-3"><span class="input-group-text field-label">Nom</span><input class="form-control" id="sourceName" maxlength="120"></div>
 <div class="input-group mb-3"><span class="input-group-text field-label">Origine</span><input class="form-control" id="sourceOrigin" readonly></div>
 <div class="input-group mb-3"><span class="input-group-text field-label">Endpoint HTTP</span><input class="form-control" id="sourceEndpoint" placeholder="http://serveur/api/source/"></div><div class="mb-3"><label for="sourceDescriptor" class="form-label">JSON de la source (complet avec id/name/descriptor, ou descripteur seul)</label><textarea class="form-control" id="sourceDescriptor" spellcheck="false"></textarea></div>
