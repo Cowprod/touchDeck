@@ -19,6 +19,7 @@ export function resolvePage(page, profile) {
       backgroundColor:COLORS[item.background] ?? '#334155',
       textColor:COLORS[item.color] ?? '#f9fafb',
       fontSize:FONT_SIZES[item.fontSize] ?? FONT_SIZES.normal,
+      radius:item.radius===0||item.radius===1||item.radius===2?item.radius:1,
       active:item.active===true,
       disabled:item.disabled===true
     }))
