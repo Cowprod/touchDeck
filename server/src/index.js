@@ -138,7 +138,7 @@ export function createTouchDeckServer({ port = 3000, host = '0.0.0.0', dataFile 
     const pageCount=visible.length;
     const pageVariables={page_number:pageNumber,page_count:pageCount};
     const resolvePageVariables=text=>typeof text==='string'?text.replace(/\$\{(page_number|page_count)\}/g,(_,key)=>String(pageVariables[key])):text;
-    const hydrated=page?{...page,components:page.components.map(item=>({...item,text:resolvePageVariables(resolveText(item.text,item.sourceId,sources.get(item.sourceId),sourceValues.get(item.sourceId)))}))}:null;
+    const hydrated=page?{...page,components:page.components.map(item=>({...item,text:resolveText(resolvePageVariables(item.text),item.sourceId,sources.get(item.sourceId),sourceValues.get(item.sourceId))}))}:null;
     return { type: 'page', pageRevision:configRevision, clientId: client.id, groupId: client.groupId, profile: profiles.get(pageSet?.profileId) ?? null, page: resolvePage(hydrated, profiles.get(pageSet?.profileId)) };
   }
   function send(client, payload) {
