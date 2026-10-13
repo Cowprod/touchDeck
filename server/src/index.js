@@ -1,4 +1,6 @@
 import http from 'node:http';
+import os from 'node:os';
+import { Bonjour } from 'bonjour-service';
 import { readFile } from 'node:fs/promises';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { WebSocketServer } from 'ws';
@@ -13,6 +15,9 @@ export function createTouchDeckServer({ port = 3000, host = '0.0.0.0', dataFile 
   let ready = false;
   let configRevision = 0;
   let stopClock = null;
+  let bonjour = null;
+  let advertised = null;
+  const instanceId = process.env.TOUCHDECK_INSTANCE_ID ?? os.hostname().replace(/[^a-zA-Z0-9_-]/g,'-');
   let mutationTail=Promise.resolve();
   function serializeMutation(operation){
     const task=mutationTail.catch(()=>{}).then(operation);
@@ -300,8 +305,18 @@ export function createTouchDeckServer({ port = 3000, host = '0.0.0.0', dataFile 
   });
   return {
     server, wss, clients,
-    async start() { await initialize(); await new Promise((resolve, reject) => { server.once('error', reject); server.listen(port, host, resolve); }); stopClock=createClockTicker(values=>publishSourceValues(CLOCK_SOURCE_ID,values)); return server.address(); },
-    async stop() { stopClock?.();stopClock=null;for (const socket of wss.clients) socket.terminate(); await new Promise(resolve => wss.close(resolve)); await new Promise(resolve => server.close(resolve)); }
+    async start() {
+      await initialize();
+      await new Promise((resolve, reject) => { server.once('error', reject); server.listen(port, host, resolve); });
+      stopClock=createClockTicker(values=>publishSourceValues(CLOCK_SOURCE_ID,values));
+      try {
+        bonjour=new Bonjour();
+        advertised=bonjour.publish({name:'TouchDeck '+instanceId,type:'touchdeck',protocol:'tcp',port:server.address().port,txt:{id:instanceId,ver:'1',path:'/ws'}});
+        console.log('touchDeck mDNS published:',instanceId,'port',server.address().port);
+      } catch(error) { console.error('touchDeck mDNS publish failed:',error); }
+      return server.address();
+    },
+    async stop() { stopClock?.();stopClock=null;advertised?.stop();bonjour?.destroy();advertised=null;bonjour=null;for (const socket of wss.clients) socket.terminate(); await new Promise(resolve => wss.close(resolve)); await new Promise(resolve => server.close(resolve)); }
   };
 }
 if (process.env.pm_id !== undefined || (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href)) {
