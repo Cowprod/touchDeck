@@ -124,14 +124,17 @@ void drawComponent(JsonVariantConst component,bool clearArea){
  if(x<0||y<0||w<4||h<4||x+w>240||y+h>240)return;
  if(clearArea)lcd->fillRect(x,y,w,h,rgb(state["page"]["backgroundColor"]|"",BLACK));
  String type=component["type"]|"Label";
- if(type!="Label" || !component["backgroundColor"].isNull()){
+ if(!((type=="Label"||type=="Icon") && component["backgroundColor"].isNull())){
   int radius=component["radius"]|1;
   int r=radius==2?min(w-2,h-2)/2:radius==0?0:4;
   uint16_t bg=rgb(component["backgroundColor"]|"",0x3186);
   if(r==0)lcd->fillRect(x+1,y+1,w-2,h-2,bg);
   else lcd->fillRoundRect(x+1,y+1,w-2,h-2,r,bg);
  }
- if(type=="Icon")drawIcon(component["icon"]|"",x+2,y+2,w-4,h-4,rgb(component["textColor"]|"",WHITE));
+ if(type=="Icon"){
+  Serial.printf("icon_render name=%s color=%s bg=%s cached=%d\\n",component["icon"]|"",component["textColor"]|"",component["backgroundColor"]|"transparent",iconPaths.containsKey(component["icon"]|""));
+  drawIcon(component["icon"]|"",x+2,y+2,w-4,h-4,rgb(component["textColor"]|"",WHITE));
+ }
  else label(component["text"]|"",x+2,y+2,w-4,h-4,rgb(component["textColor"]|"",WHITE),(component["fontSize"]|15)>=19?2:1);
 }
 void draw(){
