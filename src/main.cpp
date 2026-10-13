@@ -154,8 +154,15 @@ void setup(){
  Serial.begin(115200);delay(400);
  // One-time provisioning reset for the current physical troubleshooting session.
  Preferences resetPrefs;
- resetPrefs.begin("touchdeck",false);
- resetPrefs.clear();
+ resetPrefs.begin("td-reset",false);
+ if(!resetPrefs.getBool("once-20261013",false)){
+   Preferences wifiPrefs;
+   wifiPrefs.begin("touchdeck",false);
+   wifiPrefs.clear();
+   wifiPrefs.end();
+   resetPrefs.putBool("once-20261013",true);
+   Serial.println("provisioning_reset_once");
+ }
  resetPrefs.end();
  id="esp-"+WiFi.macAddress();id.replace(":","");id.toLowerCase();
  pinMode(3,OUTPUT);digitalWrite(3,HIGH);lcd->begin();
