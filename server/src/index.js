@@ -10,13 +10,14 @@ import { createJsonStore } from './store.js';
 import { resolvePage, FONT_SIZES } from './theme.js';
 import { validateSource, validateDescriptor } from './sources.js';
 import { resolveText, typedValue } from './bindings.js';
-import { CLOCK_SOURCE, CLOCK_SOURCE_ID, createClockTicker } from './clock-source.js';
+import { CLOCK_SOURCE, CLOCK_SOURCE_ID, createClockTicker, createStopwatch } from './clock-source.js';
 
 export function createTouchDeckServer({ port = 3000, host = '0.0.0.0', dataFile = process.env.TOUCHDECK_DATA_FILE ?? new URL('../data/config.json', import.meta.url) } = {}) {
   const store = createJsonStore(dataFile);
   let ready = false;
   let configRevision = 0;
   let stopClock = null;
+  const stopwatch=createStopwatch();
   let bonjour = null;
   let advertised = null;
   const instanceId = process.env.TOUCHDECK_INSTANCE_ID ?? os.hostname().replace(/[^a-zA-Z0-9_-]/g,'-');
@@ -63,6 +64,7 @@ export function createTouchDeckServer({ port = 3000, host = '0.0.0.0', dataFile 
   const pendingToggles = new Map();
   const actionQueues = new Map();
   async function dispatchSource(source,action,parameters){
+    if(source.id===CLOCK_SOURCE_ID){publishSourceValues(CLOCK_SOURCE_ID,stopwatch.action(action));return;}
     if(typeof source.endpoint!=='string')throw new Error('source_endpoint_missing');
     const url=new URL(source.endpoint);
     if(!['http:','https:'].includes(url.protocol)||url.username||url.password||url.hash)throw new Error('invalid_source_endpoint');
@@ -464,7 +466,7 @@ export function createTouchDeckServer({ port = 3000, host = '0.0.0.0', dataFile 
     async start() {
       await initialize();
       await new Promise((resolve, reject) => { server.once('error', reject); server.listen(port, host, resolve); });
-      stopClock=createClockTicker(values=>publishSourceValues(CLOCK_SOURCE_ID,values));
+      stopClock=createClockTicker(values=>publishSourceValues(CLOCK_SOURCE_ID,{...values,...stopwatch.values()}));
       try {
         const { Bonjour } = await import('bonjour-service');
         bonjour=new Bonjour();
