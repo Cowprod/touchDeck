@@ -80,7 +80,7 @@ function renderPreview(){
  for(const item of currentPage()?.components??[]){
   const div=document.createElement('div');div.className='piece'+(item.id===$('component').value?' selected':'');
   const paint=()=>{div.style.left=item.x*12.5+'%';div.style.top=item.y*12.5+'%';div.style.width=item.w*12.5+'%';div.style.height=item.h*12.5+'%'};
-  paint();div.style.backgroundColor=item.type==='Label'?'transparent':(palette[item.background]??'#334155');div.style.borderRadius=item.radius===2?Math.min(div.offsetWidth||item.w*30,div.offsetHeight||item.h*30)/2+'px':item.radius===0?'0px':'4px';div.style.border='none';div.style.color=palette[item.color]??'#fff';div.style.fontSize=({small:12,normal:15,large:20}[item.fontSize]??15)+'px';div.style.opacity=item.disabled?'.45':'1';div.style.outline=item.active?'2px solid #f8f9fa':'';div.textContent=item.text??item.type;div.title='Déplacer ou redimensionner '+item.id;
+  paint();div.style.backgroundColor=item.type==='Label'?'transparent':(palette[item.background]??'#334155');div.style.borderRadius=item.radius===2?Math.min(item.w,item.h)*15+'px':item.radius===0?'0px':'4px';div.style.border='none';div.style.color=palette[item.color]??'#fff';div.style.fontSize=({small:12,normal:15,large:20}[item.fontSize]??15)+'px';div.style.opacity=item.disabled?'.45':'1';div.style.outline=item.active?'2px solid #f8f9fa':'';div.textContent=item.text??item.type;div.title='Déplacer ou redimensionner '+item.id;
   div.onpointerdown=event=>{
    if(event.button!==0)return;event.preventDefault();
    $('component').value=item.id;refreshComponent();
