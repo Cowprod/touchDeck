@@ -83,6 +83,14 @@ main.container-fluid{padding-left:0!important;padding-top:0!important}
 .td-live-column #simulators>div iframe{width:270px!important;max-width:270px!important}
 @media(max-width:1100px){.td-workspace{grid-template-columns:270px minmax(0,1fr)!important}}
 @media(max-width:550px){.td-workspace{grid-template-columns:270px minmax(0,1fr)!important}}
+/* Formulaires compacts : privilégier la place utile des valeurs. */
+.td-edit-column .card-body{padding:.75rem!important}
+.td-edit-column .input-group{margin-bottom:.65rem!important}
+.td-edit-column .input-group-text{padding:.45rem .55rem!important;white-space:normal;line-height:1.2;min-width:0}
+.td-edit-column .input-group-text.field-label{width:22%!important;flex:0 0 22%!important;font-size:.88rem}
+.td-edit-column .form-control,.td-edit-column .form-select{padding:.45rem .55rem!important}
+.td-edit-column .card-header{padding:.6rem .85rem!important}
+@media(max-width:850px){.td-edit-column .input-group-text.field-label{width:25%!important;flex-basis:25%!important}}
 </style></head><body>
 <nav class="td-nav" aria-label="Navigation principale"><div class="container-fluid">
 <a class="td-brand" href="/admin"><i class="fa-solid fa-layer-group me-2"></i>TouchDeck</a>
@@ -104,7 +112,7 @@ main.container-fluid{padding-left:0!important;padding-top:0!important}
 <section class="col-lg-6"><div class="card h-100"><div class="card-header">Jeux de pages</div><div class="card-body">
 <div class="input-group mb-3"><span class="input-group-text field-label">Jeu</span><select class="form-select" id="set"></select><button class="btn btn-success" id="addSet" title="Ajouter un jeu"><i class="fa-solid fa-plus"></i></button></div>
 <div class="input-group mb-3"><span class="input-group-text field-label">Profil</span><select class="form-select" id="profile"><option value="round-240">Rond 240 × 240 — 8 × 8</option></select></div>
-<div class="input-group mb-3"><span class="input-group-text field-label">Page</span><select class="form-select" id="page"></select><button class="btn btn-success" id="addPage" title="Ajouter une page"><i class="fa-solid fa-plus"></i></button><button class="btn btn-danger" id="deletePage" title="Supprimer la page"><i class="fa-solid fa-trash"></i></button></div>
+<div class="input-group mb-3"><span class="input-group-text field-label">Page</span><select class="form-select" id="page"></select><button class="btn btn-success" id="addPage" title="Ajouter une page"><i class="fa-solid fa-plus"></i></button><button class="btn btn-secondary" id="duplicatePage" title="Dupliquer la page"><i class="fa-solid fa-copy"></i></button><button class="btn btn-danger" id="deletePage" title="Supprimer la page"><i class="fa-solid fa-trash"></i></button></div>
 <div class="input-group mb-3"><span class="input-group-text field-label">Titre</span><input class="form-control" id="pageTitle" maxlength="120"></div>
 <div class="input-group mb-3"><span class="input-group-text field-label">Fond de page</span><select class="form-select" id="pageBg"><option value="">Par défaut</option><option value="primary">primary</option><option value="secondary">secondary</option><option value="success">success</option><option value="warning">warning</option><option value="danger">danger</option><option value="info">info</option><option value="light">light</option><option value="dark">dark</option></select></div>
 <div class="input-group"><span class="input-group-text field-label">Visible</span><div class="form-check form-switch ms-3 align-self-center"><input class="form-check-input" type="checkbox" id="visible" aria-label="Page visible"></div></div>
@@ -240,6 +248,7 @@ $('addGroup').onclick=()=>{if(!config||!config.pageSets.length)return status('Au
 $('deleteGroup').onclick=()=>{if(!currentGroup())return status('Aucun groupe sélectionné',true);config.groups=config.groups.filter(x=>x.id!==$('group').value);refresh();dirty(null)};
 $('addSet').onclick=()=>{if(!config)return status('Configuration indisponible',true);const id='set-'+newId();config.pageSets.push({id,profileId:'round-240',pages:[]});refresh({set:id});dirty(null)};
 $('addPage').onclick=()=>{const s=currentSet();if(!s)return status('Aucun jeu sélectionné',true);const id='page-'+newId();s.pages.push({id,title:'Nouvelle page',visible:true,components:[]});refreshSet(id);dirty(null)};
+$('duplicatePage').onclick=()=>{const set=currentSet(),page=currentPage();if(!set||!page)return status('Aucune page sélectionnée',true);const copy=JSON.parse(JSON.stringify(page));copy.id='page-'+newId();copy.title=(page.title||'Page')+' (copie)';copy.components=copy.components.map(c=>({...c,id:'component-'+newId()}));const index=set.pages.findIndex(p=>p.id===page.id);set.pages.splice(index+1,0,copy);refreshSet(copy.id);dirty(null)};
 $('deletePage').onclick=()=>{const s=currentSet();if(!s)return status('Aucun jeu sélectionné',true);s.pages=s.pages.filter(x=>x.id!==$('page').value);refreshSet();dirty(null)};
 $('addLabel').onclick=()=>addComponent('Label');$('addButton').onclick=()=>addComponent('Button');$('addToggle').onclick=()=>addComponent('Toggle');$('addIcon').onclick=()=>addComponent('Icon');
 let iconSearchTimer;
