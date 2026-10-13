@@ -23,7 +23,7 @@ socket.onmessage=event=>{const data=JSON.parse(event.data);if(data.type==='welco
 if(data.type==='component_update'&&data.pageId===currentPageId&&data.pageRevision===currentPageRevision){
  for(const change of data.changes??[]){const element=[...screen.children].find(child=>child.dataset.componentId===change.id);if(element)element.textContent=change.text??''}
 }
-if(data.type==='interaction_result'){const el=[...screen.children].find(child=>child.dataset.componentId===data.componentId);if(el){el.dataset.pending='0';el.style.opacity=el.dataset.disabled==='1'?'.45':'1'}status.textContent=data.status==='rejected'?'Action non exécutée : '+data.reason:'Action : '+data.status}
+if(data.type==='interaction_result'){const el=[...screen.children].find(child=>child.dataset.componentId===data.componentId);if(el&&data.status!=='pending'){el.dataset.pending='0';el.style.opacity=el.dataset.disabled==='1'?'.45':'1'}status.textContent=data.status==='rejected'?'Action non exécutée : '+data.reason:'Action : '+data.status}
 if(data.type==='error')status.textContent='Erreur : '+data.code};
 socket.onclose=()=>{status.textContent='Déconnecté';setTimeout(connect,3000)}}
 document.getElementById('assign').onclick=()=>send({type:'assign',groupId:'demo'});
