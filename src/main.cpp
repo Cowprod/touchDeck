@@ -17,6 +17,9 @@ WebServer web(80);
 Preferences prefs;
 DynamicJsonDocument state(16000);
 DynamicJsonDocument iconPaths(4096);
+DynamicJsonDocument fontPaths(12288);
+String fontGroup;
+uint32_t fontRevision=0;
 bool iconFsReady=false;
 String iconGroup;
 String currentGroup;
@@ -122,6 +125,113 @@ void syncIcons(const String &group,uint32_t newRevision){
  root.close();
  Serial.printf("icon_sync_ok group=%s count=%u\\n",group.c_str(),(unsigned)iconPaths.size());
 }
+
+uint16_t blendFontColor(uint16_t fg,uint16_t bg,uint8_t alpha){
+ if(alpha>=15)return fg;
+ uint8_t r=((fg>>11)*alpha+(bg>>11)*(15-alpha)+7)/15;
+ uint8_t g=(((fg>>5)&63)*alpha+((bg>>5)&63)*(15-alpha)+7)/15;
+ uint8_t b=((fg&31)*alpha+(bg&31)*(15-alpha)+7)/15;
+ return (r<<11)|(g<<5)|b;
+}
+uint32_t nextFontCodepoint(const String &text,unsigned &index){
+ const unsigned char c=(unsigned char)text[index++];
+ if(c<128)return c;
+ int count=(c&0xe0)==0xc0?1:(c&0xf0)==0xe0?2:(c&0xf8)==0xf0?3:0;
+ uint32_t cp=c&((1<<(6-count))-1);
+ for(int n=0;n<count && index<text.length();n++)cp=(cp<<6)|((unsigned char)text[index++]&63);
+ return cp;
+}
+bool drawFontText(const String &text,int x,int y,int w,int h,uint16_t fg,uint16_t bg,int size){
+ if(!fontPaths.is<JsonObject>()||fontPaths.as<JsonObject>().size()==0)return false;
+ const int cell=(size*3+2)/5, gh=size+4;
+ int count=0;
+ for(unsigned i=0;i<text.length();){nextFontCodepoint(text,i);count++;}
+ int start=x+max(0,(w-count*cell)/2),top=y+max(0,(h-gh)/2);
+ unsigned index=0;
+ int pos=0;
+ while(index<text.length()&&pos<100){
+  uint32_t cp=nextFontCodepoint(text,index);
+  String id=String(size)+"-"+String(cp,HEX);
+  const char *path=fontPaths[id] | "";
+  if(path[0]){
+   File file=LittleFS.open(path,"r");
+   if(file){
+    const int magic=file.read(),gw=file.read(),height=file.read(),advance=file.read();
+    const int bytes=(gw*height+1)/2;
+    if(magic==0x54&&gw>0&&gw<=32&&height==gh&&bytes<=600&&advance>0){
+     uint8_t bitmap[600];
+     if(file.read(bitmap,bytes)==bytes){
+      for(int py=0;py<height;py++)for(int px=0;px<gw;px++){
+       const int dx=start+pos*cell+px,dy=top+py;
+       if(dx<x||dx>=x+w||dy<y||dy>=y+h)continue;
+       const int pixel=py*gw+px;
+       const uint8_t a=(pixel&1)?(bitmap[pixel>>1]&15):(bitmap[pixel>>1]>>4);
+       if(a)lcd->drawPixel(dx,dy,blendFontColor(fg,bg,a));
+      }
+     }
+    }
+    file.close();
+   }
+  }
+  pos++;
+ }
+ return true;
+}
+void syncFonts(const String &group,uint32_t newRevision){
+ if(!iconFsReady||group.isEmpty()||(group==fontGroup&&newRevision==fontRevision))return;
+ WiFiClient net;HTTPClient http;
+ String url="http://"+host+":"+String(port)+"/api/fonts/manifest/"+group;
+ if(!http.begin(net,url))return;
+ http.setTimeout(7000);
+ int code=http.GET();
+ if(code!=200){Serial.printf("font_manifest_http=%d\\n",code);http.end();return;}
+ String body=http.getString();http.end();
+ DynamicJsonDocument manifest(28000);
+ DeserializationError err=deserializeJson(manifest,body);
+ body=String();
+ if(err||!manifest["resources"].is<JsonArray>()){Serial.printf("font_manifest_invalid=%s\\n",err.c_str());return;}
+ DynamicJsonDocument nextPaths(12288);
+ bool success=true;
+ for(JsonVariantConst resource:manifest["resources"].as<JsonArrayConst>()){
+  String id=resource["id"]|"",sha=resource["sha256"]|"";
+  int expected=resource["bytes"]|0;
+  if(id.length()>20||sha.length()!=64||expected<4||expected>2052){success=false;break;}
+  String path="/f"+sha.substring(0,24)+".bin";
+  if(!LittleFS.exists(path)){
+   WiFiClient imageNet;HTTPClient imageHttp;
+   String imageUrl="http://"+host+":"+String(port)+"/api/fonts/glyph/"+id;
+   if(!imageHttp.begin(imageNet,imageUrl)){success=false;break;}
+   imageHttp.setTimeout(5000);
+   int status=imageHttp.GET();
+   if(status!=200){Serial.printf("font_glyph_http=%d id=%s\\n",status,id.c_str());imageHttp.end();success=false;break;}
+   String tmp=path+".tmp";
+   File output=LittleFS.open(tmp,"w");
+   if(!output){imageHttp.end();success=false;break;}
+   int copied=imageHttp.writeToStream(&output);
+   output.close();imageHttp.end();
+   File verify=LittleFS.open(tmp,"r");
+   bool valid=verify&&verify.size()==expected&&verify.read()==0x54;
+   verify.close();
+   if(copied!=expected||!valid||!LittleFS.rename(tmp,path)){LittleFS.remove(tmp);success=false;break;}
+  }
+  nextPaths[id]=path;
+  if(nextPaths.overflowed()){success=false;break;}
+ }
+ if(!success){Serial.println("font_sync_incomplete");return;}
+ fontPaths.clear();fontPaths.set(nextPaths.as<JsonVariantConst>());
+ fontGroup=group;fontRevision=newRevision;
+ File root=LittleFS.open("/");File file=root.openNextFile();
+ while(file){
+  String path=file.name();if(!path.startsWith("/"))path="/"+path;
+  file.close();bool keep=false;
+  for(JsonPairConst entry:fontPaths.as<JsonObjectConst>())if(path==entry.value().as<String>()){keep=true;break;}
+  if(path.startsWith("/f")&&path.endsWith(".bin")&&!keep)LittleFS.remove(path);
+  file=root.openNextFile();
+ }
+ root.close();
+ Serial.printf("font_sync_ok group=%s glyphs=%u\\n",group.c_str(),(unsigned)fontPaths.size());
+}
+
 void drawComponent(JsonVariantConst component,bool clearArea){
  int x=component["x"]|0,y=component["y"]|0,w=component["w"]|30,h=component["h"]|30;
  if(x<0||y<0||w<4||h<4||x+w>240||y+h>240)return;
@@ -138,7 +248,15 @@ void drawComponent(JsonVariantConst component,bool clearArea){
   Serial.printf("icon_render name=%s color=%s bg=%s cached=%d\\n",component["icon"]|"",component["textColor"]|"",component["backgroundColor"]|"transparent",iconPaths.containsKey(component["icon"]|""));
   drawIcon(component["icon"]|"",x+2,y+2,w-4,h-4,rgb(component["textColor"]|"",WHITE));
  }
- else label(component["text"]|"",x+2,y+2,w-4,h-4,rgb(component["textColor"]|"",WHITE),(component["fontSize"]|15)>=19?2:1);
+ else {
+  String text=component["text"]|"";
+  uint16_t foreground=rgb(component["textColor"]|"",WHITE);
+  uint16_t background=rgb(component["backgroundColor"]|"",rgb(state["page"]["backgroundColor"]|"",BLACK));
+  int size=component["fontSize"]|15;
+  if(size!=12&&size!=15&&size!=20)size=15;
+  if(!drawFontText(text,x+2,y+2,w-4,h-4,foreground,background,size))
+   label(text,x+2,y+2,w-4,h-4,foreground,size>=19?2:1);
+ }
 }
 void draw(){
  JsonVariantConst page=state["page"];
@@ -174,6 +292,7 @@ void onWs(WStype_t event,uint8_t *payload,size_t len){
   Serial.printf("page=%s revision=%lu components=%u bg=%s\n",pageId.c_str(),(unsigned long)revision,(unsigned)state["page"]["components"].as<JsonArrayConst>().size(),state["page"]["backgroundColor"]|"missing");
   currentGroup=doc["groupId"]|currentGroup;
   syncIcons(currentGroup,revision);
+  syncFonts(currentGroup,revision);
   draw();
  }else if(type=="component_update"){
   String incomingPage=doc["pageId"]|"";
