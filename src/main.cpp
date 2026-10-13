@@ -126,6 +126,21 @@ bool discoverServer(){
   prefs.begin("touchdeck",false);prefs.putString("serverId",selectedServer);prefs.end();
  }
  host=MDNS.IP(chosen).toString();port=MDNS.port(chosen);
+ // mDNS may resolve a multi-homed server to its ZeroTier/VPN address.
+ // Prefer an explicitly advertised IPv4 on the ESP's own subnet.
+ IPAddress local=WiFi.localIP(),mask=WiFi.subnetMask();
+ for(int n=0;n<8;n++){
+  String key="ip"+String(n);
+  String advertisedIp=MDNS.txt(chosen,key.c_str());
+  if(advertisedIp.isEmpty())continue;
+  IPAddress candidateIp;
+  if(!candidateIp.fromString(advertisedIp))continue;
+  bool sameSubnet=true;
+  for(int octet=0;octet<4;octet++)
+   if((candidateIp[octet]&mask[octet])!=(local[octet]&mask[octet]))sameSubnet=false;
+  Serial.printf("mdns_ipv4_candidate=%s same_subnet=%d\n",advertisedIp.c_str(),sameSubnet);
+  if(sameSubnet){host=advertisedIp;break;}
+ }
  if(host=="0.0.0.0"||!port)return false;
  status("Serveur trouve",host+":"+String(port));
  Serial.printf("mdns_selected=%s endpoint=%s:%u\n",selectedServer.c_str(),host.c_str(),port);
