@@ -17,6 +17,7 @@ String id, host, pageId, selectedServer;
 uint16_t port = 3000;
 uint32_t revision=0, wifiStarted=0;
 bool provision=false, wsReady=false, wsStarted=false;
+uint32_t disconnectedAt=0;
 uint32_t discoveryAt=0, lastRetryAt=0;
 uint8_t failedDiscoveries=0;
 int startX=-1, lastX=0, lastY=0;
@@ -55,8 +56,8 @@ void send(const char *type,const char *key,const String &value){
  String out;serializeJson(d,out);ws.sendTXT(out);
 }
 void onWs(WStype_t event,uint8_t *payload,size_t len){
- if(event==WStype_DISCONNECTED){wsReady=false;status("Serveur deconnecte","Reconnexion...");return;}
- if(event==WStype_CONNECTED){wsReady=true;send("hello","clientId",id);Serial.println("ws_connected");return;}
+ if(event==WStype_DISCONNECTED){wsReady=false;if(!disconnectedAt)disconnectedAt=millis();status("Serveur deconnecte","Reconnexion...");Serial.println("ws_disconnected");return;}
+ if(event==WStype_CONNECTED){disconnectedAt=0;wsReady=true;send("hello","clientId",id);Serial.println("ws_connected");return;}
  if(event!=WStype_TEXT||len>22000)return;
  DynamicJsonDocument doc(24000);
  if(deserializeJson(doc,payload,len))return;
@@ -108,12 +109,12 @@ void poll(){
 }
 bool discoverServer(){
  int count=MDNS.queryService("touchdeck","tcp");
- Serial.printf("mdns_count=%d\\n",count);
+ Serial.printf("mdns_count=%d\n",count);
  if(count<=0)return false;
  int chosen=-1;
  for(int i=0;i<count;i++){
   String candidate=MDNS.txt(i,"id");
-  Serial.printf("mdns_candidate=%s ip=%s port=%u\\n",candidate.c_str(),MDNS.IP(i).toString().c_str(),MDNS.port(i));
+  Serial.printf("mdns_candidate=%s ip=%s port=%u\n",candidate.c_str(),MDNS.IP(i).toString().c_str(),MDNS.port(i));
   if(selectedServer.length()&&candidate==selectedServer){chosen=i;break;}
  }
  if(chosen<0){
@@ -126,7 +127,7 @@ bool discoverServer(){
  }
  host=MDNS.IP(chosen).toString();port=MDNS.port(chosen);
  if(host=="0.0.0.0"||!port)return false;
- Serial.printf("mdns_selected=%s endpoint=%s:%u\\n",selectedServer.c_str(),host.c_str(),port);
+ Serial.printf("mdns_selected=%s endpoint=%s:%u\n",selectedServer.c_str(),host.c_str(),port);
  return true;
 }
 void portal(){
@@ -168,9 +169,8 @@ void loop(){
  if(provision){web.handleClient();delay(5);return;}
  if(WiFi.status()!=WL_CONNECTED){
   if(millis()-wifiStarted>30000){
-   Serial.println("wifi_timeout_entering_portal");
-   WiFi.disconnect(true);
-   portal();provision=true;return;
+   Serial.println("wifi_reconnect");
+   WiFi.reconnect();wifiStarted=millis();status("Wi-Fi indisponible","Reconnexion...");return;
   }
   delay(20);return;
  }
@@ -189,5 +189,10 @@ void loop(){
   ws.onEvent(onWs);ws.setReconnectInterval(5000);wsStarted=true;
   Serial.printf("wifi_ip=%s server=%s:%u\n",WiFi.localIP().toString().c_str(),host.c_str(),port);
  }
- ws.loop();poll();delay(2);
+ ws.loop();
+ if(wsStarted&&!wsReady&&disconnectedAt&&millis()-disconnectedAt>90000){
+  Serial.println("ws_rediscover");ws.disconnect();wsStarted=false;disconnectedAt=0;
+  status("Recherche serveur","mDNS");
+ }
+ poll();delay(2);
 }
