@@ -275,5 +275,12 @@ async function refreshFirmware(){
  }catch(error){target.textContent='Lecture impossible : '+error.message;}
 }
 document.getElementById('refreshFirmware').addEventListener('click',refreshFirmware);
-refreshFirmware();setInterval(refreshFirmware,10000);
+refreshFirmware();
+let firmwareRefreshBusy=false;
+const firmwareRefreshTimer=setInterval(async()=>{
+ if(document.hidden||firmwareRefreshBusy)return;
+ firmwareRefreshBusy=true;
+ try{await refreshFirmware()}finally{firmwareRefreshBusy=false}
+},60000);
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)refreshFirmware()});
 </script></body></html>
