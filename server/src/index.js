@@ -312,7 +312,12 @@ export function createTouchDeckServer({ port = 3000, host = '0.0.0.0', dataFile 
       try {
         const { Bonjour } = await import('bonjour-service');
         bonjour=new Bonjour();
-        advertised=bonjour.publish({name:'TouchDeck '+instanceId,type:'touchdeck',protocol:'tcp',port:server.address().port,txt:{id:instanceId,ver:'1',path:'/ws'}});
+        const addresses=Object.values(os.networkInterfaces()).flat().filter(a=>a&&a.family==='IPv4'&&!a.internal).map(a=>a.address);
+        const uniqueAddresses=[...new Set(addresses)];
+        const txt={id:instanceId,ver:'1',path:'/ws'};
+        uniqueAddresses.forEach((address,i)=>{if(i<8)txt['ip'+i]=address;});
+        advertised=bonjour.publish({name:'TouchDeck '+instanceId,type:'touchdeck',protocol:'tcp',port:server.address().port,txt});
+        console.log('touchDeck mDNS IPv4 candidates:',uniqueAddresses.join(', '));
         console.log('touchDeck mDNS published:',instanceId,'port',server.address().port);
       } catch(error) { console.error('touchDeck mDNS publish failed:',error); }
       return server.address();
