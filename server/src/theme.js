@@ -11,7 +11,7 @@ export function resolvePage(page, profile) {
     id:page.id,title:page.title,visible:page.visible,
     backgroundColor:COLORS[page.background] ?? '#0f172a',
     components:page.components.map(item=>({
-      id:item.id,type:item.type,text:item.text??'',
+      id:item.id,type:item.type,text:item.text??'',icon:item.type==='Icon'?item.icon??null:null,
       x:Math.round(item.x*profile.width/profile.gridColumns),
       y:Math.round(item.y*profile.height/profile.gridRows),
       w:Math.round(item.w*profile.width/profile.gridColumns),
