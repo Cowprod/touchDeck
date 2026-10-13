@@ -56,7 +56,7 @@ void send(const char *type,const char *key,const String &value){
  String out;serializeJson(d,out);ws.sendTXT(out);
 }
 void onWs(WStype_t event,uint8_t *payload,size_t len){
- if(event==WStype_DISCONNECTED){wsReady=false;if(!disconnectedAt)disconnectedAt=millis();status("Serveur deconnecte","Reconnexion...");Serial.println("ws_disconnected");return;}
+ if(event==WStype_DISCONNECTED){wsReady=false;if(!disconnectedAt)disconnectedAt=millis();status("Serveur deconnecte",host+":"+String(port));Serial.printf("ws_disconnected endpoint=%s:%u wifi=%s\n",host.c_str(),port,WiFi.localIP().toString().c_str());return;}
  if(event==WStype_CONNECTED){disconnectedAt=0;wsReady=true;send("hello","clientId",id);Serial.println("ws_connected");return;}
  if(event!=WStype_TEXT||len>22000)return;
  DynamicJsonDocument doc(24000);
@@ -109,7 +109,7 @@ void poll(){
 }
 bool discoverServer(){
  int count=MDNS.queryService("touchdeck","tcp");
- Serial.printf("mdns_count=%d\n",count);
+ Serial.printf("mdns_count=%d wifi=%s gateway=%s\n",count,WiFi.localIP().toString().c_str(),WiFi.gatewayIP().toString().c_str());
  if(count<=0)return false;
  int chosen=-1;
  for(int i=0;i<count;i++){
@@ -127,6 +127,7 @@ bool discoverServer(){
  }
  host=MDNS.IP(chosen).toString();port=MDNS.port(chosen);
  if(host=="0.0.0.0"||!port)return false;
+ status("Serveur trouve",host+":"+String(port));
  Serial.printf("mdns_selected=%s endpoint=%s:%u\n",selectedServer.c_str(),host.c_str(),port);
  return true;
 }
