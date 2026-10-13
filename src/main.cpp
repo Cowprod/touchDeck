@@ -19,6 +19,7 @@ DynamicJsonDocument state(16000);
 DynamicJsonDocument iconPaths(4096);
 bool iconFsReady=false;
 String iconGroup;
+String currentGroup;
 uint32_t iconRevision=0;
 uint32_t lastIconDiagnostic=0;
 String id, host, pageId, selectedServer;
@@ -158,6 +159,7 @@ void onWs(WStype_t event,uint8_t *payload,size_t len){
  String type=doc["type"]|"";
  if(type=="welcome"){
   String group=doc["groupId"]|"";
+  currentGroup=group;
   Serial.printf("welcome group=%s\n",group.c_str());
   if(group.isEmpty())send("assign","groupId","demo");
  }else if(type=="page"){
@@ -169,7 +171,8 @@ void onWs(WStype_t event,uint8_t *payload,size_t len){
   pageId=doc["page"]["id"]|"";
   revision=doc["pageRevision"]|0;
   Serial.printf("page=%s revision=%lu components=%u bg=%s\n",pageId.c_str(),(unsigned long)revision,(unsigned)state["page"]["components"].as<JsonArrayConst>().size(),state["page"]["backgroundColor"]|"missing");
-  syncIcons(doc["groupId"]|"",revision);
+  currentGroup=doc["groupId"]|currentGroup;
+  syncIcons(currentGroup,revision);
   draw();
  }else if(type=="component_update"){
   String incomingPage=doc["pageId"]|"";
@@ -349,7 +352,7 @@ void loop(){
     Serial.printf("icon_diag_component name=%s color=%s bg=%s file=%s exists=%d\\n",name.c_str(),component["textColor"]|"",component["backgroundColor"]|"transparent",path,strlen(path)>0&&LittleFS.exists(path));
    }
   }
-  if(iconPaths.size()==0 && !page.isNull())syncIcons(selectedGroup,revision);
+  if(iconPaths.size()==0 && !page.isNull())syncIcons(currentGroup,revision);
  }
  if(wsStarted&&!wsReady&&disconnectedAt&&millis()-disconnectedAt>90000){
   Serial.println("ws_rediscover");ws.disconnect();wsStarted=false;disconnectedAt=0;
