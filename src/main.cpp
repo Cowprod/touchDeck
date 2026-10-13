@@ -152,6 +152,11 @@ void portal(){
 }
 void setup(){
  Serial.begin(115200);delay(400);
+ // One-time provisioning reset for the current physical troubleshooting session.
+ Preferences resetPrefs;
+ resetPrefs.begin("touchdeck",false);
+ resetPrefs.clear();
+ resetPrefs.end();
  id="esp-"+WiFi.macAddress();id.replace(":","");id.toLowerCase();
  pinMode(3,OUTPUT);digitalWrite(3,HIGH);lcd->begin();
  pinMode(1,OUTPUT);digitalWrite(1,LOW);delay(15);digitalWrite(1,HIGH);delay(80);
