@@ -155,6 +155,13 @@ export function createTouchDeckServer({ port = 3000, host = '0.0.0.0', dataFile 
     if(!source)return false;
     const values={...(sourceValues.get(sourceId)??{}),...updates};
     sourceValues.set(sourceId,values);
+    for(const [key,pending] of pendingToggles){
+      if(pending.sourceId!==sourceId||!Object.hasOwn(updates,pending.property))continue;
+      if(updates[pending.property]===pending.expected){
+        clearTimeout(pending.timer);pendingToggles.delete(key);
+        send(pending.client,{type:'interaction_result',componentId:pending.componentId,requestId:pending.requestId,status:'confirmed',value:pending.expected});
+      }
+    }
     for(const client of clients.values()){
       const group=groups.get(client.groupId),set=pageSets.get(group?.pageSetId),page=set?.pages.find(item=>item.id===client.pageId);
       if(!page)continue;
@@ -267,7 +274,7 @@ export function createTouchDeckServer({ port = 3000, host = '0.0.0.0', dataFile 
               const components = new Set();
               const occupied = new Set();
               for (const item of page.components) {
-                if (!validId(item.id) || components.has(item.id) || (item.sourceId!==undefined&&!sourceIds.has(item.sourceId)) || !validTheme(item.background) || !validTheme(item.color) || (item.fontSize !== undefined && !Object.hasOwn(FONT_SIZES,item.fontSize)) || (item.radius !== undefined && ![0,1,2].includes(item.radius)) || (item.active !== undefined && typeof item.active !== 'boolean') || (item.disabled !== undefined && typeof item.disabled !== 'boolean') || !['Label','Button','Toggle','Icon','Gauge','Slider'].includes(item.type) || ![item.x,item.y,item.w,item.h].every(Number.isInteger) || item.x < 0 || item.y < 0 || item.w < 1 || item.h < 1 || item.x + item.w > profile.gridColumns || item.y + item.h > profile.gridRows || (item.text !== undefined && (typeof item.text !== 'string' || item.text.length > 250)) || (item.icon !== undefined && (item.type !== 'Icon' || !validIcon(item.icon)))) return json(400, { error: 'invalid_component' });
+                if (!validId(item.id) || components.has(item.id) || (item.sourceId!==undefined&&!sourceIds.has(item.sourceId)) || !validTheme(item.background) || !validTheme(item.color) || (item.fontSize !== undefined && !Object.hasOwn(FONT_SIZES,item.fontSize)) || (item.radius !== undefined && ![0,1,2].includes(item.radius)) || (item.active !== undefined && typeof item.active !== 'boolean') || (item.disabled !== undefined && typeof item.disabled !== 'boolean') || !['Label','Button','Toggle','Icon','Gauge','Slider'].includes(item.type) || ![item.x,item.y,item.w,item.h].every(Number.isInteger) || item.x < 0 || item.y < 0 || item.w < 1 || item.h < 1 || item.x + item.w > profile.gridColumns || item.y + item.h > profile.gridRows || (item.text !== undefined && (typeof item.text !== 'string' || item.text.length > 250)) || (item.property!==undefined&&(item.type!=='Toggle'||typeof item.property!=='string'||!/^[a-zA-Z0-9_-]{1,80}$/.test(item.property)||!item.sourceId)) || (item.icon !== undefined && (item.type !== 'Icon' || !validIcon(item.icon)))) return json(400, { error: 'invalid_component' });
                 components.add(item.id);
                 for (let yy = item.y; yy < item.y + item.h; yy++) for (let xx = item.x; xx < item.x + item.w; xx++) {
                   const cell = yy * profile.gridColumns + xx;
