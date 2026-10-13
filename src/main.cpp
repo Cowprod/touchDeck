@@ -203,7 +203,10 @@ void onWs(WStype_t event,uint8_t *payload,size_t len){
    Serial.printf("update_received count=%u redrawn=%u heap=%u\n",(unsigned)doc["changes"].as<JsonArrayConst>().size(),changed,(unsigned)ESP.getFreeHeap());
    lastUpdateLog=millis();
   }
- }else if(type=="error")Serial.printf("ws_error=%s\n",doc["code"]|"unknown");
+ }else if(type=="interaction_result"){
+  Serial.printf("interaction_result component=%s request=%s status=%s reason=%s\\n",
+    doc["componentId"]|"",doc["requestId"]|"",doc["status"]|"",doc["reason"]|"");
+ }else if(type=="error")Serial.printf("ws_error=%s\\n",doc["code"]|"unknown");
 }
 bool touch(int &x,int &y){
  Wire.beginTransmission(0x15);Wire.write((uint8_t)0x01);
