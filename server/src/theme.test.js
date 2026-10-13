@@ -26,3 +26,14 @@ test('legacy pages resolve with defaults and missing pages remain null',()=>{
   assert.equal(page.components[0].fontSize,FONT_SIZES.normal);
   assert.equal(page.components[0].disabled,false);
 });
+
+test('icons use transparent background unless explicitly configured', () => {
+  const page={id:'p',title:'p',visible:true,components:[{id:'i',type:'Icon',icon:'solid/house',x:0,y:0,w:2,h:2,color:'danger'}]};
+  const profile={width:240,height:240,gridColumns:8,gridRows:8};
+  const icon=resolvePage(page,profile).components[0];
+  assert.equal(icon.backgroundColor,null);
+  assert.equal(icon.textColor,'#dc3545');
+  assert.equal(icon.icon,'solid/house');
+  page.components[0].background='light';
+  assert.equal(resolvePage(page,profile).components[0].backgroundColor,'#f8f9fa');
+});
