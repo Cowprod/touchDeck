@@ -15,7 +15,7 @@ export function validateDescriptor(descriptor){
  return true;
 }
 export function validateSource(source){
- return plain(source)&&idPattern.test(source.id)&&typeof source.name==='string'&&source.name.length>0&&source.name.length<=120
+ return plain(source)&&(source.endpoint===undefined||(typeof source.endpoint==='string'&&/^https?:\/\//.test(source.endpoint)))&&idPattern.test(source.id)&&typeof source.name==='string'&&source.name.length>0&&source.name.length<=120
    &&['manual','imported'].includes(source.origin)&&validateDescriptor(source.descriptor);
 }
 export function referencesMissing(descriptor,referenced){
