@@ -428,7 +428,9 @@ export function createTouchDeckServer({ port = 3000, host = '0.0.0.0', dataFile 
       } catch(error) { console.error('touchDeck mDNS publish failed:',error); }
       return server.address();
     },
-    async stop() { stopClock?.();stopClock=null;advertised?.stop();bonjour?.destroy();advertised=null;bonjour=null;for (const socket of wss.clients) socket.terminate(); await new Promise(resolve => wss.close(resolve)); await new Promise(resolve => server.close(resolve)); }
+    async stop() {
+      for(const pending of pendingToggles.values())clearTimeout(pending.timer);
+      pendingToggles.clear(); stopClock?.();stopClock=null;advertised?.stop();bonjour?.destroy();advertised=null;bonjour=null;for (const socket of wss.clients) socket.terminate(); await new Promise(resolve => wss.close(resolve)); await new Promise(resolve => server.close(resolve)); }
   };
 }
 if (process.env.pm_id !== undefined || (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href)) {
