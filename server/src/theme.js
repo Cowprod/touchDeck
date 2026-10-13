@@ -16,7 +16,7 @@ export function resolvePage(page, profile) {
       y:Math.round(item.y*profile.height/profile.gridRows),
       w:Math.round(item.w*profile.width/profile.gridColumns),
       h:Math.round(item.h*profile.height/profile.gridRows),
-      backgroundColor:item.type==='Label'&&!item.background?null:(COLORS[item.background] ?? '#334155'),
+      backgroundColor:(item.type==='Label'||item.type==='Icon')&&!item.background?null:(COLORS[item.background] ?? '#334155'),
       textColor:COLORS[item.color] ?? '#f9fafb',
       fontSize:FONT_SIZES[item.fontSize] ?? FONT_SIZES.normal,
       radius:item.radius===0||item.radius===1||item.radius===2?item.radius:1,
