@@ -280,3 +280,33 @@ test('built-in clock is available and streams independent fields to two labels',
   assert.equal(blocked.status,403);
  }finally{socket?.close();await app.stop();await rm(dir,{recursive:true,force:true})}
 });
+
+test('component interaction validates page, type and explicitly rejects unconfigured execution', async()=>{
+ const {mkdtemp,rm}=await import('node:fs/promises');
+ const {tmpdir}=await import('node:os');
+ const {join}=await import('node:path');
+ const dir=await mkdtemp(join(tmpdir(),'touchdeck-interaction-'));
+ const app=createTouchDeckServer({port:0,host:'127.0.0.1',dataFile:join(dir,'config.json')});
+ const {port}=await app.start();
+ let socket;
+ try{
+  const connected=await connect(port,'interaction-test');socket=connected.socket;
+  const initial=await (await fetch('http://127.0.0.1:'+port+'/api/admin/config')).json();
+  initial.pageSets[0].pages[0].components.push({id:'action-button',type:'Button',x:0,y:4,w:2,h:1,text:'Test'});
+  initial.pageSets[0].pages[0].components.push({id:'action-toggle',type:'Toggle',x:3,y:4,w:2,h:1,text:'Test'});
+  assert.equal((await fetch('http://127.0.0.1:'+port+'/api/admin/config',{method:'PUT',headers:{'content-type':'application/json'},body:JSON.stringify(initial)})).status,200);
+  const page=await waitPage(socket,{type:'assign',groupId:'demo'});
+  async function request(componentId,pageRevision=page.pageRevision){
+   return new Promise((resolve,reject)=>{
+    const timer=setTimeout(()=>reject(new Error('interaction timeout')),2000);
+    const handler=raw=>{const msg=JSON.parse(raw.toString());if(['error','interaction_result'].includes(msg.type)){clearTimeout(timer);socket.off('message',handler);resolve(msg)}};
+    socket.on('message',handler);
+    socket.send(JSON.stringify({type:'interact',pageId:'home',pageRevision,componentId,requestId:'req-1'}));
+   });
+  }
+  assert.deepEqual(((await request('action-button')).status),'rejected');
+  assert.equal((await request('action-toggle')).reason,'source_confirmation_unavailable');
+  assert.equal((await request('title')).code,'invalid_interaction');
+  assert.equal((await request('action-button',-1)).code,'stale_page');
+ }finally{socket?.close();await app.stop();await rm(dir,{recursive:true,force:true})}
+});
