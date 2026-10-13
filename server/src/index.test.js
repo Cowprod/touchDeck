@@ -342,3 +342,37 @@ test('bound button dispatches POST to source and acknowledges only after HTTP su
   assert.deepEqual(received,[{url:'/actions/fire',body:{level:3}}]);
  }finally{socket?.close();await app.stop();await new Promise(resolve=>target.close(resolve));await rm(dir,{recursive:true,force:true})}
 });
+
+test('toggle requires source confirmation and rejects failed HTTP command',async()=>{
+ const http=await import('node:http');
+ const {mkdtemp,rm}=await import('node:fs/promises');
+ const {tmpdir}=await import('node:os');
+ const {join}=await import('node:path');
+ let fail=false,called=0;
+ const target=http.createServer(async(req,res)=>{called++;for await(const chunk of req){}res.writeHead(fail?503:204);res.end()});
+ await new Promise(resolve=>target.listen(0,'127.0.0.1',resolve));
+ const dir=await mkdtemp(join(tmpdir(),'touchdeck-toggle-'));
+ const app=createTouchDeckServer({port:0,host:'127.0.0.1',dataFile:join(dir,'config.json')});
+ let socket;
+ try{
+  const {port}=await app.start(),base='http://127.0.0.1:'+port;
+  const data=await(await fetch(base+'/api/admin/config')).json();
+  data.sources.push({id:'switch',name:'Switch',origin:'manual',endpoint:'http://127.0.0.1:'+target.address().port+'/',descriptor:{properties:{enabled:{type:'boolean'}},actions:{set_enabled:{input:{properties:{value:{type:'boolean'}}}}},events:{}}});
+  data.pageSets[0].pages[0].components.push({id:'switch-toggle',type:'Toggle',sourceId:'switch',property:'enabled',x:0,y:6,w:2,h:1,text:'Toggle'});
+  assert.equal((await fetch(base+'/api/admin/config',{method:'PUT',headers:{'content-type':'application/json'},body:JSON.stringify(data)})).status,200);
+  assert.equal((await fetch(base+'/api/sources/switch/values',{method:'PUT',headers:{'content-type':'application/json'},body:JSON.stringify({enabled:false})})).status,200);
+  const connected=await connect(port,'toggle-test');socket=connected.socket;
+  const page=await waitPage(socket,{type:'assign',groupId:'demo'});
+  const events=[];
+  socket.on('message',raw=>{const m=JSON.parse(raw.toString());if(m.type==='interaction_result')events.push(m)});
+  const sendToggle=id=>socket.send(JSON.stringify({type:'interact',pageId:'home',pageRevision:page.pageRevision,componentId:'switch-toggle',requestId:id}));
+  async function until(status){for(let i=0;i<100;i++){if(events.some(e=>e.status===status))return;await new Promise(r=>setTimeout(r,20))}throw new Error('missing '+status)}
+  sendToggle('toggle-1');await until('pending');
+  assert.equal(events.some(e=>e.status==='confirmed'),false);
+  assert.equal((await fetch(base+'/api/sources/switch/values',{method:'PUT',headers:{'content-type':'application/json'},body:JSON.stringify({enabled:true})})).status,200);
+  await until('confirmed');
+  assert.ok(called>=1);
+  fail=true;sendToggle('toggle-2');await until('rejected');
+  assert.equal(events.find(e=>e.status==='rejected').reason,'source_http_503');
+ }finally{socket?.close();await app.stop();await new Promise(resolve=>target.close(resolve));await rm(dir,{recursive:true,force:true})}
+});
