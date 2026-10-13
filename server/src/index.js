@@ -72,6 +72,7 @@ export function createTouchDeckServer({ port = 3000, host = '0.0.0.0', dataFile 
   const pageSets = new Map();
   const sources = new Map();
   const sourceValues = new Map();
+  const sourceLastReceived = new Map();
   const pendingToggles = new Map();
   const actionQueues = new Map();
   async function dispatchSource(source,action,parameters){
@@ -218,6 +219,7 @@ export function createTouchDeckServer({ port = 3000, host = '0.0.0.0', dataFile 
     if(!source)return false;
     const values={...(sourceValues.get(sourceId)??{}),...updates};
     sourceValues.set(sourceId,values);
+    sourceLastReceived.set(sourceId,new Date().toISOString());
     for(const [key,pending] of pendingToggles){
       if(pending.sourceId!==sourceId||!Object.hasOwn(updates,pending.property))continue;
       if(updates[pending.property]===pending.expected){
@@ -300,6 +302,18 @@ export function createTouchDeckServer({ port = 3000, host = '0.0.0.0', dataFile 
       catch { return json(500, { error: 'icon_manifest_unavailable' }); }
     }
     if (request.method === 'GET' && url.pathname === '/api/health') return json(200, { ok: true, service: 'touchDeck' });
+    if (request.method === 'GET' && url.pathname === '/api/admin/sources/status') {
+      const result={};
+      for(const source of sources.values()){
+        result[source.id]={lastReceivedAt:sourceLastReceived.get(source.id)??null,values:sourceValues.get(source.id)??{}};
+      }
+      return json(200,{sources:result});
+    }
+    if (request.method === 'GET' && url.pathname === '/admin/sources') {
+      try { const html = await readFile(fileURLToPath(new URL('../public/sources.html', import.meta.url))); response.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store', 'content-security-policy': "default-src 'self'; script-src 'unsafe-inline'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'self'" }); response.end(html); }
+      catch { return json(500,{error:'sources_ui_unavailable'}); }
+      return;
+    }
     if (url.pathname === '/api/admin/config') {
       if (request.method === 'GET') return json(200, { revision: configRevision, groups: [...groups.values()], pageSets: [...pageSets.values()], sources:[...sources.values()] });
       if (request.method === 'PUT') return serializeMutation(async()=>{
