@@ -37,6 +37,29 @@ main{max-width:1800px!important;padding-top:1rem!important}
 }
 
 @media(max-width:650px){.td-nav .container-fluid{padding:.5rem}.td-nav .td-tab,.td-nav .td-external{padding:.5rem .65rem;font-size:.88rem}.td-workspace{display:block}.td-live-column #simulators>.col-lg-4{width:100%;flex:0 0 100%}.input-group-text.field-label{width:30%}}
+
+/* Bandeau compact de simulateurs : 240 px utiles, sans cartes imbriquées. */
+.td-workspace{grid-template-columns:250px minmax(0,1fr)!important}
+.td-live-column{width:250px;max-width:250px;background:#151b25;border-radius:10px;padding:5px!important;overflow-x:hidden}
+.td-live-column>section{margin:0!important;padding:0!important}
+.td-live-column>section>.card{background:transparent!important;border:0!important;box-shadow:none!important;margin:0 0 8px!important}
+.td-live-column>section>.card>.card-header{background:transparent!important;border:0!important;padding:6px 3px!important;font-size:12px;min-height:0}
+.td-live-column>section>.card>.card-header span{font-size:0}
+.td-live-column>section>.card>.card-header span::after{content:'Simulateurs';font-size:13px;font-weight:600}
+.td-live-column>section>.card>.card-body{padding:0!important;background:transparent!important}
+.td-live-column #simulators{margin:0!important;gap:8px!important;display:flex;flex-direction:column}
+.td-live-column #simulators>div{width:240px!important;min-width:240px!important;max-width:240px!important;flex:0 0 auto!important;padding:0!important}
+.td-live-column #simulators>div>.card{margin:0!important;border:0!important;background:#212529!important;box-shadow:none!important;border-radius:6px!important;overflow:hidden}
+.td-live-column #simulators>div .card-header{padding:3px!important;gap:3px!important;background:#212529!important;border:0!important}
+.td-live-column #simulators>div .card-header .small{display:none}
+.td-live-column #simulators>div .card-header select{flex:1;min-width:0!important;max-width:unset!important;font-size:11px!important;padding:3px 18px 3px 5px!important}
+.td-live-column #simulators>div .card-header button{padding:1px 7px!important;font-size:12px!important}
+.td-live-column #simulators>div iframe{display:block;width:240px!important;height:330px!important;max-width:240px!important}
+.td-live-column #simulators>div .card-footer{font-size:10px!important;padding:3px!important;background:#212529!important;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.td-live-column .editor-viewport{max-width:240px}
+.td-live-column .card-body .row{margin:0!important}
+@media(max-width:1100px){.td-workspace{grid-template-columns:250px minmax(0,1fr)!important}.td-live-column{position:sticky;top:5.8rem;max-height:calc(100vh - 6.5rem);overflow-y:auto;grid-column:1;grid-row:1}.td-edit-column{grid-column:2;grid-row:1}}
+@media(max-width:550px){.td-workspace{grid-template-columns:minmax(0,1fr)!important}.td-edit-column{grid-column:1;grid-row:1}.td-live-column{position:static;grid-column:1;grid-row:2;width:250px;max-width:250px}}
 </style></head><body>
 <nav class="td-nav" aria-label="Navigation principale"><div class="container-fluid">
 <a class="td-brand" href="/admin"><i class="fa-solid fa-layer-group me-2"></i>TouchDeck</a>
