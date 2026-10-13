@@ -68,7 +68,11 @@ void onWs(WStype_t event,uint8_t *payload,size_t len){
   Serial.printf("welcome group=%s\n",group.c_str());
   if(group.isEmpty())send("assign","groupId","demo");
  }else if(type=="page"){
-  state.clear();state["page"]=doc["page"];
+  // Own the page tree independently of the temporary incoming JSON document.
+  String pageJson;serializeJson(doc["page"],pageJson);
+  state.clear();
+  DeserializationError pageError=deserializeJson(state,String("{\"page\":")+pageJson+"}");
+  if(pageError){Serial.printf("page_copy_error=%s\n",pageError.c_str());return;}
   pageId=doc["page"]["id"]|"";
   revision=doc["pageRevision"]|0;
   Serial.printf("page=%s revision=%lu components=%u bg=%s\n",pageId.c_str(),(unsigned long)revision,(unsigned)state["page"]["components"].as<JsonArrayConst>().size(),state["page"]["backgroundColor"]|"missing");
