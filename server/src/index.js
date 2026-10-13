@@ -152,7 +152,29 @@ export function createTouchDeckServer({ port = 3000, host = '0.0.0.0', dataFile 
       send(client,{type:'interaction_result',componentId:item.id,requestId,status:'pending',value:previous});
       return {};
     }
-    // No source action transport is configured yet: acknowledge receipt, never claim execution.
+    if(item.type==='Button'&&item.sourceId&&item.action){
+      const source=sources.get(item.sourceId),definition=source?.descriptor?.actions?.[item.action];
+      if(!definition)return {error:'invalid_action_binding'};
+      const params={};
+      for(const [name,value] of Object.entries(item.parameters??{})){
+        const spec=definition.input?.properties?.[name]??definition.input?.[name];
+        if(!spec)return {error:'invalid_action_parameter'};
+        const resolved=typeof value==='object'&&value!==null&&Object.hasOwn(value,'variable')?sourceValues.get(item.sourceId)?.[value.variable]:value;
+        if(resolved===undefined||!typedValue(resolved,spec))return {error:'invalid_action_parameter'};
+        params[name]=resolved;
+      }
+      send(client,{type:'interaction_result',componentId:item.id,requestId,status:'pending'});
+      queueAction(client,async()=>{
+        try{
+          await dispatchSource(source,item.action,params);
+          send(client,{type:'interaction_result',componentId:item.id,requestId,status:'acknowledged'});
+        }catch(error){
+          send(client,{type:'interaction_result',componentId:item.id,requestId,status:'rejected',reason:error.message});
+        }
+      });
+      return {};
+    }
+    // No action binding means no execution.
     if(item.type==='Button'){
       send(client,{type:'interaction_result',componentId:item.id,requestId,status:'rejected',reason:'action_not_configured'});
       return {};
