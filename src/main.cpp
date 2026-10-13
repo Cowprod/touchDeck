@@ -45,7 +45,7 @@ void drawComponent(JsonVariantConst component,bool clearArea){
  if(x<0||y<0||w<4||h<4||x+w>240||y+h>240)return;
  if(clearArea)lcd->fillRect(x,y,w,h,rgb(state["page"]["backgroundColor"]|"",BLACK));
  String type=component["type"]|"Label";
- if(type!="Label"){
+ if(type!="Label" || !component["backgroundColor"].isNull()){
   int radius=component["radius"]|1;
   int r=radius==2?min(w-2,h-2)/2:radius==0?0:4;
   uint16_t bg=rgb(component["backgroundColor"]|"",0x3186);
