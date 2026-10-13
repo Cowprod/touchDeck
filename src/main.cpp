@@ -40,17 +40,19 @@ void status(String a,String b){
  label(a,20,104,200,20,YELLOW,1);
  label(b,20,132,200,30,WHITE,1);
 }
+void drawComponent(JsonVariantConst component,bool clearArea){
+ int x=component["x"]|0,y=component["y"]|0,w=component["w"]|30,h=component["h"]|30;
+ if(x<0||y<0||w<4||h<4||x+w>240||y+h>240)return;
+ if(clearArea)lcd->fillRect(x,y,w,h,rgb(state["page"]["backgroundColor"]|"",BLACK));
+ String type=component["type"]|"Label";
+ if(type!="Label")lcd->fillRoundRect(x+1,y+1,w-2,h-2,4,rgb(component["backgroundColor"]|"",0x3186));
+ label(component["text"]|"",x+2,y+2,w-4,h-4,rgb(component["textColor"]|"",WHITE),(component["fontSize"]|15)>=19?2:1);
+}
 void draw(){
  JsonVariantConst page=state["page"];
  if(page.isNull()){status("Non affecte","Attente du serveur");return;}
  lcd->fillScreen(rgb(page["backgroundColor"]|"",BLACK));
- for(JsonVariantConst c:page["components"].as<JsonArrayConst>()){
-  int x=c["x"]|0,y=c["y"]|0,w=c["w"]|30,h=c["h"]|30;
-  if(x<0||y<0||w<4||h<4||x+w>240||y+h>240)continue;
-  String type=c["type"]|"Label";
-  if(type!="Label")lcd->fillRoundRect(x+1,y+1,w-2,h-2,4,rgb(c["backgroundColor"]|"",0x3186));
-  label(c["text"]|"",x+2,y+2,w-4,h-4,rgb(c["textColor"]|"",WHITE),(c["fontSize"]|15)>=19?2:1);
- }
+ for(JsonVariantConst component:page["components"].as<JsonArrayConst>())drawComponent(component,false);
 }
 void send(const char *type,const char *key,const String &value){
  StaticJsonDocument<256> d;d["type"]=type;d[key]=value;
@@ -89,18 +91,23 @@ void onWs(WStype_t event,uint8_t *payload,size_t len){
    }
    return;
   }
-  bool changed=false;
-  for(JsonVariantConst update:doc["changes"].as<JsonArrayConst>())
-   for(JsonVariant component:state["page"]["components"].as<JsonArray>())
-    if(String(component["id"]|"")==String(update["id"]|"")){
-     component["text"]=update["text"].as<String>();changed=true;
-    }
+  unsigned changed=0;
+  for(JsonVariantConst update:doc["changes"].as<JsonArrayConst>()){
+   const char *updateId=update["id"]|"";
+   String nextText=update["text"]|"";
+   for(JsonVariant component:state["page"]["components"].as<JsonArray>()){
+    if(strcmp(component["id"]|"",updateId)!=0)continue;
+    if(String(component["text"]|"")==nextText)break;
+    component["text"]=nextText;
+    drawComponent(component.as<JsonVariantConst>(),true);
+    changed++;
+    break;
+   }
+  }
   if(millis()-lastUpdateLog>3000){
-   Serial.printf("update_received count=%u matched=%d heap=%u local_components=%u incoming_id=%s\n",(unsigned)doc["changes"].as<JsonArrayConst>().size(),changed,(unsigned)ESP.getFreeHeap(),(unsigned)state["page"]["components"].as<JsonArrayConst>().size(),doc["changes"][0]["id"]|"");
-   for(JsonVariantConst component:state["page"]["components"].as<JsonArrayConst>())Serial.printf("local_component=%s\n",component["id"]|"");
+   Serial.printf("update_received count=%u redrawn=%u heap=%u\n",(unsigned)doc["changes"].as<JsonArrayConst>().size(),changed,(unsigned)ESP.getFreeHeap());
    lastUpdateLog=millis();
   }
-  if(changed)draw();
  }else if(type=="error")Serial.printf("ws_error=%s\n",doc["code"]|"unknown");
 }
 bool touch(int &x,int &y){
