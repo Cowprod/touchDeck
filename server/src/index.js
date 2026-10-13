@@ -3,6 +3,7 @@ import os from 'node:os';
 
 import { readFile } from 'node:fs/promises';
 import { iconSource, iconManifest, iconCatalog, validIcon } from './icons.js';
+import { rasterSvg } from './icon-raster.js';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { WebSocketServer } from 'ws';
 import { createJsonStore } from './store.js';
@@ -164,6 +165,18 @@ export function createTouchDeckServer({ port = 3000, host = '0.0.0.0', dataFile 
       const query = url.searchParams.get('q') ?? '';
       if (query.length > 80) return json(400, { error: 'invalid_query' });
       return json(200, await iconCatalog(query));
+    }
+    if (request.method === 'GET' && url.pathname.startsWith('/api/icons/mask/')) {
+      const name = url.pathname.slice('/api/icons/mask/'.length);
+      if (!validIcon(name)) return json(400, { error: 'invalid_icon' });
+      const icon = await iconSource(name);
+      if (!icon) return json(404, { error: 'icon_not_found' });
+      try {
+        const bitmap = rasterSvg(icon.bytes.toString('utf8'), 48);
+        response.writeHead(200, { 'content-type': 'application/octet-stream', 'cache-control': 'public, max-age=86400', 'x-content-type-options': 'nosniff', 'x-icon-sha256': icon.sha256 });
+        response.end(bitmap);
+      } catch { return json(422, { error: 'unsupported_svg_path' }); }
+      return;
     }
     if (request.method === 'GET' && url.pathname.startsWith('/api/icons/source/')) {
       const name = url.pathname.slice('/api/icons/source/'.length);
