@@ -44,6 +44,17 @@ export function createTouchDeckServer({ port = 3000, host = '0.0.0.0', dataFile 
       configRevision+=1;
       await persist();
     }
+    const demo=pageSets.get('demo');
+    if(demo&&!demo.pages.some(page=>page.id==='stopwatch')){
+      demo.pages.push({id:'stopwatch',title:'Chronomètre',visible:true,background:'dark',components:[
+        {id:'sw_title',type:'Label',x:1,y:1,w:6,h:1,text:'Chronomètre',color:'light'},
+        {id:'sw_elapsed',type:'Label',sourceId:'clock',x:1,y:2,w:6,h:2,text:'${elapsed}',color:'success',fontSize:'large'},
+        {id:'sw_start',type:'Button',sourceId:'clock',action:'start',x:0,y:5,w:3,h:2,text:'Start',background:'success'},
+        {id:'sw_stop',type:'Button',sourceId:'clock',action:'stop',x:3,y:5,w:2,h:2,text:'Stop',background:'warning',color:'dark'},
+        {id:'sw_reset',type:'Button',sourceId:'clock',action:'reset',x:5,y:5,w:3,h:2,text:'Reset',background:'danger'}
+      ]});
+      configRevision+=1;await persist();
+    }
     ready = true;
   }
   function persist() { return store.save({ schemaVersion: 1, revision: configRevision, groups: [...groups.values()], pageSets: [...pageSets.values()], sources:[...sources.values()] }); }
