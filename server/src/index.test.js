@@ -292,8 +292,8 @@ test('component interaction validates page, type and explicitly rejects unconfig
  try{
   const connected=await connect(port,'interaction-test');socket=connected.socket;
   const initial=await (await fetch('http://127.0.0.1:'+port+'/api/admin/config')).json();
-  initial.pageSets[0].pages[0].components.push({id:'action-button',type:'Button',x:0,y:4,w:2,h:1,text:'Test'});
-  initial.pageSets[0].pages[0].components.push({id:'action-toggle',type:'Toggle',x:3,y:4,w:2,h:1,text:'Test'});
+  initial.pageSets[0].pages[0].components.push({id:'action-button',type:'Button',x:0,y:6,w:2,h:1,text:'Test'});
+  initial.pageSets[0].pages[0].components.push({id:'action-toggle',type:'Toggle',x:3,y:6,w:2,h:1,text:'Test'});
   assert.equal((await fetch('http://127.0.0.1:'+port+'/api/admin/config',{method:'PUT',headers:{'content-type':'application/json'},body:JSON.stringify(initial)})).status,200);
   const page=await waitPage(socket,{type:'assign',groupId:'demo'});
   async function request(componentId,pageRevision=page.pageRevision){
