@@ -194,10 +194,22 @@ void onWs(WStype_t event,uint8_t *payload,size_t len){
     if(strcmp(component["id"]|"",updateId)!=0)continue;
     if(String(component["text"]|"")==nextText)break;
     component["text"]=nextText;
+    if(state.overflowed()){
+     Serial.printf("state_overflow update=%s heap=%u\\n",updateId,(unsigned)ESP.getFreeHeap());
+     state.garbageCollect();
+     component["text"]=nextText;
+    }
     drawComponent(component.as<JsonVariantConst>(),true);
     changed++;
     break;
    }
+  }
+  // ArduinoJson 6 keeps superseded string values until garbage collection.
+  // Clock/stopwatch updates otherwise exhaust the 16 KB state document over time.
+  static uint32_t updateBatches=0;
+  if(changed && (++updateBatches % 30)==0){
+   state.garbageCollect();
+   Serial.printf("state_gc used=%u capacity=%u overflow=%d\\n",(unsigned)state.memoryUsage(),(unsigned)state.capacity(),state.overflowed());
   }
   if(millis()-lastUpdateLog>3000){
    Serial.printf("update_received count=%u redrawn=%u heap=%u\n",(unsigned)doc["changes"].as<JsonArrayConst>().size(),changed,(unsigned)ESP.getFreeHeap());
