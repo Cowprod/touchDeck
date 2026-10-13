@@ -60,6 +60,7 @@ export function createTouchDeckServer({ port = 3000, host = '0.0.0.0', dataFile 
   const pageSets = new Map();
   const sources = new Map();
   const sourceValues = new Map();
+  const pendingToggles = new Map();
   const latestFirmwareVersion=process.env.TOUCHDECK_FIRMWARE_VERSION??'0.1.0';
   const deviceSourceId=id=>'device_'+id.slice(0,73);
   function deviceSource(id){
@@ -115,6 +116,24 @@ export function createTouchDeckServer({ port = 3000, host = '0.0.0.0', dataFile 
     if(!item||!['Button','Toggle'].includes(item.type)||item.disabled)return {error:'invalid_interaction'};
     const requestId=typeof message.requestId==='string'&&/^[a-zA-Z0-9_-]{1,80}$/.test(message.requestId)?message.requestId:null;
     if(!requestId)return {error:'invalid_request_id'};
+    if(item.type==='Toggle'&&item.sourceId&&item.property){
+      const source=sources.get(item.sourceId),definition=source?.descriptor?.properties?.[item.property];
+      if(!definition||definition.type!=='boolean'||definition.readOnly)return {error:'invalid_toggle_binding'};
+      const key=client.id+':'+item.id;
+      if(pendingToggles.has(key))return {error:'interaction_pending'};
+      const previous=sourceValues.get(item.sourceId)?.[item.property];
+      if(typeof previous!=='boolean')return {error:'source_value_unknown'};
+      const expected=!previous;
+      const pending={client,componentId:item.id,requestId,sourceId:item.sourceId,property:item.property,expected};
+      pending.timer=setTimeout(()=>{
+        if(pendingToggles.get(key)!==pending)return;
+        pendingToggles.delete(key);
+        send(client,{type:'interaction_result',componentId:item.id,requestId,status:'timeout',value:previous});
+      },5000);
+      pendingToggles.set(key,pending);
+      send(client,{type:'interaction_result',componentId:item.id,requestId,status:'pending',value:previous});
+      return {};
+    }
     // No source action transport is configured yet: acknowledge receipt, never claim execution.
     if(item.type==='Button'){
       send(client,{type:'interaction_result',componentId:item.id,requestId,status:'rejected',reason:'action_not_configured'});
