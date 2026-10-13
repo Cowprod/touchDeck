@@ -248,6 +248,7 @@ window.addEventListener('message',event=>{
  if(event.origin!==location.origin||event.data?.type!=='touchdeck-sim-ready')return;
  const sim=simulators.get(event.data.clientId);
  if(!sim||event.source!==sim.card.querySelector('iframe').contentWindow)return;
+ if(sim.ready)return;
  sim.ready=true;assignSimulator(sim.id,sim.select.value);
 });
 $('addSimulator').onclick=()=>addSimulator();
