@@ -136,6 +136,7 @@ export function createTouchDeckServer({ port = 3000, host = '0.0.0.0', dataFile 
     if(!requestId)return {error:'invalid_request_id'};
     if(item.type==='Toggle'&&item.sourceId&&item.property){
       const source=sources.get(item.sourceId),definition=source?.descriptor?.properties?.[item.property];
+      if(source&&!source.descriptor.actions?.[item.writeAction??('set_'+item.property)])return {error:'invalid_toggle_write_action'};
       if(!definition||definition.type!=='boolean'||definition.readOnly)return {error:'invalid_toggle_binding'};
       const key=client.id+':'+item.id;
       if(pendingToggles.has(key))return {error:'interaction_pending'};
