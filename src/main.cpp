@@ -75,9 +75,10 @@ void syncIcons(const String &group,uint32_t newRevision){
  int code=http.GET();
  if(code!=200){Serial.printf("icon_manifest_http=%d\\n",code);http.end();return;}
  DynamicJsonDocument manifest(12000);
- DeserializationError err=deserializeJson(manifest,http.getStream());
+ String manifestBody=http.getString();
  http.end();
- if(err||!manifest["resources"].is<JsonArray>()){Serial.println("icon_manifest_invalid");return;}
+ DeserializationError err=deserializeJson(manifest,manifestBody);
+ if(err||!manifest["resources"].is<JsonArray>()){Serial.printf("icon_manifest_invalid err=%s bytes=%u body=%.180s\\n",err.c_str(),(unsigned)manifestBody.length(),manifestBody.c_str());return;}
  DynamicJsonDocument nextPaths(4096);
  bool success=true;
  for(JsonVariantConst resource:manifest["resources"].as<JsonArrayConst>()){
