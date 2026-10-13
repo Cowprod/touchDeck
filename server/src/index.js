@@ -60,6 +60,7 @@ export function createTouchDeckServer({ port = 3000, host = '0.0.0.0', dataFile 
   const pageSets = new Map();
   const sources = new Map();
   const sourceValues = new Map();
+  const componentPending = new Map();
   const latestFirmwareVersion=process.env.TOUCHDECK_FIRMWARE_VERSION??'0.1.0';
   const deviceSourceId=id=>'device_'+id.slice(0,73);
   function deviceSource(id){
@@ -106,6 +107,24 @@ export function createTouchDeckServer({ port = 3000, host = '0.0.0.0', dataFile 
   function send(client, payload) {
     const message = JSON.stringify(payload);
     for (const socket of client.sockets) if (socket.readyState === 1) socket.send(message);
+  }
+  function interact(client,message){
+    const group=groups.get(client.groupId),set=pageSets.get(group?.pageSetId);
+    const page=set?.pages.find(p=>p.id===client.pageId);
+    if(!page||message.pageId!==page.id||message.pageRevision!==configRevision)return {error:'stale_page'};
+    const item=page.components.find(c=>c.id===message.componentId);
+    if(!item||!['Button','Toggle'].includes(item.type)||item.disabled)return {error:'invalid_interaction'};
+    const key=client.id+':'+item.id;
+    if(componentPending.has(key))return {error:'interaction_pending'};
+    const requestId=typeof message.requestId==='string'&&/^[a-zA-Z0-9_-]{1,80}$/.test(message.requestId)?message.requestId:null;
+    if(!requestId)return {error:'invalid_request_id'};
+    // No source action transport is configured yet: acknowledge receipt, never claim execution.
+    if(item.type==='Button'){
+      send(client,{type:'interaction_result',componentId:item.id,requestId,status:'rejected',reason:'action_not_configured'});
+      return {};
+    }
+    send(client,{type:'interaction_result',componentId:item.id,requestId,status:'rejected',reason:'source_confirmation_unavailable'});
+    return {};
   }
   function navigate(client, direction) {
     const pages = visiblePages(client.groupId);
@@ -350,6 +369,9 @@ export function createTouchDeckServer({ port = 3000, host = '0.0.0.0', dataFile 
         publishDevice(current,true);
         send(current, { type: 'welcome', clientId: current.id, groupId: current.groupId });
         send(current, snapshot(current));
+      } else if (message?.type === 'interact' && current) {
+        const result=interact(current,message);
+        if(result.error)socket.send(JSON.stringify({type:'error',code:result.error}));
       } else if (message?.type === 'navigate' && current && ['next', 'previous'].includes(message.direction)) {
         navigate(current, message.direction);
       } else if (message?.type === 'assign' && current && typeof message.groupId === 'string' && groups.has(message.groupId)) {
