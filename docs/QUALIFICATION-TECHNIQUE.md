@@ -94,6 +94,14 @@ Preuves attendues :
 - inventaire des formats testés ;
 - conclusion limitée au matériel réellement testé.
 
+### Synchronisation et nettoyage — périmètre du POC
+
+- Le **jeu de pages du groupe**, et non la seule page affichée, définit les icônes nécessaires (QT-006). Un changement de page ne doit donc pas provoquer de téléchargements/purges répétitifs.
+- Le serveur construit un **manifeste des ressources nécessaires**, avec identifiant, format, dimensions et empreinte du contenu. Les ressources graphiques sont indépendantes de leur couleur, appliquée au rendu.
+- Le device compare le manifeste à son cache LittleFS : réutilise les ressources identiques, récupère les absentes ou modifiées, puis peut supprimer les ressources non référencées **après synchronisation réussie**. Une coupure pendant le transfert ne doit pas détruire les ressources encore utiles.
+- Changement de groupe ou de jeu de pages : nouveau manifeste et réconciliation du cache. La politique exacte de transfert et de purge sera validée par mesures sur ESP32-C3.
+- Le choix entre masque 1 bit, alpha 8 bits et plusieurs tailles reste **ouvert** : ne pas figer un format de production avant la qualification comparative.
+
 ## Sources historiques
 
 Des essais antérieurs réalisés avec Codex existent potentiellement. Ils doivent être récupérés et analysés avant de refaire inutilement les mêmes POC.
