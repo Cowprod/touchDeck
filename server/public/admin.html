@@ -4,8 +4,39 @@
 <link href="/assets/fontawesome/css/all.min.css" rel="stylesheet">
 <style>
 main{max-width:1280px}.editor-viewport{max-width:100%;overflow:auto}.editor-stage{position:relative;margin:12px auto}.editor-stage .preview{margin:0;transform-origin:top left}.preview{width:240px;height:240px;position:relative;overflow:hidden;background:#111827;border:7px solid #6c757d;border-radius:50%;margin:12px auto}.preview{touch-action:none;background-image:linear-gradient(to right,rgba(255,255,255,.1) 1px,transparent 1px),linear-gradient(to bottom,rgba(255,255,255,.1) 1px,transparent 1px);background-size:12.5% 12.5%}.piece.selected{outline:2px solid #f0ad4e;outline-offset:-2px}.piece{touch-action:none;user-select:none;position:absolute;display:flex;justify-content:center;align-items:center;text-align:center;overflow:hidden;font-size:14px;overflow-wrap:anywhere;background:#334155;border:1px solid #64748b}.form-control,.form-select{min-width:0}.input-group-text.field-label{width:25%;justify-content:flex-start}.save-warning{border-color:var(--bs-warning)!important}.save-success{border-color:var(--bs-success)!important}.save-danger{border-color:var(--bs-danger)!important}.card{margin-bottom:1rem}.toolbar{display:flex;gap:.5rem;align-items:center;flex-wrap:wrap}.toolbar .form-select{flex:1;min-width:140px}textarea{min-height:240px;font-family:ui-monospace,monospace!important;font-size:.85rem!important}
+
+/* Navigation de travail et édition permanente */
+main{max-width:1800px!important;padding-top:1rem!important}
+.td-nav{position:sticky;top:0;z-index:1050;background:rgba(24,30,49,.97);backdrop-filter:blur(12px);border-bottom:1px solid rgba(255,255,255,.14);box-shadow:0 4px 22px rgba(0,0,0,.14)}
+.td-nav .container-fluid{display:flex;align-items:center;gap:.5rem;flex-wrap:wrap;padding:.7rem 1.5rem}
+.td-brand{font-size:1.15rem;font-weight:700;color:#fff;text-decoration:none;margin-right:1rem}
+.td-nav .td-tab{border:0;border-radius:.65rem;padding:.65rem 1rem;background:transparent;color:#d6e0f4;font-weight:600}
+.td-nav .td-tab:hover,.td-nav .td-tab.active{background:#2364d9;color:#fff}
+.td-nav .td-external{color:#d6e0f4;text-decoration:none;padding:.65rem 1rem;border-radius:.65rem;font-weight:600}
+.td-nav .td-external:hover{background:#2364d9;color:#fff}
+.td-workspace{display:grid;grid-template-columns:minmax(370px,1fr) minmax(340px,480px);gap:1rem;align-items:start}
+.td-edit-column{min-width:0}
+.td-live-column{position:sticky;top:5.8rem;max-height:calc(100vh - 6.5rem);overflow:auto;min-width:0;padding-right:.25rem}
+.td-live-column .card{margin-bottom:1rem}
+.td-live-column .preview{max-width:100%}
+.td-live-column #simulators>.col-lg-4{width:100%;flex:0 0 100%;max-width:100%}
+.td-live-column iframe{max-width:100%}
+.td-edit-column>.card,.td-edit-column>section{width:100%;max-width:100%}
+.td-section[hidden]{display:none!important}
+.td-section-heading{font-size:1.5rem;font-weight:700;margin:0 0 1rem}
+.td-help{color:#d3dbea;margin-bottom:1rem}
+#state{position:relative;z-index:1}
+@media(max-width:1050px){.td-workspace{grid-template-columns:minmax(0,1fr)}.td-live-column{position:static;max-height:none;overflow:visible}.td-live-column #simulators>.col-lg-4{width:50%;flex:0 0 50%}}
+@media(max-width:650px){.td-nav .container-fluid{padding:.5rem}.td-nav .td-tab,.td-nav .td-external{padding:.5rem .65rem;font-size:.88rem}.td-workspace{display:block}.td-live-column #simulators>.col-lg-4{width:100%;flex:0 0 100%}.input-group-text.field-label{width:30%}}
 </style></head><body>
-<nav class="navbar navbar-expand-lg bg-dark"><div class="container-fluid"><span class="navbar-brand"><i class="fa-solid fa-sliders me-2"></i>TouchDeck <small class="text-body-secondary">Administration</small></span><a class="btn btn-secondary" href="/"><i class="fa-solid fa-display me-1"></i>Simulateur</a></div></nav>
+<nav class="td-nav" aria-label="Navigation principale"><div class="container-fluid">
+<a class="td-brand" href="/admin"><i class="fa-solid fa-layer-group me-2"></i>TouchDeck</a>
+<button type="button" class="td-tab active" data-td-view="editor"><i class="fa-solid fa-pen-ruler me-1"></i> Éditeur</button>
+<button type="button" class="td-tab" data-td-view="groups"><i class="fa-solid fa-object-group me-1"></i> Groupes</button>
+<a class="td-external" href="/admin/sources"><i class="fa-solid fa-database me-1"></i> Sources</a>
+<button type="button" class="td-tab" data-td-view="devices"><i class="fa-solid fa-microchip me-1"></i> Appareils</button>
+<a class="td-external ms-auto" href="/"><i class="fa-solid fa-display me-1"></i> Simulateur plein écran</a>
+</div></nav>
 <main class="container-fluid py-4">
 <div class="alert alert-info" id="state" role="status">Chargement de la configuration…</div>
 <div class="card mb-3"><div class="card-header d-flex justify-content-between align-items-center">Appareils connectés · Firmware <button type="button" class="btn btn-secondary btn-sm" id="refreshFirmware">Actualiser</button></div><div class="card-body"><div id="firmwareDevices" class="small">Chargement…</div></div></div>
@@ -284,4 +315,47 @@ const firmwareRefreshTimer=setInterval(async()=>{
  try{await refreshFirmware()}finally{firmwareRefreshBusy=false}
 },60000);
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)refreshFirmware()});
+
+/* Organisation de l'interface : déplacer uniquement les panneaux, sans recréer
+   les champs ni les iframes, afin de conserver leurs écouteurs et leur état. */
+(function setupWorkspace(){
+ const main=document.querySelector('main');
+ const statusBox=document.getElementById('state');
+ const row=main.querySelector('.row.g-3');
+ const panelOf=id=>document.getElementById(id)?.closest('section');
+ const groupPanel=panelOf('group'),pagePanel=panelOf('set'),componentPanel=panelOf('component');
+ const previewPanel=panelOf('preview'),simPanel=panelOf('simulators');
+ const firmwarePanel=document.getElementById('firmwareDevices')?.closest('.card');
+ const legacySources=panelOf('source');
+ if(!groupPanel||!pagePanel||!componentPanel||!previewPanel||!simPanel||!firmwarePanel)return;
+ const editor=document.createElement('div');editor.id='td-editor';editor.className='td-section';
+ const workspace=document.createElement('div');workspace.className='td-workspace';
+ const controls=document.createElement('div');controls.className='td-edit-column';
+ const live=document.createElement('aside');live.className='td-live-column';live.setAttribute('aria-label','Aperçu et simulateurs toujours visibles');
+ const title=document.createElement('h1');title.className='td-section-heading';title.textContent='Éditeur de pages';
+ const help=document.createElement('p');help.className='td-help';help.textContent='Modifiez les pages et les composants à gauche ; l’aperçu et les simulateurs restent visibles à droite.';
+ editor.append(title,help,workspace);workspace.append(controls,live);
+ for(const panel of [pagePanel,componentPanel]){panel.classList.remove('col-lg-6');controls.append(panel)}
+ for(const panel of [previewPanel,simPanel]){panel.classList.remove('col-lg-6','col-12');live.append(panel)}
+ const groups=document.createElement('div');groups.id='td-groups';groups.className='td-section';groups.hidden=true;
+ groups.innerHTML='<h1 class="td-section-heading">Groupes</h1><p class="td-help">Affectation des groupes aux jeux de pages.</p>';
+ groupPanel.classList.remove('col-lg-6');groups.append(groupPanel);
+ const devices=document.createElement('div');devices.id='td-devices';devices.className='td-section';devices.hidden=true;
+ devices.innerHTML='<h1 class="td-section-heading">Appareils connectés</h1><p class="td-help">État des clients et versions du firmware.</p>';
+ devices.append(firmwarePanel);
+ if(legacySources){legacySources.hidden=true;legacySources.style.display='none'}
+ row.replaceWith(editor,groups,devices);
+ const sections={editor,groups,devices};
+ function show(view){
+  if(!sections[view])view='editor';
+  for(const [key,section] of Object.entries(sections))section.hidden=key!==view;
+  for(const button of document.querySelectorAll('[data-td-view]')){
+   const active=button.dataset.tdView===view;button.classList.toggle('active',active);button.setAttribute('aria-current',active?'page':'false');
+  }
+  if(location.hash!=='#'+view)history.replaceState(null,'','#'+view);
+ }
+ for(const button of document.querySelectorAll('[data-td-view]'))button.addEventListener('click',()=>show(button.dataset.tdView));
+ window.addEventListener('hashchange',()=>show(location.hash.slice(1)));
+ show(location.hash.slice(1)||'editor');
+})();
 </script></body></html>
