@@ -29,9 +29,30 @@ socket.onclose=()=>{status.textContent='Déconnecté';setTimeout(connect,3000)}}
 document.getElementById('assign').onclick=()=>send({type:'assign',groupId:'demo'});
 document.getElementById('prev').onclick=()=>send({type:'navigate',direction:'previous'});
 document.getElementById('next').onclick=()=>send({type:'navigate',direction:'next'});
-let touchX=null,touchY=null,touchStart=0;screen.addEventListener('touchstart',event=>{touchX=event.changedTouches[0].clientX;touchY=event.changedTouches[0].clientY;touchStart=Date.now()},{passive:true});
-screen.addEventListener('touchend',event=>{if(touchX===null)return;const delta=event.changedTouches[0].clientX-touchX,dy=event.changedTouches[0].clientY-touchY;touchX=null;if(Math.abs(delta)>35)send({type:'navigate',direction:delta<0?'next':'previous'});else if(Math.abs(delta)<15&&Math.abs(dy)<15&&Date.now()-touchStart<1000){const el=document.elementFromPoint(event.changedTouches[0].clientX,event.changedTouches[0].clientY)?.closest('.component');if(el)activate(el)}},{passive:true});
-let requestCounter=0;function activate(el){if(!['Button','Toggle'].includes(el.dataset.type)||el.dataset.disabled==='1'||el.dataset.pending==='1')return;const requestId='web-'+(++requestCounter);el.dataset.pending='1';el.style.opacity='.5';send({type:'interact',pageId:currentPageId,pageRevision:currentPageRevision,componentId:el.dataset.componentId,requestId});setTimeout(()=>{if(el.dataset.pending==='1'){el.dataset.pending='0';el.style.opacity='1'}},5000)}
-screen.addEventListener('click',event=>{if(Date.now()-touchStart<500)return;const el=event.target.closest('.component');if(el)activate(el)});
+let pointerStart=null,requestCounter=0;
+screen.style.touchAction='none';
+screen.addEventListener('pointerdown',event=>{
+ if(event.button!==0)return;
+ pointerStart={x:event.clientX,y:event.clientY,time:Date.now(),pointerId:event.pointerId};
+});
+screen.addEventListener('pointerup',event=>{
+ const start=pointerStart;pointerStart=null;
+ if(!start||start.pointerId!==event.pointerId||Date.now()-start.time>=1000)return;
+ const dx=event.clientX-start.x,dy=event.clientY-start.y;
+ if(Math.abs(dx)>=35&&Math.abs(dx)>Math.abs(dy)){send({type:'navigate',direction:dx<0?'next':'previous'});return}
+ if(Math.abs(dx)>=15||Math.abs(dy)>=15)return;
+ const element=document.elementFromPoint(event.clientX,event.clientY)?.closest('.component');
+ if(element&&screen.contains(element))activate(element);
+});
+screen.addEventListener('pointercancel',()=>{pointerStart=null});
+function activate(el){
+ if(!['Button','Toggle'].includes(el.dataset.type)||el.dataset.disabled==='1'||el.dataset.pending==='1')return;
+ if(socket?.readyState!==WebSocket.OPEN){status.textContent='Action impossible : WebSocket déconnecté';return}
+ const requestId='web-'+(++requestCounter);
+ el.dataset.pending='1';el.style.opacity='.5';
+ send({type:'interact',pageId:currentPageId,pageRevision:currentPageRevision,componentId:el.dataset.componentId,requestId});
+ status.textContent='Commande envoyée : '+el.dataset.componentId;
+ setTimeout(()=>{if(el.dataset.pending==='1'){el.dataset.pending='0';el.style.opacity='1'}},5000);
+}
 connect();
 </script></body></html>
