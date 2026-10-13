@@ -45,7 +45,7 @@ main{max-width:1280px}.editor-viewport{max-width:100%;overflow:auto}.editor-stag
 <div class="input-group mb-3"><span class="input-group-text field-label">Source</span><select class="form-select" id="source"></select><button class="btn btn-success" id="addSource" type="button" title="Nouvelle source manuelle"><i class="fa-solid fa-plus"></i></button></div>
 <div class="input-group mb-3"><span class="input-group-text field-label">Nom</span><input class="form-control" id="sourceName" maxlength="120"></div>
 <div class="input-group mb-3"><span class="input-group-text field-label">Origine</span><input class="form-control" id="sourceOrigin" readonly></div>
-<div class="mb-3"><label for="sourceDescriptor" class="form-label">Descripteur JSON : properties / actions / events</label><textarea class="form-control" id="sourceDescriptor" spellcheck="false"></textarea></div>
+<div class="input-group mb-3"><span class="input-group-text field-label">Endpoint HTTP</span><input class="form-control" id="sourceEndpoint" placeholder="http://serveur/api/source/"></div><div class="mb-3"><label for="sourceDescriptor" class="form-label">Descripteur JSON : properties / actions / events</label><textarea class="form-control" id="sourceDescriptor" spellcheck="false"></textarea></div>
 <div class="btn-group"><button class="btn btn-success" id="saveSource" type="button">Enregistrer la source manuelle</button><button class="btn btn-secondary" id="importSource" type="button">Importer / réimporter ce JSON</button></div>
 <div class="form-text">Une source importée ne peut être modifiée que par réimportation ; son identifiant reste stable.</div>
 </div></div></section>
@@ -57,7 +57,7 @@ function currentSet(){return config?.pageSets.find(x=>x.id===$('set').value)}
 function currentPage(){return currentSet()?.pages.find(x=>x.id===$('page').value)}
 function currentGroup(){return config?.groups.find(x=>x.id===$('group').value)}
 function currentSource(){return config?.sources?.find(source=>source.id===$('source').value)}
-function refreshSource(){const source=currentSource();$('sourceName').value=source?.name??'';$('sourceOrigin').value=source?.origin??'';$('sourceDescriptor').value=JSON.stringify(source?.descriptor??{properties:{},actions:{},events:{}},null,2);$('saveSource').disabled=!source||source.origin!=='manual';$('sourceName').readOnly=!!source&&source.origin==='imported';}
+function refreshSource(){const source=currentSource();$('sourceName').value=source?.name??'';$('sourceOrigin').value=source?.origin??'';$('sourceEndpoint').value=source?.endpoint??'';$('sourceDescriptor').value=JSON.stringify(source?.descriptor??{properties:{},actions:{},events:{}},null,2);$('saveSource').disabled=!source||source.origin!=='manual';$('sourceName').readOnly=!!source&&source.origin==='imported';}
 function refreshSources(selected){options($('source'),(config?.sources??[]).map(source=>({id:source.id,label:source.name})),selected??$('source').value);refreshSource()}
 
 function options(element,items,selected){element.replaceChildren();for(const item of items){const option=new Option(item.label,item.id);element.add(option)}if(selected&&items.some(x=>x.id===selected))element.value=selected}
