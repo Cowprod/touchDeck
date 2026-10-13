@@ -2,7 +2,7 @@ import http from 'node:http';
 import os from 'node:os';
 
 import { readFile } from 'node:fs/promises';
-import { iconSource, iconManifest, validIcon } from './icons.js';
+import { iconSource, iconManifest, iconCatalog, validIcon } from './icons.js';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { WebSocketServer } from 'ws';
 import { createJsonStore } from './store.js';
@@ -159,6 +159,11 @@ export function createTouchDeckServer({ port = 3000, host = '0.0.0.0', dataFile 
       response.writeHead(204, { 'cache-control': 'public, max-age=86400' });
       response.end();
       return;
+    }
+    if (request.method === 'GET' && url.pathname === '/api/icons/catalog') {
+      const query = url.searchParams.get('q') ?? '';
+      if (query.length > 80) return json(400, { error: 'invalid_query' });
+      return json(200, await iconCatalog(query));
     }
     if (request.method === 'GET' && url.pathname.startsWith('/api/icons/source/')) {
       const name = url.pathname.slice('/api/icons/source/'.length);
