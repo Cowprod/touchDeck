@@ -20,6 +20,7 @@ DynamicJsonDocument iconPaths(4096);
 bool iconFsReady=false;
 String iconGroup;
 uint32_t iconRevision=0;
+uint32_t lastIconDiagnostic=0;
 String id, host, pageId, selectedServer;
 uint16_t port = 3000;
 uint32_t revision=0, wifiStarted=0;
@@ -337,6 +338,19 @@ void loop(){
   Serial.printf("wifi_ip=%s server=%s:%u\n",WiFi.localIP().toString().c_str(),host.c_str(),port);
  }
  ws.loop();
+ if(wsReady && millis()-lastIconDiagnostic>15000){
+  lastIconDiagnostic=millis();
+  Serial.printf("icon_diag fs=%d group=%s rev=%lu entries=%u page=%s\\n",iconFsReady,iconGroup.c_str(),(unsigned long)iconRevision,(unsigned)iconPaths.size(),pageId.c_str());
+  JsonVariantConst page=state["page"];
+  for(JsonVariantConst component:page["components"].as<JsonArrayConst>()){
+   if(String(component["type"]|"")=="Icon"){
+    String name=component["icon"]|"";
+    const char *path=iconPaths[name] | "";
+    Serial.printf("icon_diag_component name=%s color=%s bg=%s file=%s exists=%d\\n",name.c_str(),component["textColor"]|"",component["backgroundColor"]|"transparent",path,strlen(path)>0&&LittleFS.exists(path));
+   }
+  }
+  if(iconPaths.size()==0 && !page.isNull())syncIcons(selectedGroup,revision);
+ }
  if(wsStarted&&!wsReady&&disconnectedAt&&millis()-disconnectedAt>90000){
   Serial.println("ws_rediscover");ws.disconnect();wsStarted=false;disconnectedAt=0;
   status("Recherche serveur","mDNS");
