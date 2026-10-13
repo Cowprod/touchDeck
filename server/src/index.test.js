@@ -377,3 +377,33 @@ test('toggle requires source confirmation and rejects failed HTTP command',async
   assert.equal(events.find(e=>e.status==='rejected').reason,'source_http_503');
  }finally{socket?.close();await app.stop();await new Promise(resolve=>target.close(resolve));await rm(dir,{recursive:true,force:true})}
 });
+
+test('stopwatch demo page executes Start Stop Reset through WebSocket and clock source',async()=>{
+ const {mkdtemp,rm}=await import('node:fs/promises');
+ const {tmpdir}=await import('node:os');
+ const {join}=await import('node:path');
+ const dir=await mkdtemp(join(tmpdir(),'touchdeck-stopwatch-e2e-'));
+ const app=createTouchDeckServer({port:0,host:'127.0.0.1',dataFile:join(dir,'config.json')});
+ let socket;
+ try{
+  const {port}=await app.start();({socket}=await connect(port,'stopwatch-e2e'));
+  await waitPage(socket,{type:'assign',groupId:'demo'});
+  await waitPage(socket,{type:'navigate',direction:'next'});
+  const page=await waitPage(socket,{type:'navigate',direction:'next'});
+  assert.equal(page.page.id,'stopwatch');
+  assert.equal(page.page.components.find(c=>c.id==='sw_elapsed').text,'00:00:00');
+  async function action(componentId){
+   return new Promise((resolve,reject)=>{
+    const timer=setTimeout(()=>reject(new Error('stopwatch interaction timeout')),2000);
+    const listener=raw=>{const msg=JSON.parse(raw.toString());if(msg.type==='interaction_result'&&msg.componentId===componentId&&msg.status==='acknowledged'){clearTimeout(timer);socket.off('message',listener);resolve(msg)}};
+    socket.on('message',listener);
+    socket.send(JSON.stringify({type:'interact',pageId:'stopwatch',pageRevision:page.pageRevision,componentId,requestId:componentId+'-1'}));
+   });
+  }
+  await action('sw_start');
+  await new Promise(resolve=>setTimeout(resolve,1150));
+  await action('sw_stop');
+  await action('sw_reset');
+  assert.equal(app.clients.get('stopwatch-e2e').pageId,'stopwatch');
+ }finally{socket?.close();await app.stop();await rm(dir,{recursive:true,force:true})}
+});
