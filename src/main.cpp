@@ -7,6 +7,8 @@
 #include <Preferences.h>
 #include <Wire.h>
 #include <ESPmDNS.h>
+#include <HTTPClient.h>
+#include <LittleFS.h>
 Arduino_DataBus *bus = new Arduino_ESP32SPI(2,10,6,7,GFX_NOT_DEFINED);
 Arduino_GFX *lcd = new Arduino_GC9A01(bus,GFX_NOT_DEFINED,0,true);
 #define TOUCHDECK_FIRMWARE_VERSION "0.1.0+" __DATE__ " " __TIME__
@@ -14,6 +16,10 @@ WebSocketsClient ws;
 WebServer web(80);
 Preferences prefs;
 DynamicJsonDocument state(16000);
+DynamicJsonDocument iconPaths(4096);
+bool iconFsReady=false;
+String iconGroup;
+uint32_t iconRevision=0;
 String id, host, pageId, selectedServer;
 uint16_t port = 3000;
 uint32_t revision=0, wifiStarted=0;
@@ -40,6 +46,79 @@ void status(String a,String b){
  label(a,20,104,200,20,YELLOW,1);
  label(b,20,132,200,30,WHITE,1);
 }
+void drawIcon(const String &name,int x,int y,int w,int h,uint16_t color){
+ const char *path=iconPaths[name] | "";
+ if(!path[0]||!iconFsReady)return;
+ File file=LittleFS.open(path,"r");
+ if(!file)return;
+ int width=file.read(),height=file.read();
+ if(width!=48||height!=48||file.size()!=290){file.close();return;}
+ uint8_t bitmap[288];
+ if(file.read(bitmap,sizeof(bitmap))!=sizeof(bitmap)){file.close();return;}
+ file.close();
+ int scale=min(w,h);
+ int left=x+(w-scale)/2,top=y+(h-scale)/2;
+ for(int py=0;py<scale;py++)for(int px=0;px<scale;px++){
+  int sx=px*48/scale,sy=py*48/scale,bit=sy*48+sx;
+  if(bitmap[bit>>3]&(0x80>>(bit&7)))lcd->drawPixel(left+px,top+py,color);
+ }
+}
+void syncIcons(const String &group,uint32_t newRevision){
+ if(!iconFsReady||group.isEmpty()||(group==iconGroup&&newRevision==iconRevision))return;
+ WiFiClient net;
+ HTTPClient http;
+ String url="http://"+host+":"+String(port)+"/api/icons/manifest/"+group;
+ if(!http.begin(net,url)){Serial.println("icon_manifest_begin_failed");return;}
+ http.setTimeout(5000);
+ int code=http.GET();
+ if(code!=200){Serial.printf("icon_manifest_http=%d\\n",code);http.end();return;}
+ DynamicJsonDocument manifest(12000);
+ DeserializationError err=deserializeJson(manifest,http.getStream());
+ http.end();
+ if(err||!manifest["resources"].is<JsonArray>()){Serial.println("icon_manifest_invalid");return;}
+ DynamicJsonDocument nextPaths(4096);
+ bool success=true;
+ for(JsonVariantConst resource:manifest["resources"].as<JsonArrayConst>()){
+  String name=resource["id"]|"",sha=resource["sha256"]|"";
+  if(name.length()<3||name.length()>90||sha.length()!=64){success=false;break;}
+  String path="/i"+sha.substring(0,24)+".bin";
+  if(!LittleFS.exists(path)){
+   HTTPClient imageHttp;WiFiClient imageNet;
+   String imageUrl="http://"+host+":"+String(port)+"/api/icons/mask/"+name;
+   if(!imageHttp.begin(imageNet,imageUrl)){success=false;break;}
+   imageHttp.setTimeout(5000);
+   int imageCode=imageHttp.GET();
+   if(imageCode!=200||imageHttp.getSize()!=290){Serial.printf("icon_mask_http=%d size=%d\\n",imageCode,imageHttp.getSize());imageHttp.end();success=false;break;}
+   String tmp=path+".tmp";
+   File output=LittleFS.open(tmp,"w");
+   if(!output){imageHttp.end();success=false;break;}
+   int copied=imageHttp.writeToStream(&output);
+   output.close();imageHttp.end();
+   if(copied!=290){LittleFS.remove(tmp);success=false;break;}
+   File verify=LittleFS.open(tmp,"r");
+   bool valid=verify&&verify.size()==290&&verify.read()==48&&verify.read()==48;
+   verify.close();
+   if(!valid||!LittleFS.rename(tmp,path)){LittleFS.remove(tmp);success=false;break;}
+  }
+  nextPaths[name]=path;
+ }
+ if(!success){Serial.println("icon_sync_incomplete");return;}
+ iconPaths.clear();iconPaths.set(nextPaths.as<JsonVariantConst>());
+ iconGroup=group;iconRevision=newRevision;
+ File root=LittleFS.open("/");
+ File file=root.openNextFile();
+ while(file){
+  String path=file.name();
+  if(!path.startsWith("/"))path="/"+path;
+  file.close();
+  bool keep=false;
+  for(JsonPairConst entry:iconPaths.as<JsonObjectConst>())if(path==entry.value().as<String>()){keep=true;break;}
+  if(path.startsWith("/i")&&path.endsWith(".bin")&&!keep)LittleFS.remove(path);
+  file=root.openNextFile();
+ }
+ root.close();
+ Serial.printf("icon_sync_ok group=%s count=%u\\n",group.c_str(),(unsigned)iconPaths.size());
+}
 void drawComponent(JsonVariantConst component,bool clearArea){
  int x=component["x"]|0,y=component["y"]|0,w=component["w"]|30,h=component["h"]|30;
  if(x<0||y<0||w<4||h<4||x+w>240||y+h>240)return;
@@ -52,7 +131,8 @@ void drawComponent(JsonVariantConst component,bool clearArea){
   if(r==0)lcd->fillRect(x+1,y+1,w-2,h-2,bg);
   else lcd->fillRoundRect(x+1,y+1,w-2,h-2,r,bg);
  }
- label(component["text"]|"",x+2,y+2,w-4,h-4,rgb(component["textColor"]|"",WHITE),(component["fontSize"]|15)>=19?2:1);
+ if(type=="Icon")drawIcon(component["icon"]|"",x+2,y+2,w-4,h-4,rgb(component["textColor"]|"",WHITE));
+ else label(component["text"]|"",x+2,y+2,w-4,h-4,rgb(component["textColor"]|"",WHITE),(component["fontSize"]|15)>=19?2:1);
 }
 void draw(){
  JsonVariantConst page=state["page"];
@@ -85,6 +165,7 @@ void onWs(WStype_t event,uint8_t *payload,size_t len){
   pageId=doc["page"]["id"]|"";
   revision=doc["pageRevision"]|0;
   Serial.printf("page=%s revision=%lu components=%u bg=%s\n",pageId.c_str(),(unsigned long)revision,(unsigned)state["page"]["components"].as<JsonArrayConst>().size(),state["page"]["backgroundColor"]|"missing");
+  syncIcons(doc["groupId"]|"",revision);
   draw();
  }else if(type=="component_update"){
   String incomingPage=doc["pageId"]|"";
@@ -201,6 +282,8 @@ void portal(){
 }
 void setup(){
  Serial.begin(115200);delay(400);
+ iconFsReady=LittleFS.begin(true);
+ Serial.printf("littlefs=%d\\n",iconFsReady);
  // One-time provisioning reset for the current physical troubleshooting session.
  Preferences resetPrefs;
  resetPrefs.begin("td-reset",false);
