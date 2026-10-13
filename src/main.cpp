@@ -32,6 +32,7 @@ void loop() {
   static uint32_t previous = 0;
   if (millis() - previous >= 10000) {
     previous = millis();
+    report();
     Serial.printf("heartbeat_ms=%lu free_heap=%lu\n",
       (unsigned long)millis(), (unsigned long)ESP.getFreeHeap());
   }
