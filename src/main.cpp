@@ -29,7 +29,7 @@ bool provision=false, wsReady=false, wsStarted=false;
 uint32_t disconnectedAt=0;
 uint32_t discoveryAt=0, lastRetryAt=0;
 uint8_t failedDiscoveries=0;
-int startX=-1, lastX=0, lastY=0;
+int startX=-1, startY=-1, lastX=0, lastY=0;
 bool pressed=false;
 uint32_t started=0, lastPoll=0;
 uint16_t rgb(const char *hex, uint16_t fallback) {
@@ -217,13 +217,28 @@ void poll(){
  if(millis()-lastPoll<35)return;lastPoll=millis();
  int x=0,y=0;bool down=touch(x,y);
  if(down){
-  if(!pressed){startX=x;started=millis();}
+  if(!pressed){startX=x;startY=y;started=millis();}
   lastX=x;lastY=y;
  }else if(pressed&&startX>=0){
   int dx=lastX-startX;
   if(abs(dx)>=35&&millis()-started<1000&&wsReady){
    send("navigate","direction",dx<0?"next":"previous");
    Serial.printf("swipe=%d\n",dx);
+  }
+  else if(abs(dx)<15&&abs(lastY-startY)<15&&millis()-started<1000&&wsReady){
+   for(JsonVariantConst component:state["page"]["components"].as<JsonArrayConst>()){
+    String kind=component["type"]|"";
+    if((kind!="Button"&&kind!="Toggle")||(component["disabled"]|false))continue;
+    int cx=component["x"]|0,cy=component["y"]|0,cw=component["w"]|0,ch=component["h"]|0;
+    if(lastX<cx||lastX>=cx+cw||lastY<cy||lastY>=cy+ch)continue;
+    StaticJsonDocument<256> interaction;
+    interaction["type"]="interact";interaction["pageId"]=pageId;interaction["pageRevision"]=revision;
+    interaction["componentId"]=component["id"]|"";
+    interaction["requestId"]="esp-"+String(millis());
+    String payload;serializeJson(interaction,payload);ws.sendTXT(payload);
+    Serial.printf("interaction_sent component=%s\n",component["id"]|"");
+    break;
+   }
   }
   startX=-1;
  }
