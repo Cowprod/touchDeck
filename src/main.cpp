@@ -91,7 +91,7 @@ void syncIcons(const String &group,uint32_t newRevision){
    if(!imageHttp.begin(imageNet,imageUrl)){success=false;break;}
    imageHttp.setTimeout(5000);
    int imageCode=imageHttp.GET();
-   if(imageCode!=200||imageHttp.getSize()!=290){Serial.printf("icon_mask_http=%d size=%d\\n",imageCode,imageHttp.getSize());imageHttp.end();success=false;break;}
+   if(imageCode!=200||(imageHttp.getSize()>=0&&imageHttp.getSize()!=290)){Serial.printf("icon_mask_http=%d size=%d\\n",imageCode,imageHttp.getSize());imageHttp.end();success=false;break;}
    String tmp=path+".tmp";
    File output=LittleFS.open(tmp,"w");
    if(!output){imageHttp.end();success=false;break;}
