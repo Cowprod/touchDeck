@@ -1,4 +1,4 @@
-import { readFile } from 'node:fs/promises';
+import { readFile, readdir } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 
 // SVGs are server-only source assets. ESP firmware must not decode SVG.
@@ -27,4 +27,19 @@ export async function iconManifest(pageSet) {
     resources.push({ id: name, sha256: source.sha256, sourceBytes: source.bytes.length });
   }
   return { schemaVersion: 1, format: 'svg-source', resources };
+}
+
+export async function iconCatalog(query = '', limit = 80) {
+  const term = String(query).toLowerCase().trim();
+  const matches = [];
+  for (const style of ['solid', 'regular', 'brands']) {
+    const files = await readdir(new URL(style + '/', ROOT));
+    for (const file of files) {
+      if (!file.endsWith('.svg')) continue;
+      const name = style + '/' + file.slice(0, -4);
+      if (!term || name.includes(term)) matches.push(name);
+    }
+  }
+  matches.sort();
+  return { total: matches.length, icons: matches.slice(0, limit) };
 }
