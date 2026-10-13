@@ -63,6 +63,7 @@ void loop() {
     previous = millis();
     report();
     screenCounter++;
+    Serial.printf("display_ready=%u screen_tick=%lu\\n", displayReady ? 1u : 0u, (unsigned long)screenCounter);
     drawScreen();
     Serial.printf("heartbeat_ms=%lu free_heap=%lu\n",
       (unsigned long)millis(), (unsigned long)ESP.getFreeHeap());
