@@ -60,6 +60,18 @@ main{max-width:1800px!important;padding-top:1rem!important}
 .td-live-column .card-body .row{margin:0!important}
 @media(max-width:1100px){.td-workspace{grid-template-columns:250px minmax(0,1fr)!important}.td-live-column{position:sticky;top:5.8rem;max-height:calc(100vh - 6.5rem);overflow-y:auto;grid-column:1;grid-row:1}.td-edit-column{grid-column:2;grid-row:1}}
 @media(max-width:550px){.td-workspace{grid-template-columns:minmax(0,1fr)!important}.td-edit-column{grid-column:1;grid-row:1}.td-live-column{position:static;grid-column:1;grid-row:2;width:250px;max-width:250px}}
+
+/* Atelier : rail affleurant à gauche, aperçu dans l'éditeur avant les composants. */
+main.container-fluid{padding-left:0!important;padding-top:0!important}
+#td-editor>.td-section-heading,#td-editor>.td-help{display:none}
+.td-workspace{gap:12px!important;grid-template-columns:250px minmax(0,1fr)!important}
+.td-live-column{border-radius:0!important;padding:0!important;margin:0!important;width:250px!important;max-width:250px!important;position:sticky!important;top:var(--td-nav-height,72px)!important;grid-column:1!important;grid-row:1!important;max-height:calc(100dvh - var(--td-nav-height,72px))!important;overflow-y:auto!important}
+.td-edit-column{grid-column:2!important;grid-row:1!important;padding-right:12px!important;min-width:0}
+.td-live-column #simulators>div{width:240px!important;max-width:240px!important}
+.td-live-column #simulators{align-items:flex-start}
+.td-edit-column>section{margin:0 0 12px!important;padding:0!important}
+.td-edit-column>section>.card{height:auto!important}
+@media(max-width:550px){.td-workspace{grid-template-columns:250px minmax(0,1fr)!important;overflow-x:auto}.td-edit-column{min-width:300px}.td-live-column{position:sticky!important;left:0!important}}
 </style></head><body>
 <nav class="td-nav" aria-label="Navigation principale"><div class="container-fluid">
 <a class="td-brand" href="/admin"><i class="fa-solid fa-layer-group me-2"></i>TouchDeck</a>
@@ -363,12 +375,12 @@ document.addEventListener('visibilitychange',()=>{if(!document.hidden)refreshFir
  const editor=document.createElement('div');editor.id='td-editor';editor.className='td-section';
  const workspace=document.createElement('div');workspace.className='td-workspace';
  const controls=document.createElement('div');controls.className='td-edit-column';
- const live=document.createElement('aside');live.className='td-live-column';live.setAttribute('aria-label','Aperçu et simulateurs toujours visibles');
+ const live=document.createElement('aside');live.className='td-live-column';live.setAttribute('aria-label','Simulateurs toujours visibles');
  const title=document.createElement('h1');title.className='td-section-heading';title.textContent='Éditeur de pages';
- const help=document.createElement('p');help.className='td-help';help.textContent='En paysage : simulateurs à gauche, paramètres à droite. En portrait : éditeur en premier, simulateurs accessibles juste après.';
+ const help=document.createElement('p');help.className='td-help';help.textContent='Simulateurs à gauche ; édition, aperçu et composants à droite.';
  editor.append(title,help,workspace);workspace.append(live,controls);
- for(const panel of [pagePanel,componentPanel]){panel.classList.remove('col-lg-6');controls.append(panel)}
- for(const panel of [simPanel,previewPanel]){panel.classList.remove('col-lg-6','col-12');live.append(panel)}
+ for(const panel of [pagePanel,previewPanel,componentPanel]){panel.classList.remove('col-lg-6','col-12');controls.append(panel)}
+ simPanel.classList.remove('col-lg-6','col-12');live.append(simPanel)
  const groups=document.createElement('div');groups.id='td-groups';groups.className='td-section';groups.hidden=true;
  groups.innerHTML='<h1 class="td-section-heading">Groupes</h1><p class="td-help">Affectation des groupes aux jeux de pages.</p>';
  groupPanel.classList.remove('col-lg-6');groups.append(groupPanel);
