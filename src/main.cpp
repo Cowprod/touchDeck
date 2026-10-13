@@ -6,16 +6,19 @@
 #include <WebServer.h>
 #include <Preferences.h>
 #include <Wire.h>
+#include <ESPmDNS.h>
 Arduino_DataBus *bus = new Arduino_ESP32SPI(2,10,6,7,GFX_NOT_DEFINED);
 Arduino_GFX *lcd = new Arduino_GC9A01(bus,GFX_NOT_DEFINED,0,true);
 WebSocketsClient ws;
 WebServer web(80);
 Preferences prefs;
 DynamicJsonDocument state(16000);
-String id, host, pageId;
+String id, host, pageId, selectedServer;
 uint16_t port = 3000;
 uint32_t revision=0, wifiStarted=0;
 bool provision=false, wsReady=false, wsStarted=false;
+uint32_t discoveryAt=0, lastRetryAt=0;
+uint8_t failedDiscoveries=0;
 int startX=-1, lastX=0, lastY=0;
 bool pressed=false;
 uint32_t started=0, lastPoll=0;
@@ -103,23 +106,45 @@ void poll(){
  }
  pressed=down;
 }
+bool discoverServer(){
+ int count=MDNS.queryService("touchdeck","tcp");
+ Serial.printf("mdns_count=%d\\n",count);
+ if(count<=0)return false;
+ int chosen=-1;
+ for(int i=0;i<count;i++){
+  String candidate=MDNS.txt(i,"id");
+  Serial.printf("mdns_candidate=%s ip=%s port=%u\\n",candidate.c_str(),MDNS.IP(i).toString().c_str(),MDNS.port(i));
+  if(selectedServer.length()&&candidate==selectedServer){chosen=i;break;}
+ }
+ if(chosen<0){
+  if(selectedServer.length()){status("Serveur absent",selectedServer);return false;}
+  if(count!=1){status("Choix serveur requis","Plusieurs instances");return false;}
+  chosen=0;
+  selectedServer=MDNS.txt(chosen,"id");
+  if(selectedServer.isEmpty()){status("Serveur invalide","ID mDNS manquant");return false;}
+  prefs.begin("touchdeck",false);prefs.putString("serverId",selectedServer);prefs.end();
+ }
+ host=MDNS.IP(chosen).toString();port=MDNS.port(chosen);
+ if(host=="0.0.0.0"||!port)return false;
+ Serial.printf("mdns_selected=%s endpoint=%s:%u\\n",selectedServer.c_str(),host.c_str(),port);
+ return true;
+}
 void portal(){
  WiFi.mode(WIFI_AP);
  String ssid="TouchDeck-"+id.substring(id.length()-6);
  WiFi.softAP(ssid.c_str());
  status("Configuration Wi-Fi",ssid);
  web.on("/",HTTP_GET,[](){
-  web.send(200,"text/html","<meta name='viewport' content='width=device-width'><h2>TouchDeck</h2><form method='post' action='/save'>SSID<input name='ssid' required><br>Mot de passe<input type='password' name='pass'><br>Serveur<input name='host' value='192.168.194.189'><br>Port<input name='port' value='3000' type='number'><br><button>Enregistrer</button></form>");
+  web.send(200,"text/html","<meta name='viewport' content='width=device-width'><h2>TouchDeck</h2><form method='post' action='/save'>SSID<input name='ssid' required><br>Mot de passe<input type='password' name='pass'><br><button>Enregistrer</button></form>");
  });
  web.on("/save",HTTP_POST,[](){
-  String ssid=web.arg("ssid"),target=web.arg("host");
-  int p=web.arg("port").toInt();
-  if(ssid.length()<1||ssid.length()>32||target.length()<1||target.length()>120||p<1||p>65535){
+  String ssid=web.arg("ssid");
+  if(ssid.length()<1||ssid.length()>32){
    web.send(400,"text/plain","Invalid");return;
   }
   prefs.begin("touchdeck",false);
   prefs.putString("ssid",ssid);prefs.putString("pass",web.arg("pass"));
-  prefs.putString("host",target);prefs.putUShort("port",p);prefs.end();
+  prefs.end();
   web.send(200,"text/plain","Enregistre. Redemarrage...");delay(300);ESP.restart();
  });
  web.begin();Serial.printf("ap=%s ip=%s\n",ssid.c_str(),WiFi.softAPIP().toString().c_str());
@@ -133,8 +158,7 @@ void setup(){
  status("Demarrage",id);
  prefs.begin("touchdeck",true);
  String ssid=prefs.getString("ssid",""),pass=prefs.getString("pass","");
- host=prefs.getString("host","192.168.194.189");
- port=prefs.getUShort("port",3000);prefs.end();
+ selectedServer=prefs.getString("serverId","");prefs.end();
  Serial.printf("client=%s\n",id.c_str());
  if(ssid.isEmpty()){portal();provision=true;return;}
  WiFi.mode(WIFI_STA);WiFi.begin(ssid.c_str(),pass.c_str());
@@ -151,6 +175,16 @@ void loop(){
   delay(20);return;
  }
  if(!wsStarted){
+  static bool mdnsReady=false;
+  if(!mdnsReady){mdnsReady=MDNS.begin(id.c_str());if(!mdnsReady){delay(2000);return;}}
+  if(millis()-discoveryAt<5000)return;
+  discoveryAt=millis();
+  if(!discoverServer()){
+    failedDiscoveries++;
+    if(failedDiscoveries>=3){status("Recherche serveur","mDNS _touchdeck._tcp");failedDiscoveries=0;}
+    delay(30);return;
+  }
+  failedDiscoveries=0;
   ws.begin(host.c_str(),port,"/ws");
   ws.onEvent(onWs);ws.setReconnectInterval(5000);wsStarted=true;
   Serial.printf("wifi_ip=%s server=%s:%u\n",WiFi.localIP().toString().c_str(),host.c_str(),port);
