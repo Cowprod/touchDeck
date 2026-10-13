@@ -238,11 +238,11 @@ async function refreshFirmware(){
   target.replaceChildren();
   if(!clients.length){target.textContent='Aucun ESP32 enregistré depuis le démarrage du serveur.';return;}
   const table=document.createElement('table');table.className='table table-sm mb-0';
-  const head=document.createElement('thead');head.innerHTML='<tr><th>Appareil</th><th>État</th><th>Version firmware</th></tr>';table.append(head);
+  const head=document.createElement('thead');head.innerHTML='<tr><th>Appareil</th><th>État</th><th>Installée / disponible</th></tr>';table.append(head);
   const body=document.createElement('tbody');
   for(const client of clients){
    const tr=document.createElement('tr');
-   for(const value of [client.id,client.online?'Connecté':'Déconnecté',client.firmwareVersion??'Non communiquée']){
+   for(const value of [client.id,client.online?'Connecté':'Déconnecté',(client.firmwareVersion??'Non communiquée')+' / '+(client.latestVersion??'Non définie')+(client.updateAvailable===true?' · Mise à jour disponible':client.updateAvailable===false?' · À jour':'')]){
     const td=document.createElement('td');td.textContent=value;tr.append(td);
    }
    body.append(tr);
