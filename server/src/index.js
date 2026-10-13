@@ -61,6 +61,24 @@ export function createTouchDeckServer({ port = 3000, host = '0.0.0.0', dataFile 
   const sources = new Map();
   const sourceValues = new Map();
   const pendingToggles = new Map();
+  const actionQueues = new Map();
+  async function dispatchSource(source,action,parameters){
+    if(typeof source.endpoint!=='string')throw new Error('source_endpoint_missing');
+    const url=new URL(source.endpoint);
+    if(!['http:','https:'].includes(url.protocol)||url.username||url.password||url.hash)throw new Error('invalid_source_endpoint');
+    const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),5000);
+    try{
+      const target=new URL('actions/'+encodeURIComponent(action),url.href.endsWith('/')?url.href:url.href+'/');
+      const response=await fetch(target,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(parameters),signal:controller.signal,redirect:'error'});
+      if(!response.ok)throw new Error('source_http_'+response.status);
+    }finally{clearTimeout(timer)}
+  }
+  function queueAction(client,task){
+    const previous=actionQueues.get(client.id)??Promise.resolve();
+    const next=previous.catch(()=>{}).then(task);
+    actionQueues.set(client.id,next);
+    next.finally(()=>{if(actionQueues.get(client.id)===next)actionQueues.delete(client.id)}).catch(()=>{});
+  }
   const latestFirmwareVersion=process.env.TOUCHDECK_FIRMWARE_VERSION??'0.1.0';
   const deviceSourceId=id=>'device_'+id.slice(0,73);
   function deviceSource(id){
