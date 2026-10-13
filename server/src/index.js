@@ -150,6 +150,15 @@ export function createTouchDeckServer({ port = 3000, host = '0.0.0.0', dataFile 
       },5000);
       pendingToggles.set(key,pending);
       send(client,{type:'interaction_result',componentId:item.id,requestId,status:'pending',value:previous});
+      queueAction(client,async()=>{
+        try{await dispatchSource(source,item.writeAction??('set_'+item.property),{value:expected})}
+        catch(error){
+          if(pendingToggles.get(key)===pending){
+            clearTimeout(pending.timer);pendingToggles.delete(key);
+            send(client,{type:'interaction_result',componentId:item.id,requestId,status:'rejected',reason:error.message,value:previous});
+          }
+        }
+      });
       return {};
     }
     if(item.type==='Button'&&item.sourceId&&item.action){
