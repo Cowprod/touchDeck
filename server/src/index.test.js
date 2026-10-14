@@ -307,7 +307,7 @@ test('component interaction validates page, type and explicitly rejects unconfig
   }
   assert.deepEqual(((await request('action-button')).status),'rejected');
   assert.equal((await request('action-toggle')).reason,'source_confirmation_unavailable');
-  assert.equal((await request('title')).code,'invalid_interaction');
+  assert.equal((await request('title')).reason,'action_not_configured');
   assert.equal((await request('action-button',-1)).code,'stale_page');
  }finally{socket?.close();await app.stop();await rm(dir,{recursive:true,force:true})}
 });
