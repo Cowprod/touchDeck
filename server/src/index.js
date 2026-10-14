@@ -511,9 +511,15 @@ export function createTouchDeckServer({ port = 3000, host = '0.0.0.0', dataFile 
           const client=clients.get(data.clientId);
           if(!client)return json(404,{error:'client_not_found'});
           if(!client.id.startsWith('web-sim-')){
+            const previous=deviceAssignments.get(client.id);
             if(data.groupId===null)deviceAssignments.delete(client.id);
             else deviceAssignments.set(client.id,data.groupId);
-            await persist();
+            try{await persist()}
+            catch(error){
+              if(previous===undefined)deviceAssignments.delete(client.id);
+              else deviceAssignments.set(client.id,previous);
+              throw error;
+            }
           }
           client.groupId=data.groupId;
           client.pageId=visiblePages(client.groupId)[0]?.id??null;
