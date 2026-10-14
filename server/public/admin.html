@@ -154,7 +154,7 @@ main.container-fluid{padding-left:0!important;padding-top:0!important}
 <div class="btn-group"><button class="btn btn-success" id="addLabel"><i class="fa-solid fa-plus me-1"></i>Label</button><button class="btn btn-success" id="addButton"><i class="fa-solid fa-plus me-1"></i>Bouton</button><button class="btn btn-success" id="addToggle"><i class="fa-solid fa-plus me-1"></i>Toggle</button><button class="btn btn-success" id="addIcon"><i class="fa-solid fa-plus me-1"></i>Icône</button></div><div class="btn-group ms-2"><button class="btn btn-success" id="addGauge"><i class="fa-solid fa-plus me-1"></i>Jauge</button><button class="btn btn-success" id="addProgress"><i class="fa-solid fa-plus me-1"></i>Progress</button><button class="btn btn-success" id="addSlider"><i class="fa-solid fa-plus me-1"></i>Slider</button><button class="btn btn-success" id="addIconBar"><i class="fa-solid fa-plus me-1"></i>IconBar</button></div>
 <details class="mt-3"><summary class="small">JSON (diagnostic)</summary><textarea class="form-control mt-2" id="components" spellcheck="false"></textarea></details>
 </div></div></section>
-<section class="col-lg-6"><div class="card h-100"><div class="card-header d-flex align-items-center justify-content-between"><span>Aperçu</span><div class="d-flex align-items-center gap-2"><label for="editorZoom" class="small mb-0">Zoom</label><select id="editorZoom" class="form-select form-select-sm" style="width:auto"><option value="1">×1</option><option value="2">×2</option><option value="3">×3</option></select></div></div><div class="card-body"><div class="editor-viewport"><div id="editorStage" class="editor-stage"><div id="preview" class="preview"></div></div></div><p class="small text-body-secondary">Aperçu local ; validation de la grille côté serveur.</p></div></div></section>
+<section class="col-lg-6"><div class="card h-100"><div class="card-header d-flex align-items-center justify-content-between"><span>Aperçu</span><div class="d-flex align-items-center gap-2"><label for="editorZoom" class="small mb-0">Zoom</label><select id="editorZoom" class="form-select form-select-sm" style="width:auto"><option value="1">×1</option><option value="2">×2</option><option value="3">×3</option></select></div></div><div class="card-body"><div class="editor-viewport"><div id="editorStage" class="editor-stage"><div id="preview" class="preview" tabindex="0" aria-label="Éditeur de grille : flèches pour déplacer, Maj + flèches pour redimensionner"></div></div></div><p class="small text-body-secondary">Cliquez sur un composant, puis utilisez les flèches pour le déplacer ; Maj + flèches pour le redimensionner. Aperçu local ; validation de la grille côté serveur.</p></div></div></section>
 </div>
 <section class="col-12"><div class="card"><div class="card-header">Sources de données</div><div class="card-body"><p>Le catalogue, les définitions et les valeurs reçues sont maintenant gérés sur une page dédiée.</p><a class="btn btn-success" href="/admin/sources"><i class="fa-solid fa-database me-2"></i>Ouvrir la gestion des sources</a></div><div class="card-body" hidden>
 <div class="input-group mb-3"><span class="input-group-text field-label">Source</span><select class="form-select" id="source"></select><button class="btn btn-success" id="addSource" type="button" title="Nouvelle source manuelle"><i class="fa-solid fa-plus"></i></button></div>
@@ -270,7 +270,7 @@ function renderPreview(){
      for(const key of ['X','Y','W','H'])$('component'+key).value=item[key.toLowerCase()];
     }
    };
-   const finish=()=>{div.onpointermove=null;div.onpointerup=null;div.onpointercancel=null;if(changed){$('components').value=JSON.stringify(currentPage().components,null,2);dirty(null)}renderPreview()};
+   const finish=()=>{div.onpointermove=null;div.onpointerup=null;div.onpointercancel=null;if(changed){$('components').value=JSON.stringify(currentPage().components,null,2);dirty(null)}renderPreview();view.focus({preventScroll:true})};
    div.onpointerup=finish;div.onpointercancel=finish;
   };
   div.onpointermove=event=>{
@@ -284,6 +284,19 @@ function renderPreview(){
  }
  updateEditorZoom();
 }
+$('preview').addEventListener('keydown',event=>{
+ const directions={ArrowLeft:[-1,0],ArrowRight:[1,0],ArrowUp:[0,-1],ArrowDown:[0,1]};
+ const direction=directions[event.key];if(!direction||event.altKey||event.ctrlKey||event.metaKey)return;
+ const item=currentComponent(),page=currentPage();if(!item||!page)return;
+ event.preventDefault();
+ const [dx,dy]=direction,next={...item};
+ if(event.shiftKey){next.w+=dx;next.h+=dy;}else{next.x+=dx;next.y+=dy;}
+ if(next.x<0||next.y<0||next.w<1||next.h<1||next.x+next.w>8||next.y+next.h>8||overlaps(page,next,item.id))return;
+ Object.assign(item,{x:next.x,y:next.y,w:next.w,h:next.h});
+ $('components').value=JSON.stringify(page.components,null,2);
+ for(const key of ['X','Y','W','H'])$('component'+key).value=item[key.toLowerCase()];
+ renderPreview();dirty(null);
+});
 function updateComponent(field,value,control){const item=currentComponent();if(!item)return;const p=currentPage();const next={...item,[field]:value};if(![next.x,next.y,next.w,next.h].every(Number.isInteger)||next.x<0||next.y<0||next.w<1||next.h<1||next.x+next.w>8||next.y+next.h>8){control.classList.add('save-danger');status('Position hors de la grille 8 × 8',true);return}if(overlaps(p,next,item.id)){control.classList.add('save-danger');status('Emplacement occupé par un autre composant',true);return}Object.assign(item,next);$('components').value=JSON.stringify(p.components,null,2);renderPreview();dirty(control,field==='text'?650:0)}
 function addComponent(type){const p=currentPage();if(!p)return status('Aucune page sélectionnée',true);const spot=(['Gauge','Progress'].includes(type)?freePlacement(p,3,3):type==='Slider'?freePlacement(p,4,1):type==='IconBar'?freePlacement(p,4,1):freePlacement(p,6,1))??freePlacement(p,1,1);if(!spot)return status('Grille pleine : aucun emplacement libre',true);const id=type.toLowerCase()+'-'+newId();p.components.push({id,type,...spot,text:type==='Label'?'Texte':type==='Button'?'Bouton':type==='Icon'?'':'Toggle',...(type==='Icon'?{icon:'solid/house'}:{}),...(['Gauge','Progress','Slider'].includes(type)?{min:0,max:100,value:50,orientation:'horizontal',display:'bar'}:{}),...(type==='IconBar'?{icons:['solid/house','solid/gear']}: {})});$('components').value=JSON.stringify(p.components,null,2);refreshComponents(id);renderPreview();dirty(null)}
 let saveTimer;let saving=false;let saveAgain=false;
