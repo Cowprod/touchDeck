@@ -52,3 +52,30 @@ test('numeric and icon bar components carry bounded display metadata to clients'
  assert.equal(result[2].property,'level');
  assert.deepEqual(result[3].icons,['solid/house','solid/gear']);
 });
+
+test('validation fixture in admin has seven non-overlapping pages with all component types',async()=>{
+ const {readFile}=await import('node:fs/promises');
+ const {Script,runInNewContext}=await import('node:vm');
+ const html=await readFile(new URL('../public/admin.html',import.meta.url),'utf8');
+ for(const match of html.matchAll(/<script(?:\\s[^>]*)?>([\\s\\S]*?)<\\/script>/g))new Script(match[1]);
+ const fixture=html.match(/function buildValidationSet\\(\\)\\{[\\s\\S]*?\\n\\}\\n\\$\\('createTestSet'\\)/);
+ assert.ok(fixture,'fixture generator must be present');
+ const code=fixture[0].replace(/\\n\\$\\('createTestSet'\\)$/,'');
+ const generated=runInNewContext(code+';buildValidationSet()', {newId:()=> 'abcdef0123456789'});
+ assert.equal(generated.set.pages.length,7);
+ assert.equal(generated.group.pageSetId,generated.set.id);
+ const types=new Set();
+ for(const page of generated.set.pages){
+  const cells=new Set();
+  for(const component of page.components){
+   types.add(component.type);
+   assert.ok(component.x>=0&&component.y>=0&&component.x+component.w<=8&&component.y+component.h<=8);
+   for(let y=component.y;y<component.y+component.h;y++)for(let x=component.x;x<component.x+component.w;x++){
+    const key=x+':'+y;
+    assert.ok(!cells.has(key),'overlap '+page.id+' '+key);
+    cells.add(key);
+   }
+  }
+ }
+ for(const type of ['Label','Icon','Button','Gauge','Progress','Slider','IconBar'])assert.ok(types.has(type),type);
+});
