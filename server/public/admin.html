@@ -112,6 +112,13 @@ main.container-fluid{padding:12px!important;max-width:1800px!important}
 #td-admin-workspace #td-sources>.row{margin-top:0!important}
 #td-admin-workspace #td-sources>.row>[class*="col-"]{padding-top:0!important}
 @media(max-width:550px){main.container-fluid{padding:12px!important}}
+/* Aligner strictement le haut des panneaux avec le rail, sans décalage par onglet. */
+#td-admin-workspace .td-live-column,#td-admin-workspace .td-edit-column{margin-top:0!important}
+#td-admin-workspace #td-editor>section:first-child,#td-admin-workspace #td-groups>section:first-child,#td-admin-workspace #td-devices>.card:first-child{margin-top:0!important;padding-top:0!important}
+#td-admin-workspace #td-sources #message[hidden],#td-admin-workspace #state[hidden]{display:none!important}
+#td-admin-workspace #td-sources>.row.g-3{margin-top:0!important}
+#td-admin-workspace #td-sources>.row.g-3>div{margin-top:0!important;padding-top:0!important}
+#td-admin-workspace #td-sources>.row.g-3>div>.card:first-child{margin-top:0!important}
 </style></head><body>
 <nav class="td-nav" aria-label="Navigation principale"><div class="container-fluid">
 <a class="td-brand" href="/admin"><img src="/favicon.svg" alt="" width="28" height="28" class="me-2" style="vertical-align:middle">TouchDeck</a>
