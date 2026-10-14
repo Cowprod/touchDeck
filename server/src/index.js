@@ -574,7 +574,7 @@ export function createTouchDeckServer({ port = 3000, host = '0.0.0.0', dataFile 
       await new Promise((resolve, reject) => { server.once('error', reject); server.listen(port, host, resolve); });
       publishSourceValues(TEST_SOURCE_ID,testSource.values());
       stopClock=createClockTicker(values=>publishSourceValues(CLOCK_SOURCE_ID,{...values,...stopwatch.values()}));
-      try {
+      if(port!==0)try {
         const { Bonjour } = await import('bonjour-service');
         bonjour=new Bonjour();
         const addresses=Object.values(os.networkInterfaces()).flat().filter(a=>a&&a.family==='IPv4'&&!a.internal).map(a=>a.address);
