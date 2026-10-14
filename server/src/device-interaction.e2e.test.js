@@ -52,10 +52,19 @@ test('virtual sliders synchronize all bound controls across two simulators and r
    const update=await until(()=>client.messages.find(m=>m.type==='component_update'&&m.changes?.some(c=>c.id==='level-a'&&c.value===67)));
    for(const id of ['level-a','level-b','level-gauge'])assert.equal(update.changes.find(c=>c.id===id)?.value,67);
   }
+  const bPage=b.messages.findLast(m=>m.type==='page'&&m.page?.id==='home');
+  b.ws.send(JSON.stringify({type:'interact',pageId:'home',pageRevision:bPage.pageRevision,componentId:'level-b',requestId:'level-2',value:24}));
+  await until(()=>b.messages.some(m=>m.type==='interaction_result'&&m.requestId==='level-2'&&m.status==='acknowledged'));
+  for(const client of [a,b]){
+   const update=await until(()=>client.messages.find(m=>m.type==='component_update'&&m.changes?.some(c=>c.id==='level-a'&&c.value===24)));
+   for(const id of ['level-a','level-b','level-gauge'])assert.equal(update.changes.find(c=>c.id===id)?.value,24);
+  }
+  a.ws.send(JSON.stringify({type:'interact',pageId:'home',pageRevision:page.pageRevision,componentId:'level-a',requestId:'bad-range',value:125}));
+  await until(()=>a.messages.some(m=>m.type==='error'&&m.code==='invalid_slider_value'));
   b.ws.close();await new Promise(resolve=>b.ws.once('close',resolve));
   const reconnected=await connect(port,'web-sim-b','web-simulator');sockets.push(reconnected.ws);
   const snapshot=await until(()=>reconnected.messages.find(m=>m.type==='page'&&m.page?.id==='home'));
-  for(const id of ['level-a','level-b','level-gauge'])assert.equal(snapshot.page.components.find(c=>c.id===id)?.value,67);
+  for(const id of ['level-a','level-b','level-gauge'])assert.equal(snapshot.page.components.find(c=>c.id===id)?.value,24);
  }finally{for(const ws of sockets)ws.close();await app.stop();await rm(dir,{recursive:true,force:true})}
 });
 test('physical device starts unassigned and group selection persists across server restart',async()=>{
