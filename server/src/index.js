@@ -168,6 +168,9 @@ export function createTouchDeckServer({ port = 3000, host = '0.0.0.0', dataFile 
       send(client,{type:'interaction_result',componentId:item.id,requestId,status:'acknowledged'});
       return {};
     }
+    if(item.type==='Slider'&&!item.sourceId){
+      return {error:'slider_source_required'};
+    }
     if(item.type==='Slider'){
       const source=sources.get(item.sourceId),property=source?.descriptor?.properties?.[item.property];
       const action=item.writeAction??('set_'+item.property);
