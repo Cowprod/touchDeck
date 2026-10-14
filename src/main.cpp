@@ -384,7 +384,7 @@ void onWs(WStype_t event,uint8_t *payload,size_t len){
   String group=doc["groupId"]|"";
   currentGroup=group;
   Serial.printf("welcome group=%s\n",group.c_str());
-  if(group.isEmpty())send("assign","groupId","demo");
+  // Group assignment is server-owned; an unassigned device waits for a page.
  }else if(type=="page"){
   // Own the page tree independently of the temporary incoming JSON document.
   String pageJson;serializeJson(doc["page"],pageJson);
