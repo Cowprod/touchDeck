@@ -57,10 +57,10 @@ test('validation fixture in admin has seven non-overlapping pages with all compo
  const {readFile}=await import('node:fs/promises');
  const {Script,runInNewContext}=await import('node:vm');
  const html=await readFile(new URL('../public/admin.html',import.meta.url),'utf8');
- for(const match of html.matchAll(/<script(?:\\s[^>]*)?>([\\s\\S]*?)<\\/script>/g))new Script(match[1]);
- const fixture=html.match(/function buildValidationSet\\(\\)\\{[\\s\\S]*?\\n\\}\\n\\$\\('createTestSet'\\)/);
+ for(const match of html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g))new Script(match[1]);
+ const fixture=html.match(/function buildValidationSet\(\)\{[\s\S]*?\n\}\n\$\('createTestSet'\)/);
  assert.ok(fixture,'fixture generator must be present');
- const code=fixture[0].replace(/\\n\\$\\('createTestSet'\\)$/,'');
+ const code=fixture[0].replace(/\n\$\('createTestSet'\)$/,'');
  const generated=runInNewContext(code+';buildValidationSet()', {newId:()=> 'abcdef0123456789'});
  assert.equal(generated.set.pages.length,7);
  assert.equal(generated.group.pageSetId,generated.set.id);
