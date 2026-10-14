@@ -94,12 +94,12 @@ main.container-fluid{padding-left:0!important;padding-top:0!important}
 .td-edit-column .card-header{padding:.6rem .85rem!important}
 @media(max-width:850px){.td-edit-column .input-group-text.field-label{width:25%!important;flex-basis:25%!important}}
 
-/* Commandes des simulateurs : groupe Bootstrap compact, sans libellé redondant. */
+/* Groupe Bootstrap unique : select + bouton contigus, marge sur le groupe entier. */
 .td-live-column>section>.card>.card-header span,.td-live-column>section>.card>.card-header span::after{display:none!important;content:none!important}
 .td-live-column>section>.card>.card-header{justify-content:flex-end!important}
-.td-live-column #simulators>div .card-header .input-group{display:flex;flex-wrap:nowrap;width:100%}
-.td-live-column #simulators>div .card-header .input-group select{flex:1 1 auto!important;width:1%!important;min-width:0!important;max-width:none!important;border-top-right-radius:var(--bs-border-radius)!important;border-bottom-right-radius:var(--bs-border-radius)!important}
-.td-live-column #simulators>div .card-header .input-group button.ms-2{flex:0 0 auto;margin-left:.5rem!important;border-radius:var(--bs-border-radius)!important}
+.td-live-column #simulators>div .card-header .input-group{display:flex;flex-wrap:nowrap;width:calc(100% - .5rem)!important;min-width:0}
+.td-live-column #simulators>div .card-header .input-group select{flex:1 1 auto!important;width:1%!important;min-width:0!important;max-width:none!important;border-top-right-radius:0!important;border-bottom-right-radius:0!important}
+.td-live-column #simulators>div .card-header .input-group button{flex:0 0 auto;margin-left:0!important;border-top-left-radius:0!important;border-bottom-left-radius:0!important}
 </style></head><body>
 <nav class="td-nav" aria-label="Navigation principale"><div class="container-fluid">
 <a class="td-brand" href="/admin"><i class="fa-solid fa-layer-group me-2"></i>TouchDeck</a>
@@ -326,12 +326,12 @@ function addSimulator(existingId=null,existingGroup=null){
  const shell=document.createElement('div');shell.className='card h-100';
  const header=document.createElement('div');header.className='card-header d-flex align-items-center';
  const name=document.createElement('span');name.className='small text-truncate';name.textContent='Simulateur '+nextSimulator++;
- const inputGroup=document.createElement('div');inputGroup.className='input-group input-group-sm w-100';
+ const inputGroup=document.createElement('div');inputGroup.className='input-group input-group-sm ms-2';
  const select=document.createElement('select');select.className='form-select';
  const none=new Option('Non affecté','');select.add(none);
  for(const group of simulatorGroups())select.add(new Option(group.label,group.id));
  select.value=selected;
- const remove=document.createElement('button');remove.className='btn btn-danger ms-2';remove.type='button';remove.title='Fermer ce simulateur';remove.textContent='×';
+ const remove=document.createElement('button');remove.className='btn btn-danger';remove.type='button';remove.title='Fermer ce simulateur';remove.textContent='×';
  const frame=document.createElement('iframe');frame.style.width='100%';frame.style.height='425px';frame.style.border='0';frame.title='Simulateur '+id;
  frame.src='/?embedded=1&simId='+encodeURIComponent(id);
  const info=document.createElement('div');info.className='card-footer small text-body-secondary';info.textContent='Connexion…';
