@@ -474,13 +474,28 @@ async function refreshFirmware(){
   target.replaceChildren();
   if(!clients.length){target.textContent='Aucun ESP32 enregistré depuis le démarrage du serveur.';return;}
   const table=document.createElement('table');table.className='table table-sm mb-0';
-  const head=document.createElement('thead');head.innerHTML='<tr><th>Appareil</th><th>État</th><th>Installée / disponible</th></tr>';table.append(head);
+  const head=document.createElement('thead');head.innerHTML='<tr><th>Appareil</th><th>État</th><th>Installée / disponible</th><th>Groupe</th></tr>';table.append(head);
   const body=document.createElement('tbody');
   for(const client of clients){
    const tr=document.createElement('tr');
    for(const value of [client.id,client.online?'Connecté':'Déconnecté',(client.firmwareVersion??'Non communiquée')+' / '+(client.latestVersion??'Non définie')+(client.updateAvailable===true?' · Mise à jour disponible':client.updateAvailable===false?' · À jour':'')]){
     const td=document.createElement('td');td.textContent=value;tr.append(td);
    }
+   const td=document.createElement('td');
+   const select=document.createElement('select');select.className='form-select form-select-sm';
+   const choices=[{id:'',name:'Non affecté'},...(config?.groups??[]).map(g=>({id:g.id,name:g.name}))];
+   for(const choice of choices){const option=document.createElement('option');option.value=choice.id;option.textContent=choice.name;select.append(option);}
+   select.value=client.groupId??'';
+   select.onchange=async()=>{
+    select.disabled=true;
+    try{
+     const response=await fetch('/api/admin/clients',{method:'PUT',headers:{'content-type':'application/json'},body:JSON.stringify({clientId:client.id,groupId:select.value||null})});
+     if(!response.ok)throw Error('HTTP '+response.status);
+     status('Affectation de '+client.id+' enregistrée');
+    }catch(error){status('Affectation impossible : '+error.message,true);}
+    finally{await refreshFirmware();}
+   };
+   td.append(select);tr.append(td);
    body.append(tr);
   }
   table.append(body);target.append(table);
