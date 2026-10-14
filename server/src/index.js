@@ -441,7 +441,7 @@ export function createTouchDeckServer({ port = 3000, host = '0.0.0.0', dataFile 
               return json(409,{error:'source_in_use',sourceId:priorSource.id});
           }
           for (const group of groups.values()) {
-            if (!config.groups.some(next => next.id === group.id) && [...clients.values()].some(client => client.groupId === group.id))
+            if (!config.groups.some(next => next.id === group.id) && ([...clients.values()].some(client => client.groupId === group.id) || [...deviceAssignments.values()].includes(group.id)))
               return json(409, { error: 'group_has_clients', groupId: group.id });
           }
           for (const set of pageSets.values()) {
