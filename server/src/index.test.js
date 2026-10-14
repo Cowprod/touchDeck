@@ -180,7 +180,7 @@ test('sources persist; imported descriptors require reimport and keep identity',
   const imported=await put('/sources/import',{revision,id:'imported-1',name:'Imported source',descriptor});
   assert.equal(imported.status,200);
   const after=await(await fetch(root+'/config')).json();
-  assert.equal(after.sources.length,3);
+  assert.equal(after.sources.length,4);
   assert.equal(after.sources.find(item=>item.id==='imported-1').origin,'imported');
   const changed=structuredClone(after);
   changed.sources.find(item=>item.id==='imported-1').descriptor.properties.temperature.type='string';
@@ -192,7 +192,7 @@ test('sources persist; imported descriptors require reimport and keep identity',
   assert.equal(reimport.status,200);
   const saved=JSON.parse(await readFile(file,'utf8'));
   assert.equal(saved.sources.find(item=>item.id==='imported-1').descriptor.properties.temperature.type,'integer');
-  assert.equal(saved.sources.length,3);
+  assert.equal(saved.sources.length,4);
  }finally{await app.stop();await rm(dir,{recursive:true,force:true})}
 });
 
