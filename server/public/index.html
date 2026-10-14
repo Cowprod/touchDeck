@@ -49,7 +49,7 @@ screen.addEventListener('pointerup',event=>{
 });
 screen.addEventListener('pointercancel',()=>{pointerStart=null});
 function activate(el){
- if(!['Button','Toggle'].includes(el.dataset.type)||el.dataset.disabled==='1'||el.dataset.pending==='1')return;
+ if(!['Button','Toggle','Label','Icon'].includes(el.dataset.type)||el.dataset.disabled==='1'||el.dataset.pending==='1')return;
  if(socket?.readyState!==WebSocket.OPEN){status.textContent='Action impossible : WebSocket déconnecté';return}
  const requestId='web-'+(++requestCounter);
  el.dataset.pending='1';el.style.opacity='.5';
