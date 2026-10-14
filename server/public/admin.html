@@ -7,6 +7,7 @@
 
 main{max-width:1280px}.editor-viewport{max-width:100%;overflow:auto}.editor-stage{position:relative;margin:12px auto}.editor-stage .preview{margin:0;transform-origin:top left}.preview{width:240px;height:240px;position:relative;overflow:hidden;background:#111827;border:7px solid #6c757d;border-radius:50%;margin:12px auto}.preview{touch-action:none;background-image:linear-gradient(to right,rgba(255,255,255,.1) 1px,transparent 1px),linear-gradient(to bottom,rgba(255,255,255,.1) 1px,transparent 1px);background-size:12.5% 12.5%}.piece.selected{outline:2px solid #f0ad4e;outline-offset:-2px}.piece{touch-action:none;user-select:none;position:absolute;display:flex;justify-content:center;align-items:center;text-align:center;overflow:hidden;font-size:14px;overflow-wrap:anywhere;background:#334155;border:1px solid #64748b}.form-control,.form-select{min-width:0}.input-group-text.field-label{width:25%;justify-content:flex-start}.save-warning{border-color:var(--bs-warning)!important}.save-success{border-color:var(--bs-success)!important}.save-danger{border-color:var(--bs-danger)!important}.card{margin-bottom:1rem}.toolbar{display:flex;gap:.5rem;align-items:center;flex-wrap:wrap}.toolbar .form-select{flex:1;min-width:140px}textarea{min-height:240px;font-family:ui-monospace,monospace!important;font-size:.85rem!important}
 
+#td-sources .mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}#td-sources .table td{vertical-align:middle}#td-sources .wrap{overflow-wrap:anywhere}
 /* Navigation de travail et édition permanente */
 main{max-width:1800px!important;padding-top:1rem!important}
 .td-nav{position:sticky;top:0;z-index:1050;background:rgba(24,30,49,.97);backdrop-filter:blur(12px);border-bottom:1px solid rgba(255,255,255,.14);box-shadow:0 4px 22px rgba(0,0,0,.14)}
@@ -623,7 +624,7 @@ document.addEventListener('visibilitychange',()=>{if(!document.hidden)refreshFir
 
 'use strict';
 const $=id=>document.getElementById(id);let config=null,selected=null,creating=false,telemetry=null,dirty=false;
-function msg(text,bad=false){$('message').className='alert alert-'+(bad?'danger':'info');$('message').textContent=text}
+let sourceMessageTimer;function msg(text,bad=false){clearTimeout(sourceMessageTimer);const el=$('message');el.hidden=!text;el.className='alert alert-'+(bad?'danger':'info');el.textContent=text||'';if(text&&!bad)sourceMessageTimer=setTimeout(()=>{el.hidden=true},2500)}
 async function api(path,options){const r=await fetch(path,{cache:'no-store',...options});const body=await r.json();if(!r.ok)throw Error(body.error||'HTTP '+r.status);return body}
 function source(){return config?.sources?.find(x=>x.id===selected)}
 function newForm(){creating=true;selected=null;$('id').readOnly=false;$('id').value='';$('name').value='';$('origin').disabled=false;$('origin').value='imported';$('endpoint').value='';$('descriptor').value=JSON.stringify({properties:{},actions:{},events:{}},null,2);dirty=false;render()}
@@ -657,7 +658,7 @@ $('delete').onclick=async()=>{
   selected=null;creating=false;await reload(null);msg('Source supprimée'+(linked.length?' ; '+linked.length+' composant(s) dissocié(s).':''));
  }catch(e){msg('Suppression impossible : '+e.message,true)}
 };
-(async()=>{try{await reload();msg('Catalogue chargé. Les mesures sont actualisées toutes les 5 secondes.')}catch(e){msg('Chargement impossible : '+e.message,true)}})();
+(async()=>{try{await reload();msg(null)}catch(e){msg('Chargement impossible : '+e.message,true)}})();
 setInterval(async()=>{try{telemetry=await api('/api/admin/sources/status');render()}catch{}},5000);
 
 })();
