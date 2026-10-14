@@ -550,7 +550,7 @@ test('admin has four unified tabs and legacy Sources URL redirects to its tab', 
   assert.match(html, /id="td-sources"/);
   assert.match(html, /id="catalogue"/);
   assert.match(html, /const sections=\\{editor,groups,sources:sourcesSection,devices\\}/);
-  const scripts = [...html.matchAll(/<script(?:\\s[^>]*)?>([\\s\\S]*?)<\\/script>/g)];
+  const scripts = [...html.matchAll(new RegExp('<script(?:\\s[^>]*)?>([\\s\\S]*?)</script>', 'g'))];
   assert.ok(scripts.length >= 2);
   for (const [, code] of scripts) new Script(code);
   const dir = await mkdtemp(join(tmpdir(), 'touchdeck-unified-admin-'));
