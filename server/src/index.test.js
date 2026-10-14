@@ -322,16 +322,16 @@ test('static label/icon/button actions navigate only the interacting client',asy
  try{
   const {port}=await app.start();
   const data=await (await fetch('http://127.0.0.1:'+port+'/api/admin/config')).json();
-  data.pageSets[0].pages[0].components.push({id:'go-second',type:'Icon',icon:'solid/house',x:0,y:6,w:2,h:1,action:'page_target',targetPageId:'second'});
-  data.pageSets[0].pages[1].components.push({id:'go-home',type:'Label',x:0,y:6,w:2,h:1,text:'Home',action:'page_first'});
+  Object.assign(data.pageSets[0].pages[0].components[0],{type:'Icon',icon:'solid/house',action:'page_target',targetPageId:'second'});
+  Object.assign(data.pageSets[0].pages[1].components[0],{type:'Label',action:'page_first'});
   assert.equal((await fetch('http://127.0.0.1:'+port+'/api/admin/config',{method:'PUT',headers:{'content-type':'application/json'},body:JSON.stringify(data)})).status,200);
   const first=await connect(port,'nav-a'),other=await connect(port,'nav-b');a=first.socket;b=other.socket;
   const pageA=await waitPage(a,{type:'assign',groupId:'demo'});
   const pageB=await waitPage(b,{type:'assign',groupId:'demo'});
   assert.equal(pageA.page.id,'home');assert.equal(pageB.page.id,'home');
-  const target=await waitPage(a,{type:'interact',pageId:'home',pageRevision:pageA.pageRevision,componentId:'go-second',requestId:'nav-1'});
+  const target=await waitPage(a,{type:'interact',pageId:'home',pageRevision:pageA.pageRevision,componentId:'title',requestId:'nav-1'});
   assert.equal(target.page.id,'second');
-  const back=await waitPage(a,{type:'interact',pageId:'second',pageRevision:target.pageRevision,componentId:'go-home',requestId:'nav-2'});
+  const back=await waitPage(a,{type:'interact',pageId:'second',pageRevision:target.pageRevision,componentId:'title2',requestId:'nav-2'});
   assert.equal(back.page.id,'home');
   const still=await waitPage(b,{type:'navigate',direction:'next'});
   assert.equal(still.page.id,'second');
