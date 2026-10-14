@@ -141,7 +141,7 @@ uint32_t nextFontCodepoint(const String &text,unsigned &index){
  for(int n=0;n<count && index<text.length();n++)cp=(cp<<6)|((unsigned char)text[index++]&63);
  return cp;
 }
-bool drawFontText(const String &text,int x,int y,int w,int h,uint16_t fg,uint16_t bg,int size){
+bool drawFontText(const String &text,int x,int y,int w,int h,uint16_t fg,uint16_t bg,int size,uint16_t pageBg,int radius){
  if(!fontPaths.is<JsonObject>()||fontPaths.as<JsonObject>().size()==0)return false;
  const int cell=(size*3+2)/5, gh=size+4;
  int count=0;
@@ -245,7 +245,19 @@ bool drawBufferedLabel(const String &text,int x,int y,int w,int h,uint16_t fg,ui
   if(!replacement)return false;
   pixels=replacement;capacity=needed;
  }
- for(size_t i=0;i<needed;i++)pixels[i]=bg;
+ for(size_t i=0;i<needed;i++)pixels[i]=pageBg;
+ const int r=radius==2?min(w-2,h-2)/2:radius==0?0:4;
+ for(int py=1;py<h-1;py++)for(int px=1;px<w-1;px++){
+  bool inside=true;
+  if(r>0){
+   int left=1+r,right=w-2-r,topEdge=1+r,bottom=h-2-r;
+   int cornerX=px<left?left:(px>right?right:px);
+   int cornerY=py<topEdge?topEdge:(py>bottom?bottom:py);
+   int dx=px-cornerX,dy=py-cornerY;
+   inside=dx*dx+dy*dy<=r*r;
+  }
+  if(inside)pixels[py*w+px]=bg;
+ }
  const int cell=(size*3+2)/5,gh=size+4;
  int count=0;
  for(unsigned i=0;i<text.length();){nextFontCodepoint(text,i);count++;}
@@ -287,13 +299,13 @@ void drawComponent(JsonVariantConst component,bool clearArea){
  String type=component["type"]|"Label";
  // Only opaque, rectangular, dynamically refreshed labels use the buffer.
  // Preserve legacy transparency and rounded-corner behavior elsewhere.
- if(type=="Label"&&clearArea&&!component["backgroundColor"].isNull()&&(component["radius"]|0)==0){
+ if(type=="Label"&&clearArea&&!component["backgroundColor"].isNull()){
   String text=component["text"]|"";
   int size=component["fontSize"]|15;
   if(size!=12&&size!=15&&size!=20)size=15;
   const uint16_t foreground=rgb(component["textColor"]|"",WHITE);
   const uint16_t background=rgb(component["backgroundColor"]|"",rgb(state["page"]["backgroundColor"]|"",BLACK));
-  if(drawBufferedLabel(text,x,y,w,h,foreground,background,size))return;
+  if(drawBufferedLabel(text,x,y,w,h,foreground,background,size,rgb(state["page"]["backgroundColor"]|"",BLACK),component["radius"]|1))return;
  }
  if(clearArea)lcd->fillRect(x,y,w,h,rgb(state["page"]["backgroundColor"]|"",BLACK));
  if(!((type=="Label"||type=="Icon") && component["backgroundColor"].isNull())){
