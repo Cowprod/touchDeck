@@ -151,7 +151,7 @@ export function createTouchDeckServer({ port = 3000, host = '0.0.0.0', dataFile 
     const page=set?.pages.find(p=>p.id===client.pageId);
     if(!page||message.pageId!==page.id||message.pageRevision!==configRevision)return {error:'stale_page'};
     const item=page.components.find(c=>c.id===message.componentId);
-    if(!item||!['Button','Toggle','Label','Icon'].includes(item.type)||item.disabled)return {error:'invalid_interaction'};
+    if(!item||!['Button','Toggle','Label','Icon','Slider'].includes(item.type)||item.disabled)return {error:'invalid_interaction'};
     const requestId=typeof message.requestId==='string'&&/^[a-zA-Z0-9_-]{1,80}$/.test(message.requestId)?message.requestId:null;
     if(!requestId)return {error:'invalid_request_id'};
     if(item.type!=='Toggle'&&!item.sourceId&&item.action){
@@ -166,6 +166,19 @@ export function createTouchDeckServer({ port = 3000, host = '0.0.0.0', dataFile 
         return {error:'invalid_navigation_target'};
       }
       send(client,{type:'interaction_result',componentId:item.id,requestId,status:'acknowledged'});
+      return {};
+    }
+    if(item.type==='Slider'){
+      const source=sources.get(item.sourceId),property=source?.descriptor?.properties?.[item.property];
+      const action=item.writeAction??('set_'+item.property);
+      const value=message.value;
+      if(!property||property.readOnly||!['number','integer'].includes(property.type)||!source.descriptor.actions?.[action])return {error:'invalid_slider_binding'};
+      if(typeof value!=='number'||!Number.isFinite(value)||value<(item.min??0)||value>(item.max??100)||(property.type==='integer'&&!Number.isInteger(value)))return {error:'invalid_slider_value'};
+      send(client,{type:'interaction_result',componentId:item.id,requestId,status:'pending'});
+      queueAction(client,async()=>{
+        try{await dispatchSource(source,action,{value});send(client,{type:'interaction_result',componentId:item.id,requestId,status:'acknowledged'})}
+        catch(error){send(client,{type:'interaction_result',componentId:item.id,requestId,status:'rejected',reason:error.message})}
+      });
       return {};
     }
     if(item.type==='Toggle'&&item.sourceId&&item.property){
@@ -399,7 +412,7 @@ export function createTouchDeckServer({ port = 3000, host = '0.0.0.0', dataFile 
               const components = new Set();
               const occupied = new Set();
               for (const item of page.components) {
-                if (!validId(item.id) || components.has(item.id) || (item.sourceId!==undefined&&!sourceIds.has(item.sourceId)) || !validTheme(item.background) || !validTheme(item.color) || (item.fontSize !== undefined && !Object.hasOwn(FONT_SIZES,item.fontSize)) || (item.radius !== undefined && ![0,1,2].includes(item.radius)) || (item.active !== undefined && typeof item.active !== 'boolean') || (item.disabled !== undefined && typeof item.disabled !== 'boolean') || !['Label','Button','Toggle','Icon','Gauge','Progress','Slider','IconBar'].includes(item.type) || ![item.x,item.y,item.w,item.h].every(Number.isInteger) || item.x < 0 || item.y < 0 || item.w < 1 || item.h < 1 || item.x + item.w > profile.gridColumns || item.y + item.h > profile.gridRows || (item.text !== undefined && (typeof item.text !== 'string' || item.text.length > 250)) || (item.action!==undefined&&(!['Button','Label','Icon'].includes(item.type)||typeof item.action!=='string'||(item.sourceId? !/^[a-zA-Z0-9_-]{1,80}$/.test(item.action):!['page_previous','page_next','page_first','page_target'].includes(item.action)))) || (item.targetPageId!==undefined&&(!['Button','Label','Icon'].includes(item.type)||item.sourceId||typeof item.targetPageId!=='string'||!validId(item.targetPageId))) || (item.writeAction!==undefined&&(item.type!=='Toggle'||typeof item.writeAction!=='string')) || (item.parameters!==undefined&&(!['Button','Label','Icon'].includes(item.type)||!item.parameters||typeof item.parameters!=='object'||Array.isArray(item.parameters))) || (item.property!==undefined&&(!['Toggle','Gauge','Progress','Slider'].includes(item.type)||typeof item.property!=='string'||!/^[a-zA-Z0-9_-]{1,80}$/.test(item.property)||!item.sourceId)) || (['Gauge','Progress','Slider'].includes(item.type)&&(![item.min??0,item.max??100,item.value??0].every(v=>typeof v==='number'&&Number.isFinite(v))||(item.min??0)>=(item.max??100)||(item.orientation!==undefined&&!['horizontal','vertical'].includes(item.orientation))||(item.display!==undefined&&!['bar','circle','arc'].includes(item.display)))) || (item.icons!==undefined&&(item.type!=='IconBar'||!Array.isArray(item.icons)||item.icons.length>8||item.icons.some(icon=>typeof icon!=='string'||!validIcon(icon)))) || (item.icon !== undefined && (item.type !== 'Icon' || !validIcon(item.icon)))) return json(400, { error: 'invalid_component' });
+                if (!validId(item.id) || components.has(item.id) || (item.sourceId!==undefined&&!sourceIds.has(item.sourceId)) || !validTheme(item.background) || !validTheme(item.color) || (item.fontSize !== undefined && !Object.hasOwn(FONT_SIZES,item.fontSize)) || (item.radius !== undefined && ![0,1,2].includes(item.radius)) || (item.active !== undefined && typeof item.active !== 'boolean') || (item.disabled !== undefined && typeof item.disabled !== 'boolean') || !['Label','Button','Toggle','Icon','Gauge','Progress','Slider','IconBar'].includes(item.type) || ![item.x,item.y,item.w,item.h].every(Number.isInteger) || item.x < 0 || item.y < 0 || item.w < 1 || item.h < 1 || item.x + item.w > profile.gridColumns || item.y + item.h > profile.gridRows || (item.text !== undefined && (typeof item.text !== 'string' || item.text.length > 250)) || (item.action!==undefined&&(!['Button','Label','Icon'].includes(item.type)||typeof item.action!=='string'||(item.sourceId? !/^[a-zA-Z0-9_-]{1,80}$/.test(item.action):!['page_previous','page_next','page_first','page_target'].includes(item.action)))) || (item.targetPageId!==undefined&&(!['Button','Label','Icon'].includes(item.type)||item.sourceId||typeof item.targetPageId!=='string'||!validId(item.targetPageId))) || (item.writeAction!==undefined&&(!['Toggle','Slider'].includes(item.type)||typeof item.writeAction!=='string')) || (item.parameters!==undefined&&(!['Button','Label','Icon'].includes(item.type)||!item.parameters||typeof item.parameters!=='object'||Array.isArray(item.parameters))) || (item.property!==undefined&&(!['Toggle','Gauge','Progress','Slider'].includes(item.type)||typeof item.property!=='string'||!/^[a-zA-Z0-9_-]{1,80}$/.test(item.property)||!item.sourceId)) || (['Gauge','Progress','Slider'].includes(item.type)&&(![item.min??0,item.max??100,item.value??0].every(v=>typeof v==='number'&&Number.isFinite(v))||(item.min??0)>=(item.max??100)||(item.orientation!==undefined&&!['horizontal','vertical'].includes(item.orientation))||(item.display!==undefined&&!['bar','circle','arc'].includes(item.display)))) || (item.icons!==undefined&&(item.type!=='IconBar'||!Array.isArray(item.icons)||item.icons.length>8||item.icons.some(icon=>typeof icon!=='string'||!validIcon(icon)))) || (item.icon !== undefined && (item.type !== 'Icon' || !validIcon(item.icon)))) return json(400, { error: 'invalid_component' });
                 components.add(item.id);
                 for (let yy = item.y; yy < item.y + item.h; yy++) for (let xx = item.x; xx < item.x + item.w; xx++) {
                   const cell = yy * profile.gridColumns + xx;
