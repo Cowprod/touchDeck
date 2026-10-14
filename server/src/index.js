@@ -452,7 +452,7 @@ export function createTouchDeckServer({ port = 3000, host = '0.0.0.0', dataFile 
             if (!validId(group.id) || groupIds.has(group.id) || typeof group.name !== 'string' || group.name.length > 120 || !sets.has(group.pageSetId)) return json(400, { error: 'invalid_group' });
             groupIds.add(group.id);
           }
-          await store.save({ schemaVersion: 1, revision: configRevision + 1, groups: config.groups, pageSets: config.pageSets, sources:requestedSources });
+          await store.save({ schemaVersion: 1, revision: configRevision + 1, groups: config.groups, pageSets: config.pageSets, sources:requestedSources,deviceAssignments:Object.fromEntries(deviceAssignments) });
           configRevision += 1;
           groups.clear(); pageSets.clear();
           for (const set of config.pageSets) pageSets.set(set.id, set);
@@ -501,7 +501,7 @@ export function createTouchDeckServer({ port = 3000, host = '0.0.0.0', dataFile 
     }
     if (url.pathname === '/api/admin/clients') {
       if (request.method === 'GET') return json(200,{ clients:[...clients.values()].map(client=>({id:client.id,groupId:client.groupId,pageId:client.pageId,online:client.sockets.size>0,firmwareVersion:sourceValues.get(deviceSourceId(client.id))?.firmwareVersion??null,latestVersion:sourceValues.get(deviceSourceId(client.id))?.latestVersion??null,updateAvailable:sourceValues.get(deviceSourceId(client.id))?.updateAvailable??null,deviceType:client.deviceType??null})) });
-      if (request.method === 'PUT') {
+      if (request.method === 'PUT') return serializeMutation(async()=>{
         try {
           let body='';for await(const chunk of request){body+=chunk;if(body.length>4096)return json(413,{error:'too_large'})}
           const data=JSON.parse(body);
