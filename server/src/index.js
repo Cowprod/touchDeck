@@ -557,7 +557,7 @@ export function createTouchDeckServer({ port = 3000, host = '0.0.0.0', dataFile 
         navigate(current, message.direction);
       } else if (message?.type === 'assign' && current && typeof message.groupId === 'string' && groups.has(message.groupId)) {
         // Temporary simulator-only assignment; authorization is required before exposing beyond local development.
-        if (!current.id.startsWith('web-sim-')||message.groupId !== 'demo') { socket.send(JSON.stringify({ type: 'error', code: 'admin_required' })); return; }
+        if (!(current.id.startsWith('web-sim-')||current.deviceType==='web-simulator')||message.groupId !== 'demo') { socket.send(JSON.stringify({ type: 'error', code: 'admin_required' })); return; }
         current.groupId = message.groupId;
         current.pageId = visiblePages(current.groupId)[0]?.id ?? null;
         send(current, snapshot(current));
