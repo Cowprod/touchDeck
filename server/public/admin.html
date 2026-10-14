@@ -326,7 +326,7 @@ function addSimulator(existingId=null,existingGroup=null){
  const shell=document.createElement('div');shell.className='card h-100';
  const header=document.createElement('div');header.className='card-header d-flex align-items-center';
  const name=document.createElement('span');name.className='small text-truncate';name.textContent='Simulateur '+nextSimulator++;
- const inputGroup=document.createElement('div');inputGroup.className='input-group input-group-sm ms-2';
+ const inputGroup=document.createElement('div');inputGroup.className='input-group input-group-sm ms-2 me-2';
  const select=document.createElement('select');select.className='form-select';
  const none=new Option('Non affecté','');select.add(none);
  for(const group of simulatorGroups())select.add(new Option(group.label,group.id));
