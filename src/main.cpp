@@ -344,8 +344,11 @@ void onWs(WStype_t event,uint8_t *payload,size_t len){
    String nextText=update["text"]|"";
    for(JsonVariant component:state["page"]["components"].as<JsonArray>()){
     if(strcmp(component["id"]|"",updateId)!=0)continue;
-    if(String(component["text"]|"")==nextText)break;
+    bool numeric=String(component["type"]|"")=="Gauge"||String(component["type"]|"")=="Progress"||String(component["type"]|"")=="Slider";
+    bool valueChanged=numeric&&!update["value"].isNull()&&fabsf((component["value"]|0.0f)-(update["value"]|0.0f))>0.001f;
+    if(String(component["text"]|"")==nextText&&!valueChanged)break;
     component["text"]=nextText;
+    if(valueChanged)component["value"]=update["value"].as<float>();
     if(state.overflowed())Serial.printf("state_overflow update=%s heap=%u\\n",updateId,(unsigned)ESP.getFreeHeap());
     drawComponent(component.as<JsonVariantConst>(),true);
     changed++;
