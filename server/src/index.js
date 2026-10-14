@@ -411,6 +411,10 @@ export function createTouchDeckServer({ port = 3000, host = '0.0.0.0', dataFile 
             if(source.origin==='imported'&&(!prior||JSON.stringify(prior.descriptor)!==JSON.stringify(source.descriptor)))
               return json(403,{error:'source_import_only',sourceId:source.id});
           }
+          for(const priorSource of sources.values()){
+            if(!sourceIds.has(priorSource.id)&&config.pageSets.some(set=>set.pages.some(page=>page.components.some(item=>item.sourceId===priorSource.id))))
+              return json(409,{error:'source_in_use',sourceId:priorSource.id});
+          }
           const validId = id => typeof id === 'string' && /^[a-zA-Z0-9_-]{1,80}$/.test(id);
           const themeTokens = new Set(['primary','secondary','success','warning','danger','info','light','dark']);
           const validTheme = value => value === undefined || themeTokens.has(value);
@@ -435,10 +439,6 @@ export function createTouchDeckServer({ port = 3000, host = '0.0.0.0', dataFile 
                 }
               }
             }
-          }
-          for(const priorSource of sources.values()){
-            if(!sourceIds.has(priorSource.id)&&config.pageSets.some(set=>set.pages.some(page=>page.components.some(item=>item.sourceId===priorSource.id))))
-              return json(409,{error:'source_in_use',sourceId:priorSource.id});
           }
           for (const group of groups.values()) {
             if (!config.groups.some(next => next.id === group.id) && ([...clients.values()].some(client => client.groupId === group.id) || [...deviceAssignments.values()].includes(group.id)))
