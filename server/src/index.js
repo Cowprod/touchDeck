@@ -12,6 +12,7 @@ import { validateSource, validateDescriptor } from './sources.js';
 import { resolveText, typedValue } from './bindings.js';
 import { fontManifest, glyphBitmap, parseGlyphId } from './font-glyphs.js';
 import { CLOCK_SOURCE, CLOCK_SOURCE_ID, createClockTicker, createStopwatch } from './clock-source.js';
+import { TEST_SOURCE, TEST_SOURCE_ID, createTestSource } from './test-source.js';
 
 export function createTouchDeckServer({ port = 3000, host = '0.0.0.0', dataFile = process.env.TOUCHDECK_DATA_FILE ?? new URL('../data/config.json', import.meta.url) } = {}) {
   const store = createJsonStore(dataFile);
@@ -19,6 +20,7 @@ export function createTouchDeckServer({ port = 3000, host = '0.0.0.0', dataFile 
   let configRevision = 0;
   let stopClock = null;
   const stopwatch=createStopwatch();
+  const testSource=createTestSource();
   let bonjour = null;
   let advertised = null;
   const instanceId = process.env.TOUCHDECK_INSTANCE_ID ?? os.hostname().replace(/[^a-zA-Z0-9_-]/g,'-');
@@ -42,6 +44,11 @@ export function createTouchDeckServer({ port = 3000, host = '0.0.0.0', dataFile 
     // Built-in test source: a regular imported descriptor, no second backend.
     if(JSON.stringify(sources.get(CLOCK_SOURCE_ID))!==JSON.stringify(CLOCK_SOURCE)){
       sources.set(CLOCK_SOURCE_ID,CLOCK_SOURCE);
+      configRevision+=1;
+      await persist();
+    }
+    if(JSON.stringify(sources.get(TEST_SOURCE_ID))!==JSON.stringify(TEST_SOURCE)){
+      sources.set(TEST_SOURCE_ID,TEST_SOURCE);
       configRevision+=1;
       await persist();
     }
@@ -78,6 +85,7 @@ export function createTouchDeckServer({ port = 3000, host = '0.0.0.0', dataFile 
   const actionQueues = new Map();
   async function dispatchSource(source,action,parameters){
     if(source.id===CLOCK_SOURCE_ID){publishSourceValues(CLOCK_SOURCE_ID,stopwatch.action(action));return;}
+    if(source.id===TEST_SOURCE_ID){publishSourceValues(TEST_SOURCE_ID,testSource.action(action,parameters));return;}
     if(typeof source.endpoint!=='string')throw new Error('source_endpoint_missing');
     const url=new URL(source.endpoint);
     if(!['http:','https:'].includes(url.protocol)||url.username||url.password||url.hash)throw new Error('invalid_source_endpoint');
@@ -390,12 +398,12 @@ export function createTouchDeckServer({ port = 3000, host = '0.0.0.0', dataFile 
           if (!Array.isArray(config.groups) || !Array.isArray(config.pageSets) || config.groups.length > 100 || config.pageSets.length > 100) return json(400, { error: 'invalid_config' });
           const requestedSources = config.sources===undefined?[...sources.values()]:config.sources;
           if(!Array.isArray(requestedSources)||requestedSources.length>100)return json(400,{error:'invalid_sources'});
-          if(!requestedSources.some(source=>source.id===CLOCK_SOURCE_ID))return json(409,{error:'built_in_source'});
+          if(!requestedSources.some(source=>source.id===CLOCK_SOURCE_ID)||!requestedSources.some(source=>source.id===TEST_SOURCE_ID))return json(409,{error:'built_in_source'});
           const sourceIds=new Set();
           for(const source of requestedSources){
             if(!validateSource(source)||sourceIds.has(source.id))return json(400,{error:'invalid_source'});
             sourceIds.add(source.id);
-            if(source.id===CLOCK_SOURCE_ID&&JSON.stringify(source)!==JSON.stringify(CLOCK_SOURCE))return json(403,{error:'built_in_source'});
+            if((source.id===CLOCK_SOURCE_ID&&JSON.stringify(source)!==JSON.stringify(CLOCK_SOURCE))||(source.id===TEST_SOURCE_ID&&JSON.stringify(source)!==JSON.stringify(TEST_SOURCE)))return json(403,{error:'built_in_source'});
             const prior=sources.get(source.id);
             if(source.origin==='imported'&&(!prior||JSON.stringify(prior.descriptor)!==JSON.stringify(source.descriptor)))
               return json(403,{error:'source_import_only',sourceId:source.id});
@@ -463,7 +471,7 @@ export function createTouchDeckServer({ port = 3000, host = '0.0.0.0', dataFile 
         const idOk=typeof data.id==='string'&&/^[a-zA-Z0-9_-]{1,80}$/.test(data.id);
         if(!idOk||!validateDescriptor(data.descriptor)||typeof data.name!=='string'||!data.name.length||data.name.length>120)return json(400,{error:'invalid_descriptor'});
         if(!sources.has(data.id)&&sources.size>=100)return json(400,{error:'source_limit'});
-        if(data.id===CLOCK_SOURCE_ID||data.id.startsWith('device_'))return json(403,{error:'built_in_source'});
+        if(data.id===CLOCK_SOURCE_ID||data.id===TEST_SOURCE_ID||data.id.startsWith('device_'))return json(403,{error:'built_in_source'});
         const source={id:data.id,name:data.name,origin:'imported',descriptor:data.descriptor};
         const nextSources=[...sources.values()].filter(item=>item.id!==data.id).concat(source);
         await store.save({schemaVersion:1,revision:configRevision+1,groups:[...groups.values()],pageSets:[...pageSets.values()],sources:nextSources});
@@ -475,7 +483,7 @@ export function createTouchDeckServer({ port = 3000, host = '0.0.0.0', dataFile 
     if(sourcePushMatch&&request.method==='PUT'){
       const source=sources.get(sourcePushMatch[1]);
       if(!source)return json(404,{error:'source_not_found'});
-      if(source.id===CLOCK_SOURCE_ID||source.id.startsWith('device_'))return json(403,{error:'built_in_source'});
+      if(source.id===CLOCK_SOURCE_ID||source.id===TEST_SOURCE_ID||source.id.startsWith('device_'))return json(403,{error:'built_in_source'});
       try{
         let body='';for await(const chunk of request){body+=chunk;if(body.length>32768)return json(413,{error:'too_large'})}
         const updates=JSON.parse(body);
@@ -555,6 +563,7 @@ export function createTouchDeckServer({ port = 3000, host = '0.0.0.0', dataFile 
     async start() {
       await initialize();
       await new Promise((resolve, reject) => { server.once('error', reject); server.listen(port, host, resolve); });
+      publishSourceValues(TEST_SOURCE_ID,testSource.values());
       stopClock=createClockTicker(values=>publishSourceValues(CLOCK_SOURCE_ID,{...values,...stopwatch.values()}));
       try {
         const { Bonjour } = await import('bonjour-service');
