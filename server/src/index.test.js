@@ -8,7 +8,7 @@ function connect(port, clientId) {
     const socket = new WebSocket('ws://127.0.0.1:' + port + '/ws');
     const messages = [];
     socket.on('error', reject);
-    socket.on('message', raw => { const msg = JSON.parse(raw.toString()); messages.push(msg); if (msg.type === 'page') resolve({ socket, messages }); });
+    socket.on('message', raw => { const msg = JSON.parse(raw.toString()); messages.push(msg); if (msg.type === 'welcome') resolve({ socket, messages }); });
     socket.on('open', () => socket.send(JSON.stringify({ type: 'hello', clientId, deviceType: 'web-simulator' })));
   });
 }
