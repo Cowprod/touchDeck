@@ -18,7 +18,7 @@ export async function iconSource(name) {
 
 export async function iconManifest(pageSet) {
   const names = [...new Set((pageSet?.pages ?? []).flatMap(page =>
-    page.components.filter(item => item.type === 'Icon' && validIcon(item.icon)).map(item => item.icon)
+    page.components.flatMap(item => item.type === 'Icon' && validIcon(item.icon) ? [item.icon] : item.type === 'IconBar' ? (item.icons ?? []).filter(validIcon) : [])
   ))].sort();
   const resources = [];
   for (const name of names) {
