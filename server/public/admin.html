@@ -473,8 +473,8 @@ async function assignSimulator(id,groupId){
  sim.card.dataset.group=groupId;
  sortSimulators();persistSimulators();
  if(!sim.ready)return;
- try{const response=await fetch('/api/admin/clients',{method:'PUT',headers:{'content-type':'application/json'},body:JSON.stringify({clientId:id,groupId:groupId||null})});const data=await response.json();if(!response.ok)throw Error(data.error??response.status);sim.info.textContent='Client '+id.slice(-8)+' · '+(groupId||'non affecté')}
- catch(error){sim.info.textContent='Erreur : '+error.message;status('Affectation impossible : '+error.message,true)}
+ try{const response=await fetch('/api/admin/clients',{method:'PUT',headers:{'content-type':'application/json'},body:JSON.stringify({clientId:id,groupId:groupId||null})});const data=await response.json();if(!response.ok)throw Error(data.error??response.status);sim.info.textContent='Client '+id.slice(-8)+' · '+(groupId||'non affecté');refreshGroupClients()}
+ catch(error){sim.info.textContent='Erreur : '+error.message;status('Affectation impossible : '+error.message,true);refreshGroupClients()}
 }
 window.addEventListener('message',event=>{
  if(event.origin!==location.origin||event.data?.type!=='touchdeck-sim-ready')return;
