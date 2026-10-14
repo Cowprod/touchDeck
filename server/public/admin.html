@@ -183,7 +183,9 @@ options($('set'),config.pageSets.map(x=>({id:x.id,label:x.id})),selected.set??$(
 refreshGroup();refreshSet(selected.page);refreshSources();if(typeof sortSimulators==='function')sortSimulators();
 }
 function refreshGroup(){const g=currentGroup();$('groupName').value=g?.name??'';options($('groupSet'),config.pageSets.map(x=>({id:x.id,label:x.id})),g?.pageSetId);refreshGroupClients()}
+let groupClientsRequest=0;
 async function refreshGroupClients(){
+ const requestId=++groupClientsRequest;
  const target=$('groupClients'),groupId=currentGroup()?.id;
  target.replaceChildren();
  if(!groupId){target.textContent='Sélectionner un groupe.';return;}
