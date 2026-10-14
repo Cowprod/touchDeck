@@ -119,7 +119,7 @@ main.container-fluid{padding-left:0!important;padding-top:0!important}
 <div class="input-group"><span class="input-group-text field-label">Jeu de pages</span><select class="form-select" id="groupSet"></select></div>
 </div></div></section>
 <section class="col-lg-6"><div class="card h-100"><div class="card-header">Jeux de pages</div><div class="card-body">
-<div class="input-group mb-3"><span class="input-group-text field-label">Jeu</span><select class="form-select" id="set"></select><button class="btn btn-success" id="addSet" title="Ajouter un jeu"><i class="fa-solid fa-plus"></i></button></div>
+<div class="input-group mb-3"><span class="input-group-text field-label">Jeu</span><select class="form-select" id="set"></select><button class="btn btn-success" id="addSet" title="Ajouter un jeu"><i class="fa-solid fa-plus"></i></button><button class="btn btn-secondary" id="createTestSet" title="Créer un jeu de pages de validation isolé"><i class="fa-solid fa-vial me-1"></i>Jeu de test</button></div>
 <div class="input-group mb-3"><span class="input-group-text field-label">Profil</span><select class="form-select" id="profile"><option value="round-240">Rond 240 × 240 — 8 × 8</option></select></div>
 <div class="input-group mb-3"><span class="input-group-text field-label">Page</span><select class="form-select" id="page"></select><button class="btn btn-success" id="addPage" title="Ajouter une page"><i class="fa-solid fa-plus"></i></button><button class="btn btn-secondary" id="duplicatePage" title="Dupliquer la page"><i class="fa-solid fa-copy"></i></button><button class="btn btn-danger" id="deletePage" title="Supprimer la page"><i class="fa-solid fa-trash"></i></button></div>
 <div class="input-group mb-3"><span class="input-group-text field-label">Titre</span><input class="form-control" id="pageTitle" maxlength="120"></div>
@@ -277,6 +277,86 @@ $('visible').onchange=()=>{if(currentPage()){currentPage().visible=$('visible').
 $('components').oninput=()=>{if(currentPage()){try{currentPage().components=JSON.parse($('components').value);refreshComponents();renderPreview();dirty($('components'),750)}catch(e){status('JSON invalide : '+e.message,true);$('components').classList.add('save-danger')}}};
 $('addGroup').onclick=()=>{if(!config||!config.pageSets.length)return status('Aucun jeu de pages disponible',true);const id='group-'+newId();config.groups.push({id,name:'Nouveau groupe',pageSetId:config.pageSets[0].id});refresh({group:id});dirty(null)};
 $('deleteGroup').onclick=()=>{if(!currentGroup())return status('Aucun groupe sélectionné',true);config.groups=config.groups.filter(x=>x.id!==$('group').value);refresh();dirty(null)};
+function buildValidationSet(){
+ const suffix=newId().slice(0,6),id='validation-'+suffix,groupId='validation-'+suffix;
+ const item=(name,type,x,y,w,h,extra={})=>({id:name,type,x,y,w,h,...extra});
+ const label=(name,text,x,y,w,h,extra={})=>item(name,'Label',x,y,w,h,{text,...extra});
+ const icon=(name,iconName,x,y,w,h,extra={})=>item(name,'Icon',x,y,w,h,{icon:iconName,...extra});
+ const button=(name,text,x,y,w,h,action='page_next',extra={})=>item(name,'Button',x,y,w,h,{text,action,...extra});
+ const page=(name,title,components,background='dark')=>({id:name,title,visible:true,background,components});
+ const footer=(previous=true,next=true)=>[
+  ...(previous?[button('nav-prev','<',1,7,2,1,'page_previous',{background:'secondary'})]:[]),
+  label('nav-index','${page_number}/${page_count}',3,7,2,1,{color:'light'}),
+  ...(next?[button('nav-next','>',5,7,2,1,'page_next',{background:'success'})]:[])
+ ];
+ const pages=[
+  page('intro','01 - Navigation',[
+   label('heading','TEST TOUCHDECK',1,0,6,1,{fontSize:'large',color:'info'}),
+   label('help','Toucher les icones',1,1,6,1,{fontSize:'small'}),
+   icon('home-icon','solid/house',1,3,2,2,{action:'page_first',color:'success'}),
+   icon('next-icon','solid/arrow-right',5,3,2,2,{action:'page_next',color:'warning'}),
+   label('next-label','SUIVANT >',2,5,4,1,{action:'page_next',color:'info'}),
+   ...footer()
+  ]),
+  page('labels','02 - Labels / textes',[
+   label('heading','LABELS',1,0,6,1,{fontSize:'large'}),
+   label('small','PETIT 12',1,2,6,1,{fontSize:'small',color:'info'}),
+   label('normal','Normal 15',1,3,6,1,{fontSize:'normal',color:'success'}),
+   label('large','GRAND 20',1,4,6,1,{fontSize:'large',color:'warning'}),
+   label('disabled','DESACTIVE',1,5,6,1,{disabled:true}),
+   ...footer()
+  ]),
+  page('icons','03 - Icones',[
+   label('heading','ICONES',1,0,6,1,{fontSize:'large'}),
+   icon('house','solid/house',1,2,2,2,{color:'success',action:'page_first'}),
+   icon('gear','solid/gear',3,2,2,2,{color:'warning',action:'page_next'}),
+   icon('heart','solid/heart',5,2,2,2,{color:'danger',action:'page_previous'}),
+   item('icon-bar','IconBar',1,5,6,1,{icons:['solid/house','solid/gear','solid/heart','solid/play'],color:'info'}),
+   ...footer()
+  ]),
+  page('buttons','04 - Boutons / etats',[
+   label('heading','BOUTONS',1,0,6,1,{fontSize:'large'}),
+   button('go-next','SUIVANT',1,2,6,1,'page_next',{background:'success'}),
+   button('go-first','ACCUEIL',1,4,3,1,'page_first',{background:'primary'}),
+   button('disabled','OFF',5,4,2,1,'page_next',{background:'danger',disabled:true}),
+   ...footer()
+  ]),
+  page('gauges','05 - Jauges',[
+   label('heading','GAUGES',1,0,6,1,{fontSize:'large'}),
+   item('gauge-arc','Gauge',1,2,3,3,{min:0,max:100,value:70,display:'arc',color:'success'}),
+   item('gauge-circle','Gauge',4,2,3,3,{min:0,max:100,value:35,display:'circle',color:'warning'}),
+   item('progress','Progress',1,6,6,1,{min:0,max:100,value:65,display:'bar',color:'info'}),
+   ...footer()
+  ]),
+  page('sliders','06 - Slider / Progress',[
+   label('heading','SLIDER',1,0,6,1,{fontSize:'large'}),
+   label('hint','Statique : lecture',1,1,6,1,{fontSize:'small'}),
+   item('slider-h','Slider',1,3,6,1,{min:0,max:100,value:40,color:'info'}),
+   item('slider-v','Slider',1,4,2,3,{min:0,max:100,value:75,orientation:'vertical',color:'warning'}),
+   item('progress-v','Progress',5,4,2,3,{min:0,max:100,value:50,orientation:'vertical',color:'success'}),
+   ...footer()
+  ]),
+  page('summary','07 - Couleurs / fin',[
+   label('heading','COULEURS',1,0,6,1,{fontSize:'large'}),
+   label('success','SUCCESS',1,2,3,1,{background:'success',color:'light'}),
+   label('warning','WARNING',4,2,3,1,{background:'warning',color:'dark'}),
+   label('danger','DANGER',1,4,3,1,{background:'danger',color:'light'}),
+   label('info','INFO',4,4,3,1,{background:'info',color:'dark'}),
+   button('restart','RECOMMENCER',1,6,6,1,'page_first',{background:'primary'}),
+   ...footer()
+  ])
+ ];
+ return {set:{id,profileId:'round-240',pages},group:{id:groupId,name:'Validation composants '+suffix,pageSetId:id}};
+}
+$('createTestSet').onclick=()=>{
+ if(!config)return status('Configuration indisponible',true);
+ if(config.pageSets.length>=100||config.groups.length>=100)return status('Limite de jeux ou groupes atteinte',true);
+ const created=buildValidationSet();
+ config.pageSets.push(created.set);config.groups.push(created.group);
+ refresh({group:created.group.id,set:created.set.id,page:created.set.pages[0].id});
+ dirty(null);
+ status('Jeu de validation créé : 7 pages. Enregistrement en cours. Sélectionner le groupe Validation sur le simulateur.');
+};
 $('addSet').onclick=()=>{if(!config)return status('Configuration indisponible',true);const id='set-'+newId();config.pageSets.push({id,profileId:'round-240',pages:[]});refresh({set:id});dirty(null)};
 $('addPage').onclick=()=>{const s=currentSet();if(!s)return status('Aucun jeu sélectionné',true);const id='page-'+newId();s.pages.push({id,title:'Nouvelle page',visible:true,components:[]});refreshSet(id);dirty(null)};
 $('duplicatePage').onclick=()=>{const set=currentSet(),page=currentPage();if(!set||!page)return status('Aucune page sélectionnée',true);const copy=JSON.parse(JSON.stringify(page));copy.id='page-'+newId();copy.title=(page.title||'Page')+' (copie)';copy.components=copy.components.map(c=>({...c,id:'component-'+newId()}));const index=set.pages.findIndex(p=>p.id===page.id);set.pages.splice(index+1,0,copy);refreshSet(copy.id);dirty(null)};
