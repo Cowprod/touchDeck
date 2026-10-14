@@ -96,24 +96,20 @@ test('physical device starts unassigned and group selection persists across serv
  }finally{ws?.close();await app?.stop();await rm(dir,{recursive:true,force:true})}
 });
 
-test('removing an assigned group clears device page and does not restore stale assignment',async()=>{
- const dir=await mkdtemp(join(tmpdir(),'touchdeck-group-removal-')),dataFile=join(dir,'state.json');
- let app,ws;
+test('assigned group cannot be deleted while a device uses it',async()=>{
+ const dir=await mkdtemp(join(tmpdir(),'touchdeck-group-guard-')),dataFile=join(dir,'state.json');
+ const app=createTouchDeckServer({port:0,host:'127.0.0.1',dataFile});
+ let ws;
  try{
-  app=createTouchDeckServer({port:0,host:'127.0.0.1',dataFile});
-  let {port}=await app.start(),base='http://127.0.0.1:'+port;
-  let client=await connect(port,'esp-removal-1','esp32c3');ws=client.ws;
-  assert.equal((await fetch(base+'/api/admin/clients',{method:'PUT',headers,body:JSON.stringify({clientId:'esp-removal-1',groupId:'demo'})})).status,200);
+  const {port}=await app.start(),base='http://127.0.0.1:'+port;
+  const client=await connect(port,'esp-group-guard','esp32c3');ws=client.ws;
+  assert.equal((await fetch(base+'/api/admin/clients',{method:'PUT',headers,body:JSON.stringify({clientId:'esp-group-guard',groupId:'demo'})})).status,200);
   await until(()=>client.messages.some(m=>m.type==='page'&&m.page?.id==='home'));
   const config=await(await fetch(base+'/api/admin/config')).json();
   config.groups=config.groups.filter(g=>g.id!=='demo');
-  assert.equal((await fetch(base+'/api/admin/config',{method:'PUT',headers,body:JSON.stringify(config)})).status,200);
-  await until(()=>client.messages.some(m=>m.type==='page'&&m.page===null));
-  assert.equal((await(await fetch(base+'/api/admin/clients')).json()).clients.find(c=>c.id==='esp-removal-1').groupId,null);
-  ws.close();await new Promise(resolve=>ws.once('close',resolve));await app.stop();
-  app=createTouchDeckServer({port:0,host:'127.0.0.1',dataFile});({port}=await app.start());
-  client=await connect(port,'esp-removal-1','esp32c3');ws=client.ws;
-  assert.equal(client.messages.find(m=>m.type==='welcome').groupId,null);
-  assert.equal(client.messages.some(m=>m.type==='page'&&m.page!==null),false);
- }finally{ws?.close();await app?.stop();await rm(dir,{recursive:true,force:true})}
+  const response=await fetch(base+'/api/admin/config',{method:'PUT',headers,body:JSON.stringify(config)});
+  assert.equal(response.status,409);
+  assert.equal((await response.json()).error,'group_has_clients');
+  assert.equal((await(await fetch(base+'/api/admin/clients')).json()).clients.find(c=>c.id==='esp-group-guard').groupId,'demo');
+ }finally{ws?.close();await app.stop();await rm(dir,{recursive:true,force:true})}
 });
