@@ -93,6 +93,13 @@ main.container-fluid{padding-left:0!important;padding-top:0!important}
 .td-edit-column .form-control,.td-edit-column .form-select{padding:.45rem .55rem!important}
 .td-edit-column .card-header{padding:.6rem .85rem!important}
 @media(max-width:850px){.td-edit-column .input-group-text.field-label{width:25%!important;flex-basis:25%!important}}
+
+/* Commandes des simulateurs : groupe Bootstrap compact, sans libellé redondant. */
+.td-live-column>section>.card>.card-header span,.td-live-column>section>.card>.card-header span::after{display:none!important;content:none!important}
+.td-live-column>section>.card>.card-header{justify-content:flex-end!important}
+.td-live-column #simulators>div .card-header .input-group{display:flex;flex-wrap:nowrap;width:100%}
+.td-live-column #simulators>div .card-header .input-group select{flex:1 1 auto!important;width:1%!important;min-width:0!important;max-width:none!important;border-top-right-radius:var(--bs-border-radius)!important;border-bottom-right-radius:var(--bs-border-radius)!important}
+.td-live-column #simulators>div .card-header .input-group button.ms-2{flex:0 0 auto;margin-left:.5rem!important;border-radius:var(--bs-border-radius)!important}
 </style></head><body>
 <nav class="td-nav" aria-label="Navigation principale"><div class="container-fluid">
 <a class="td-brand" href="/admin"><i class="fa-solid fa-layer-group me-2"></i>TouchDeck</a>
@@ -146,7 +153,7 @@ main.container-fluid{padding-left:0!important;padding-top:0!important}
 <div class="btn-group"><button class="btn btn-success" id="saveSource" type="button">Enregistrer la source manuelle</button><button class="btn btn-secondary" id="importSource" type="button">Importer la source JSON</button></div>
 <div class="form-text">Pour importer une source, coller son JSON complet (id, name, descriptor), puis cliquer sur « Importer la source JSON ». Le champ Endpoint HTTP est inutile pour une source push.</div>
 </div></div></section>
-<section class="col-12"><div class="card"><div class="card-header d-flex align-items-center justify-content-between"><span>Simulateurs HTML — D-026 / D-027</span><button class="btn btn-success btn-sm" id="addSimulator" type="button"><i class="fa-solid fa-plus me-1"></i>Simulateur</button></div><div class="card-body"><div class="row g-3" id="simulators"></div></div></div></section>
+<section class="col-12"><div class="card"><div class="card-header d-flex align-items-center justify-content-between"><span>Simulateurs HTML — D-026 / D-027</span><button class="btn btn-success btn-sm" id="addSimulator" type="button" title="Ajouter un simulateur" aria-label="Ajouter un simulateur"><i class="fa-solid fa-plus"></i></button></div><div class="card-body"><div class="row g-3" id="simulators"></div></div></div></section>
 </div>
 </main><script>let config=null;const $=id=>document.getElementById(id);const palette={primary:'#0d6efd',secondary:'#6c757d',success:'#198754',warning:'#ffc107',danger:'#dc3545',info:'#0dcaf0',light:'#f8f9fa',dark:'#212529'};const validId=id=>/^[a-zA-Z0-9_-]{1,80}$/.test(id);
 function newId(){const bytes=new Uint8Array(8);crypto.getRandomValues(bytes);return Array.from(bytes,b=>b.toString(16).padStart(2,'0')).join('')}
@@ -317,17 +324,18 @@ function addSimulator(existingId=null,existingGroup=null){
  const id=existingId??'web-sim-'+newId(),selected=existingGroup??currentGroup()?.id??'';
  const card=document.createElement('div');card.className='col-lg-4 col-md-6';card.dataset.id=id;card.dataset.group=selected;
  const shell=document.createElement('div');shell.className='card h-100';
- const header=document.createElement('div');header.className='card-header d-flex gap-2 align-items-center';
+ const header=document.createElement('div');header.className='card-header d-flex align-items-center';
  const name=document.createElement('span');name.className='small text-truncate';name.textContent='Simulateur '+nextSimulator++;
- const select=document.createElement('select');select.className='form-select form-select-sm';select.style.maxWidth='190px';
+ const inputGroup=document.createElement('div');inputGroup.className='input-group input-group-sm w-100';
+ const select=document.createElement('select');select.className='form-select';
  const none=new Option('Non affecté','');select.add(none);
  for(const group of simulatorGroups())select.add(new Option(group.label,group.id));
  select.value=selected;
- const remove=document.createElement('button');remove.className='btn btn-danger btn-sm';remove.type='button';remove.title='Fermer ce simulateur';remove.textContent='×';
+ const remove=document.createElement('button');remove.className='btn btn-danger ms-2';remove.type='button';remove.title='Fermer ce simulateur';remove.textContent='×';
  const frame=document.createElement('iframe');frame.style.width='100%';frame.style.height='425px';frame.style.border='0';frame.title='Simulateur '+id;
  frame.src='/?embedded=1&simId='+encodeURIComponent(id);
  const info=document.createElement('div');info.className='card-footer small text-body-secondary';info.textContent='Connexion…';
- header.append(name,select,remove);shell.append(header,frame,info);card.append(shell);$('simulators').append(card);
+ inputGroup.append(select,remove);header.append(inputGroup);shell.append(header,frame,info);card.append(shell);$('simulators').append(card);
  simulators.set(id,{id,card,select,info,ready:false});persistSimulators();
  select.onchange=()=>assignSimulator(id,select.value);
  remove.onclick=()=>{simulators.delete(id);card.remove();persistSimulators();frame.src='about:blank'};
