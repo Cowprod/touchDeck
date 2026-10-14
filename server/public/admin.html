@@ -116,7 +116,7 @@ main.container-fluid{padding-left:0!important;padding-top:0!important}
 <section class="col-lg-6"><div class="card h-100"><div class="card-header">Groupes</div><div class="card-body">
 <div class="input-group mb-3"><span class="input-group-text field-label">Groupe</span><select class="form-select" id="group"></select><button class="btn btn-success" id="addGroup" title="Ajouter un groupe"><i class="fa-solid fa-plus"></i></button><button class="btn btn-danger" id="deleteGroup" title="Supprimer le groupe"><i class="fa-solid fa-trash"></i></button></div>
 <div class="input-group mb-3"><span class="input-group-text field-label">Nom</span><input class="form-control" id="groupName" maxlength="120"></div>
-<div class="input-group"><span class="input-group-text field-label">Jeu de pages</span><select class="form-select" id="groupSet"></select></div>
+<div class="input-group mb-3"><span class="input-group-text field-label">Jeu de pages</span><select class="form-select" id="groupSet"></select></div><div class="small fw-semibold mb-2">Appareils et simulateurs associés</div><div id="groupClients" class="small text-body-secondary">Chargement…</div>
 </div></div></section>
 <section class="col-lg-6"><div class="card h-100"><div class="card-header">Jeux de pages</div><div class="card-body">
 <div class="input-group mb-3"><span class="input-group-text field-label">Jeu</span><select class="form-select" id="set"></select><button class="btn btn-success" id="addSet" title="Ajouter un jeu"><i class="fa-solid fa-plus"></i></button><button class="btn btn-secondary" id="createTestSet" title="Créer un jeu de pages de validation isolé"><i class="fa-solid fa-vial me-1"></i>Jeu de test</button></div>
@@ -178,7 +178,28 @@ options($('group'),config.groups.map(x=>({id:x.id,label:x.name})),selected.group
 options($('set'),config.pageSets.map(x=>({id:x.id,label:x.id})),selected.set??$('set').value);
 refreshGroup();refreshSet(selected.page);refreshSources();if(typeof sortSimulators==='function')sortSimulators();
 }
-function refreshGroup(){const g=currentGroup();$('groupName').value=g?.name??'';options($('groupSet'),config.pageSets.map(x=>({id:x.id,label:x.id})),g?.pageSetId)}
+function refreshGroup(){const g=currentGroup();$('groupName').value=g?.name??'';options($('groupSet'),config.pageSets.map(x=>({id:x.id,label:x.id})),g?.pageSetId);refreshGroupClients()}
+async function refreshGroupClients(){
+ const target=$('groupClients'),groupId=currentGroup()?.id;
+ target.replaceChildren();
+ if(!groupId){target.textContent='Sélectionner un groupe.';return;}
+ try{
+  const response=await fetch('/api/admin/clients',{cache:'no-store'});
+  if(!response.ok)throw Error('HTTP '+response.status);
+  const data=await response.json();
+  if(currentGroup()?.id!==groupId)return;
+  const clients=(data.clients??[]).filter(c=>c.groupId===groupId);
+  if(!clients.length){target.textContent='Aucun appareil ou simulateur associé.';return;}
+  for(const client of clients){
+   const line=document.createElement('div');line.className='d-flex justify-content-between align-items-center border-bottom py-2 gap-2';
+   const name=document.createElement('span');name.textContent=client.id;
+   const meta=document.createElement('span');meta.className='text-nowrap';
+   const kind=client.id.startsWith('web-sim-')?'Simulateur':'Appareil';
+   meta.textContent=kind+' · '+(client.online?'Connecté':'Déconnecté');
+   line.append(name,meta);target.append(line);
+  }
+ }catch(error){target.textContent='Liste indisponible : '+error.message;}
+}
 function refreshSet(selectedPage){const s=currentSet();$('profile').value=s?.profileId??'round-240';options($('page'),(s?.pages??[]).map(x=>({id:x.id,label:x.title})),selectedPage);refreshPage()}
 function refreshPage(){const p=currentPage();$('pageTitle').value=p?.title??'';$('visible').checked=!!p?.visible;$('pageBg').value=p?.background??'';$('components').value=JSON.stringify(p?.components??[],null,2);refreshComponents();renderPreview()}
 function currentComponent(){return currentPage()?.components.find(x=>x.id===$('component').value)}
@@ -471,6 +492,7 @@ async function refreshFirmware(){
   if(!response.ok)throw Error('HTTP '+response.status);
   const data=await response.json();
   const clients=(data.clients??[]).filter(client=>client.deviceType==='esp32c3'||client.id.startsWith('esp-'));
+  refreshGroupClients();
   target.replaceChildren();
   if(!clients.length){target.textContent='Aucun ESP32 enregistré depuis le démarrage du serveur.';return;}
   const table=document.createElement('table');table.className='table table-sm mb-0';
