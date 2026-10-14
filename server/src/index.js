@@ -19,6 +19,7 @@ export function createTouchDeckServer({ port = 3000, host = '0.0.0.0', dataFile 
   let ready = false;
   let configRevision = 0;
   let stopClock = null;
+  const deviceAssignments=new Map();
   const stopwatch=createStopwatch();
   const testSource=createTestSource();
   let bonjour = null;
@@ -40,6 +41,7 @@ export function createTouchDeckServer({ port = 3000, host = '0.0.0.0', dataFile 
       for (const group of saved.groups) groups.set(group.id, group);
       for (const pageSet of saved.pageSets) pageSets.set(pageSet.id, pageSet);
       sources.clear();for(const source of saved.sources??[])sources.set(source.id,source);
+      for(const [id,groupId] of Object.entries(saved.deviceAssignments??{}))if(/^[a-zA-Z0-9_-]{1,80}$/.test(id)&&typeof groupId==='string')deviceAssignments.set(id,groupId);
     }
     // Built-in test source: a regular imported descriptor, no second backend.
     if(JSON.stringify(sources.get(CLOCK_SOURCE_ID))!==JSON.stringify(CLOCK_SOURCE)){
@@ -65,14 +67,14 @@ export function createTouchDeckServer({ port = 3000, host = '0.0.0.0', dataFile 
     }
     ready = true;
   }
-  function persist() { return store.save({ schemaVersion: 1, revision: configRevision, groups: [...groups.values()], pageSets: [...pageSets.values()], sources:[...sources.values()] }); }
+  function persist() { return store.save({ schemaVersion: 1, revision: configRevision, groups: [...groups.values()], pageSets: [...pageSets.values()], sources:[...sources.values()],deviceAssignments:Object.fromEntries(deviceAssignments) }); }
   function broadcastConfig() {
     for (const client of clients.values()) {
       if (client.groupId && !groups.has(client.groupId)) { client.groupId = null; client.pageId = null; }
       const group = groups.get(client.groupId);
       const allPages = pageSets.get(group?.pageSetId)?.pages ?? [];
       if (!allPages.some(page => page.id === client.pageId)) client.pageId = visiblePages(client.groupId)[0]?.id ?? null;
-      send(client, snapshot(client));
+      if(client.groupId)send(client, snapshot(client));
     }
   }
   const clients = new Map();
@@ -506,11 +508,16 @@ export function createTouchDeckServer({ port = 3000, host = '0.0.0.0', dataFile 
           if(typeof data.clientId!=='string'||!Object.hasOwn(data,'groupId')||(data.groupId!==null&&!groups.has(data.groupId)))return json(400,{error:'invalid_assignment'});
           const client=clients.get(data.clientId);
           if(!client)return json(404,{error:'client_not_found'});
-          if(!client.id.startsWith('web-sim-'))return json(403,{error:'only_web_simulators_supported'});
+          if(!client.id.startsWith('web-sim-')){
+            if(data.groupId===null)deviceAssignments.delete(client.id);
+            else deviceAssignments.set(client.id,data.groupId);
+            await persist();
+          }
           client.groupId=data.groupId;
           client.pageId=visiblePages(client.groupId)[0]?.id??null;
           send(client,{type:'welcome',clientId:client.id,groupId:client.groupId});
-          send(client,snapshot(client));
+          if(client.groupId)send(client,snapshot(client));
+          else send(client,{type:'page',clientId:client.id,groupId:null,page:null,profile:null,pageRevision:configRevision});
           return json(200,{ok:true});
         }catch{return json(400,{error:'invalid_request'})}
       }
@@ -532,15 +539,17 @@ export function createTouchDeckServer({ port = 3000, host = '0.0.0.0', dataFile 
         if (current) current.sockets.delete(socket);
         current = clients.get(message.clientId);
         if (!current) {
-          current = { id: message.clientId, groupId: null, pageId: null, sockets: new Set() };
+          current = { id: message.clientId, groupId: deviceAssignments.get(message.clientId)??null, pageId: null, sockets: new Set() };
           clients.set(current.id, current);
         }
+        if(!current.id.startsWith('web-sim-'))current.groupId=deviceAssignments.get(current.id)??null;
+        current.pageId=current.groupId?(current.pageId??visiblePages(current.groupId)[0]?.id??null):null;
         current.sockets.add(socket);
         current.firmwareVersion=typeof message.firmwareVersion==='string'&&message.firmwareVersion.length<=100?message.firmwareVersion:null;
         current.deviceType=typeof message.deviceType==='string'&&message.deviceType.length<=40?message.deviceType:null;
         publishDevice(current,true);
         send(current, { type: 'welcome', clientId: current.id, groupId: current.groupId });
-        send(current, snapshot(current));
+        if(current.groupId)send(current, snapshot(current));
       } else if (message?.type === 'interact' && current) {
         const result=interact(current,message);
         if(result.error)socket.send(JSON.stringify({type:'error',code:result.error}));
@@ -548,7 +557,7 @@ export function createTouchDeckServer({ port = 3000, host = '0.0.0.0', dataFile 
         navigate(current, message.direction);
       } else if (message?.type === 'assign' && current && typeof message.groupId === 'string' && groups.has(message.groupId)) {
         // Temporary simulator-only assignment; authorization is required before exposing beyond local development.
-        if (message.groupId !== 'demo') { socket.send(JSON.stringify({ type: 'error', code: 'admin_required' })); return; }
+        if (!current.id.startsWith('web-sim-')||message.groupId !== 'demo') { socket.send(JSON.stringify({ type: 'error', code: 'admin_required' })); return; }
         current.groupId = message.groupId;
         current.pageId = visiblePages(current.groupId)[0]?.id ?? null;
         send(current, snapshot(current));
