@@ -384,11 +384,28 @@ void poll(){
   lastX=x;lastY=y;
  }else if(pressed&&startX>=0){
   int dx=lastX-startX;
-  if(abs(dx)>=35&&millis()-started<1000&&wsReady){
+  bool sliderHandled=false;
+  if(wsReady&&millis()-started<3000){
+   for(JsonVariantConst component:state["page"]["components"].as<JsonArrayConst>()){
+    if(String(component["type"]|"")!="Slider"||(component["disabled"]|false))continue;
+    int cx=component["x"]|0,cy=component["y"]|0,cw=component["w"]|0,ch=component["h"]|0;
+    if(startX<cx||startX>=cx+cw||startY<cy||startY>=cy+ch)continue;
+    float minimum=component["min"]|0.0f,maximum=component["max"]|100.0f;
+    String orientation=component["orientation"]|"horizontal";
+    float ratio=orientation=="vertical"?1.0f-(float)(lastY-cy)/max(1,ch):(float)(lastX-cx)/max(1,cw);
+    float value=roundf(minimum+constrain(ratio,0.0f,1.0f)*(maximum-minimum));
+    StaticJsonDocument<256> interaction;
+    interaction["type"]="interact";interaction["pageId"]=pageId;interaction["pageRevision"]=revision;
+    interaction["componentId"]=component["id"]|"";interaction["requestId"]="esp-"+String(millis());interaction["value"]=value;
+    String payload;serializeJson(interaction,payload);ws.sendTXT(payload);
+    sliderHandled=true;break;
+   }
+  }
+  if(!sliderHandled&&abs(dx)>=35&&millis()-started<1000&&wsReady){
    send("navigate","direction",dx<0?"next":"previous");
    Serial.printf("swipe=%d\n",dx);
   }
-  else if(abs(dx)<15&&abs(lastY-startY)<15&&millis()-started<1000&&wsReady){
+  else if(!sliderHandled&&abs(dx)<15&&abs(lastY-startY)<15&&millis()-started<1000&&wsReady){
    for(JsonVariantConst component:state["page"]["components"].as<JsonArrayConst>()){
     String kind=component["type"]|"";
     if((kind!="Button"&&kind!="Toggle"&&kind!="Label"&&kind!="Icon")||(component["disabled"]|false))continue;
