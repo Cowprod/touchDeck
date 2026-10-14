@@ -141,7 +141,7 @@ uint32_t nextFontCodepoint(const String &text,unsigned &index){
  for(int n=0;n<count && index<text.length();n++)cp=(cp<<6)|((unsigned char)text[index++]&63);
  return cp;
 }
-bool drawFontText(const String &text,int x,int y,int w,int h,uint16_t fg,uint16_t bg,int size,uint16_t pageBg,int radius){
+bool drawFontText(const String &text,int x,int y,int w,int h,uint16_t fg,uint16_t bg,int size){
  if(!fontPaths.is<JsonObject>()||fontPaths.as<JsonObject>().size()==0)return false;
  const int cell=(size*3+2)/5, gh=size+4;
  int count=0;
@@ -234,7 +234,7 @@ void syncFonts(const String &group,uint32_t newRevision){
 
 // Render frequently updated labels off-screen to avoid per-glyph SPI flicker.
 // Reuse a bounded RGB565 buffer; fall back to the legacy path if it cannot fit.
-bool drawBufferedLabel(const String &text,int x,int y,int w,int h,uint16_t fg,uint16_t bg,int size){
+bool drawBufferedLabel(const String &text,int x,int y,int w,int h,uint16_t fg,uint16_t bg,int size,uint16_t pageBg,int radius){
  if(!fontPaths.is<JsonObject>()||fontPaths.as<JsonObject>().size()==0)return false;
  if(w<=0||h<=0||(uint32_t)w*h>12000)return false;
  static uint16_t *pixels=nullptr;
