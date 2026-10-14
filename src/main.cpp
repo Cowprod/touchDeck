@@ -244,6 +244,39 @@ void drawComponent(JsonVariantConst component,bool clearArea){
   if(r==0)lcd->fillRect(x+1,y+1,w-2,h-2,bg);
   else lcd->fillRoundRect(x+1,y+1,w-2,h-2,r,bg);
  }
+ if(type=="Gauge"||type=="Progress"||type=="Slider"){
+  float minimum=component["min"]|0.0f,maximum=component["max"]|100.0f,value=component["value"]|0.0f;
+  float ratio=maximum>minimum?constrain((value-minimum)/(maximum-minimum),0.0f,1.0f):0;
+  uint16_t color=rgb(component["textColor"]|"",WHITE),track=0x8410;
+  String display=component["display"]|"bar",orientation=component["orientation"]|"horizontal";
+  if(display=="circle"||display=="arc"){
+   int cx=x+w/2,cy=y+h/2,r=max(3,min(w,h)/2-5);
+   int start=display=="arc"?135:0,extent=display=="arc"?270:360;
+   for(int a=0;a<extent;a+=3){
+    float angle=(start+a-90)*PI/180.0f;
+    int px=cx+(int)(cosf(angle)*r),py=cy+(int)(sinf(angle)*r);
+    lcd->fillCircle(px,py,2,a<extent*ratio?color:track);
+   }
+  }else if(orientation=="vertical"){
+   int bx=x+w/3,bw=max(3,w/3),by=y+4,bh=max(1,h-8),filled=(int)(bh*ratio);
+   lcd->fillRect(bx,by,bw,bh,track);
+   if(filled>0)lcd->fillRect(bx,by+bh-filled,bw,filled,color);
+  }else{
+   int bx=x+4,bw=max(1,w-8),by=y+h/3,bh=max(3,h/3),filled=(int)(bw*ratio);
+   lcd->fillRect(bx,by,bw,bh,track);
+   if(filled>0)lcd->fillRect(bx,by,filled,bh,color);
+  }
+  return;
+ }
+ if(type=="IconBar"){
+  JsonArrayConst icons=component["icons"].as<JsonArrayConst>();
+  int count=icons.size();if(count==0)return;
+  for(int i=0;i<count;i++){
+   int iw=w/count;
+   drawIcon(icons[i].as<String>(),x+i*iw+2,y+2,iw-4,h-4,rgb(component["textColor"]|"",WHITE));
+  }
+  return;
+ }
  if(type=="Icon"){
   Serial.printf("icon_render name=%s color=%s bg=%s cached=%d\\n",component["icon"]|"",component["textColor"]|"",component["backgroundColor"]|"transparent",iconPaths.containsKey(component["icon"]|""));
   drawIcon(component["icon"]|"",x+2,y+2,w-4,h-4,rgb(component["textColor"]|"",WHITE));
