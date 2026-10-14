@@ -487,3 +487,51 @@ test('admin protects a group referenced by an offline persisted device', async (
     await rm(dir, { recursive: true, force: true });
   }
 });
+
+
+test('D-028: referenced page sets, sources and device profiles remain protected', async () => {
+  const { mkdtemp, rm } = await import('node:fs/promises');
+  const { tmpdir } = await import('node:os');
+  const { join } = await import('node:path');
+  const dir = await mkdtemp(join(tmpdir(), 'touchdeck-d028-'));
+  const app = createTouchDeckServer({ port: 0, host: '127.0.0.1', dataFile: join(dir, 'config.json') });
+  const { port } = await app.start();
+  const url = 'http://127.0.0.1:' + port + '/api/admin/config';
+  const put = config => fetch(url, { method: 'PUT', headers: { 'content-type': 'application/json' }, body: JSON.stringify(config) });
+  try {
+    const original = await (await fetch(url)).json();
+    const setId = original.groups[0].pageSetId;
+    const withoutSet = structuredClone(original);
+    withoutSet.pageSets = withoutSet.pageSets.filter(set => set.id !== setId);
+    const setResponse = await put(withoutSet);
+    assert.equal(setResponse.status, 409);
+    assert.deepEqual(await setResponse.json(), { error: 'page_set_in_use', pageSetId: setId });
+
+    const withBadProfile = structuredClone(original);
+    withBadProfile.pageSets[0].profileId = 'removed-profile';
+    const profileResponse = await put(withBadProfile);
+    assert.equal(profileResponse.status, 400);
+    assert.equal((await profileResponse.json()).error, 'invalid_page_set');
+
+    const sourceId = 'd028_manual_source';
+    const source = { id: sourceId, name: 'D028 source', origin: 'manual', descriptor: { properties: {}, actions: {}, events: {} } };
+    const withSource = structuredClone(original);
+    withSource.sources.push(source);
+    const bound = withSource.pageSets[0].pages[0].components[0];
+    bound.sourceId = sourceId;
+    const created = await put(withSource);
+    assert.equal(created.status, 200);
+    const current = await (await fetch(url)).json();
+    const withoutSource = structuredClone(current);
+    withoutSource.sources = withoutSource.sources.filter(item => item.id !== sourceId);
+    const sourceResponse = await put(withoutSource);
+    assert.equal(sourceResponse.status, 409);
+    assert.deepEqual(await sourceResponse.json(), { error: 'source_in_use', sourceId });
+    const persisted = await (await fetch(url)).json();
+    assert.ok(persisted.sources.some(item => item.id === sourceId));
+    assert.equal(persisted.pageSets[0].pages[0].components[0].sourceId, sourceId);
+  } finally {
+    await app.stop();
+    await rm(dir, { recursive: true, force: true });
+  }
+});
