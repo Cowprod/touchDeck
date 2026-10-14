@@ -565,3 +565,17 @@ test('admin has four unified tabs and legacy Sources URL redirects to its tab', 
     await rm(dir, { recursive: true, force: true });
   }
 });
+
+
+test('admin simulator rail is outside all four tab sections', async () => {
+  const { readFile } = await import('node:fs/promises');
+  const { fileURLToPath } = await import('node:url');
+  const html = await readFile(fileURLToPath(new URL('../public/admin.html', import.meta.url)), 'utf8');
+  assert.ok(html.includes("workspace.id='td-admin-workspace'"));
+  assert.ok(html.includes("workspace.append(live,controls)"));
+  assert.ok(html.includes("live.append(simPanel)"));
+  assert.ok(html.includes("controls.append(editor,groups,sourcesSection,devices)"));
+  assert.ok(html.includes("row.replaceWith(workspace"));
+  assert.ok(html.includes("#td-admin-workspace .td-section[hidden]{display:none!important}"));
+  assert.ok(html.includes("sourcesSection.querySelector(':scope > .mb-3')?.remove()"));
+});
