@@ -68,6 +68,8 @@ screen.addEventListener('pointerup',event=>{
  const start=pointerStart;pointerStart=null;
  if(!start||start.pointerId!==event.pointerId||Date.now()-start.time>=1000)return;
  const dx=event.clientX-start.x,dy=event.clientY-start.y;
+ const origin=document.elementFromPoint(start.x,start.y)?.closest('.component');
+ if(origin&&screen.contains(origin)&&origin.dataset.type==='Slider'){slide(origin,event);return}
  if(Math.abs(dx)>=35&&Math.abs(dx)>Math.abs(dy)){send({type:'navigate',direction:dx<0?'next':'previous'});return}
  if(Math.abs(dx)>=15||Math.abs(dy)>=15)return;
  const element=document.elementFromPoint(event.clientX,event.clientY)?.closest('.component');
