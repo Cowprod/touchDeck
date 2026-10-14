@@ -358,7 +358,7 @@ void poll(){
   else if(abs(dx)<15&&abs(lastY-startY)<15&&millis()-started<1000&&wsReady){
    for(JsonVariantConst component:state["page"]["components"].as<JsonArrayConst>()){
     String kind=component["type"]|"";
-    if((kind!="Button"&&kind!="Toggle")||(component["disabled"]|false))continue;
+    if((kind!="Button"&&kind!="Toggle"&&kind!="Label"&&kind!="Icon")||(component["disabled"]|false))continue;
     int cx=component["x"]|0,cy=component["y"]|0,cw=component["w"]|0,ch=component["h"]|0;
     if(lastX<cx||lastX>=cx+cw||lastY<cy||lastY>=cy+ch)continue;
     StaticJsonDocument<256> interaction;
