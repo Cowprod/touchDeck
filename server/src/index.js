@@ -521,7 +521,7 @@ export function createTouchDeckServer({ port = 3000, host = '0.0.0.0', dataFile 
           else send(client,{type:'page',clientId:client.id,groupId:null,page:null,profile:null,pageRevision:configRevision});
           return json(200,{ok:true});
         }catch{return json(400,{error:'invalid_request'})}
-      }
+      });
       return json(405,{error:'method_not_allowed'});
     }
     if (request.method === 'GET' && url.pathname === '/api/bootstrap') return json(200, { profiles: [...profiles.values()], groups: [...groups.values()], pageSets: [...pageSets.values()] });
