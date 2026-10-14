@@ -502,7 +502,7 @@ export function createTouchDeckServer({ port = 3000, host = '0.0.0.0', dataFile 
     }
     if (url.pathname === '/api/admin/clients') {
       if (request.method === 'GET') return json(200,{ clients:[...clients.values()].map(client=>({id:client.id,groupId:client.groupId,pageId:client.pageId,online:client.sockets.size>0,firmwareVersion:sourceValues.get(deviceSourceId(client.id))?.firmwareVersion??null,latestVersion:sourceValues.get(deviceSourceId(client.id))?.latestVersion??null,updateAvailable:sourceValues.get(deviceSourceId(client.id))?.updateAvailable??null,deviceType:client.deviceType??null})) });
-      if (request.method === 'PUT') return serializeMutation(async()=>{
+      if (request.method === 'PUT') {
         try {
           let body='';for await(const chunk of request){body+=chunk;if(body.length>4096)return json(413,{error:'too_large'})}
           const data=JSON.parse(body);
@@ -521,7 +521,7 @@ export function createTouchDeckServer({ port = 3000, host = '0.0.0.0', dataFile 
           else send(client,{type:'page',clientId:client.id,groupId:null,page:null,profile:null,pageRevision:configRevision});
           return json(200,{ok:true});
         }catch{return json(400,{error:'invalid_request'})}
-      });
+      }
       return json(405,{error:'method_not_allowed'});
     }
     if (request.method === 'GET' && url.pathname === '/api/bootstrap') return json(200, { profiles: [...profiles.values()], groups: [...groups.values()], pageSets: [...pageSets.values()] });
