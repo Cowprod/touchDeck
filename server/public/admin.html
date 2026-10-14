@@ -106,7 +106,7 @@ main.container-fluid{padding-left:0!important;padding-top:0!important}
 <a class="td-brand" href="/admin"><img src="/favicon.svg" alt="" width="28" height="28" class="me-2" style="vertical-align:middle">TouchDeck</a>
 <button type="button" class="td-tab active" data-td-view="editor"><i class="fa-solid fa-pen-ruler me-1"></i> Éditeur</button>
 <button type="button" class="td-tab" data-td-view="groups"><i class="fa-solid fa-object-group me-1"></i> Groupes</button>
-<a class="td-external" href="/admin/sources"><i class="fa-solid fa-database me-1"></i> Sources</a>
+<button type="button" class="td-tab" data-td-view="sources"><i class="fa-solid fa-database me-1"></i> Sources</button>
 <button type="button" class="td-tab" data-td-view="devices"><i class="fa-solid fa-microchip me-1"></i> Appareils</button>
 <a class="td-external ms-auto" href="/"><i class="fa-solid fa-display me-1"></i> Simulateur plein écran</a>
 </div></nav>
@@ -168,6 +168,20 @@ main.container-fluid{padding-left:0!important;padding-top:0!important}
 </div></div></section>
 <section class="col-12"><div class="card"><div class="card-header d-flex align-items-center justify-content-between"><span>Simulateurs HTML — D-026 / D-027</span><button class="btn btn-success btn-sm" id="addSimulator" type="button" title="Ajouter un simulateur" aria-label="Ajouter un simulateur"><i class="fa-solid fa-plus"></i></button></div><div class="card-body"><div class="row g-3" id="simulators"></div></div></div></section>
 </div>
+<section id="td-sources" class="td-section" hidden>
+<div class="mb-3"><h1 class="h3 mb-1"><i class="fa-solid fa-database me-2"></i>Sources de données</h1><div class="text-body-secondary">Catalogue, configuration et mesures reçues par TouchDeck</div></div>
+<div id="message" role="status" class="alert alert-info">Chargement…</div>
+<div class="row g-3"><div class="col-lg-4"><div class="card"><div class="card-header">Catalogue <button id="refresh" class="btn btn-sm btn-secondary float-end" type="button">Actualiser</button></div><div class="card-body"><div class="input-group mb-3"><input id="filter" class="form-control" placeholder="Rechercher une source"><button id="new" class="btn btn-success" type="button"><i class="fa-solid fa-plus"></i> Nouvelle</button></div><div id="catalogue" class="list-group"></div></div></div>
+<div class="card"><div class="card-header">État de la réception</div><div class="card-body"><div id="connection" class="mb-2">—</div><div class="small text-body-secondary">Une source push est « active » si une mesure a été reçue récemment. Sans mesure, l'état est inconnu ou inactif ; il ne prouve pas une panne réseau. Les mesures sont conservées en mémoire jusqu'au redémarrage du serveur.</div></div></div></div>
+<div class="col-lg-8"><div class="card"><div class="card-header">Fiche source</div><div class="card-body">
+<div class="row g-3"><div class="col-md-6"><label class="form-label" for="id">Identifiant stable</label><input id="id" class="form-control mono" maxlength="80" placeholder="ma_source"><div class="form-text">Défini à la création, non modifiable ensuite.</div></div><div class="col-md-6"><label class="form-label" for="name">Nom affiché</label><input id="name" class="form-control" maxlength="120" placeholder="Serveur de supervision"></div>
+<div class="col-md-6"><label class="form-label" for="origin">Type</label><select id="origin" class="form-select"><option value="imported">Externe (import JSON / push)</option><option value="manual">Manuelle</option></select></div><div class="col-md-6"><label class="form-label" for="endpoint">Endpoint de commande (facultatif)</label><input id="endpoint" class="form-control" placeholder="https://exemple.net/api/commands"><div class="form-text">Ne pas renseigner pour une source qui publie en push.</div></div>
+<div class="col-12"><label class="form-label" for="descriptor">Définition JSON</label><textarea id="descriptor" class="form-control mono" rows="12" spellcheck="false" placeholder='{"id":"ma_source","name":"Ma source","descriptor":{"properties":{},"actions":{},"events":{}}}'></textarea><div class="form-text">Pour importer : coller le JSON complet (id, name, descriptor), ou uniquement le descriptor si les champs sont remplis. Les sources externes sont mises à jour par import.</div></div></div>
+<div class="d-flex flex-wrap gap-2 mt-3"><button id="save" class="btn btn-success">Enregistrer</button><button id="import" class="btn btn-primary">Importer le JSON</button><button id="delete" class="btn btn-danger">Supprimer</button><button id="cancel" class="btn btn-secondary">Annuler</button></div>
+</div></div>
+<div class="card"><div class="card-header">Mesures et marqueurs disponibles <span id="count" class="badge bg-secondary ms-2">0</span></div><div class="card-body"><div class="small mb-2">Marqueur à insérer dans un texte : <code>${property}</code>. Exemple : <code>${cpu_percent}</code> (remplacer par les identifiants affichés ci-dessous).</div><div class="table-responsive"><table class="table table-sm table-striped"><thead><tr><th>Propriété</th><th>Marqueur (copier)</th><th>Dernière valeur reçue</th><th>Unité</th></tr></thead><tbody id="properties"></tbody></table></div><div id="empty" class="text-body-secondary small"></div></div></div>
+</div></div>
+</section>
 </main><script>let config=null;const $=id=>document.getElementById(id);const palette={primary:'#0d6efd',secondary:'#6c757d',success:'#198754',warning:'#ffc107',danger:'#dc3545',info:'#0dcaf0',light:'#f8f9fa',dark:'#212529'};const validId=id=>/^[a-zA-Z0-9_-]{1,80}$/.test(id);
 function newId(){const bytes=new Uint8Array(8);crypto.getRandomValues(bytes);return Array.from(bytes,b=>b.toString(16).padStart(2,'0')).join('')}
 function currentSet(){return config?.pageSets.find(x=>x.id===$('set').value)}
@@ -303,8 +317,8 @@ function addComponent(type){const p=currentPage();if(!p)return status('Aucune pa
 let saveTimer;let saving=false;let saveAgain=false;
 function dirty(control,delay=0){if(!config)return;if(control){control.classList.remove('save-success','save-danger');control.classList.add('save-warning')}clearTimeout(saveTimer);saveTimer=setTimeout(save,delay)}
 async function save(){if(!config)return;if(saving){saveAgain=true;return}saving=true;try{const response=await fetch('/api/admin/config',{method:'PUT',headers:{'content-type':'application/json'},body:JSON.stringify(config)});const data=await response.json();if(!response.ok)throw Error(({config_conflict:'Configuration modifiée ailleurs : rechargez cette page avant de poursuivre',component_overlap:'Un composant chevauche un autre composant',group_has_clients:'Groupe utilisé par un ou plusieurs clients',page_set_in_use:'Jeu de pages encore référencé',invalid_component:'Composant invalide : vérifier ses propriétés',invalid_page:'Page invalide : vérifier ses propriétés'})[data.error]??data.error??'Erreur HTTP '+response.status);config.revision=data.revision;document.querySelectorAll('.save-warning').forEach(el=>{el.classList.replace('save-warning','save-success');setTimeout(()=>el.classList.remove('save-success'),1500)});status('Modifications enregistrées et diffusées')}catch(e){document.querySelectorAll('.save-warning').forEach(el=>el.classList.replace('save-warning','save-danger'));status(e.message,true)}finally{saving=false;if(saveAgain){saveAgain=false;dirty(null,50)}}}
-function status(message,error=false){$('state').textContent=message;$('state').className='alert '+(error?'alert-danger':'alert-success')}
-async function load(){try{const response=await fetch('/api/admin/config');if(!response.ok)throw Error('Chargement impossible (HTTP '+response.status+')');config=await response.json();refresh();status('Configuration chargée')}catch(e){status(e.message,true)}}
+let statusTimer;function status(message,error=false){clearTimeout(statusTimer);const el=$('state');el.hidden=!message;el.textContent=message||'';el.className='alert '+(error?'alert-danger':'alert-success');if(message&&!error)statusTimer=setTimeout(()=>{el.hidden=true},2500)}
+async function load(){try{const response=await fetch('/api/admin/config');if(!response.ok)throw Error('Chargement impossible (HTTP '+response.status+')');config=await response.json();refresh();status(null)}catch(e){status(e.message,true)}}
 $('group').onchange=()=>{refreshGroup();sortSimulators()};$('set').onchange=()=>refreshSet();$('page').onchange=refreshPage;
 $('groupName').oninput=()=>{if(currentGroup()){currentGroup().name=$('groupName').value;dirty($('groupName'),650)}};
 $('groupSet').onchange=()=>{if(currentGroup()){currentGroup().pageSetId=$('groupSet').value;dirty($('groupSet'))}};
@@ -584,12 +598,13 @@ document.addEventListener('visibilitychange',()=>{if(!document.hidden)refreshFir
  const groups=document.createElement('div');groups.id='td-groups';groups.className='td-section';groups.hidden=true;
  groups.innerHTML='<h1 class="td-section-heading">Groupes</h1><p class="td-help">Affectation des groupes aux jeux de pages.</p>';
  groupPanel.classList.remove('col-lg-6');groups.append(groupPanel);
+ const sourcesSection=document.getElementById('td-sources');
  const devices=document.createElement('div');devices.id='td-devices';devices.className='td-section';devices.hidden=true;
  devices.innerHTML='<h1 class="td-section-heading">Appareils connectés</h1><p class="td-help">État des clients et versions du firmware.</p>';
  devices.append(firmwarePanel);
  if(legacySources){legacySources.hidden=true;legacySources.style.display='none'}
  row.replaceWith(editor,groups,devices,...(legacySources?[legacySources]:[]));
- const sections={editor,groups,devices};
+ const sections={editor,groups,sources:sourcesSection,devices};
  function show(view){
   if(!sections[view])view='editor';
   for(const [key,section] of Object.entries(sections))section.hidden=key!==view;
@@ -601,5 +616,49 @@ document.addEventListener('visibilitychange',()=>{if(!document.hidden)refreshFir
  for(const button of document.querySelectorAll('[data-td-view]'))button.addEventListener('click',()=>show(button.dataset.tdView));
  window.addEventListener('hashchange',()=>show(location.hash.slice(1)));
  show(location.hash.slice(1)||'editor');
+})();
+</script>
+<script>
+(function initSources(){
+
+'use strict';
+const $=id=>document.getElementById(id);let config=null,selected=null,creating=false,telemetry=null,dirty=false;
+function msg(text,bad=false){$('message').className='alert alert-'+(bad?'danger':'info');$('message').textContent=text}
+async function api(path,options){const r=await fetch(path,{cache:'no-store',...options});const body=await r.json();if(!r.ok)throw Error(body.error||'HTTP '+r.status);return body}
+function source(){return config?.sources?.find(x=>x.id===selected)}
+function newForm(){creating=true;selected=null;$('id').readOnly=false;$('id').value='';$('name').value='';$('origin').disabled=false;$('origin').value='imported';$('endpoint').value='';$('descriptor').value=JSON.stringify({properties:{},actions:{},events:{}},null,2);dirty=false;render()}
+function choose(id){creating=false;selected=id;const s=source();if(!s)return newForm();$('id').value=s.id;$('id').readOnly=true;$('name').value=s.name;$('origin').value=s.origin;$('origin').disabled=true;$('endpoint').value=s.endpoint||'';$('descriptor').value=JSON.stringify(s.descriptor,null,2);dirty=false;render()}
+function render(){const q=$('filter').value.toLowerCase();$('catalogue').replaceChildren();for(const s of config?.sources||[]){if(!(s.name+' '+s.id).toLowerCase().includes(q))continue;const b=document.createElement('button');b.type='button';b.className='list-group-item list-group-item-action text-start'+(selected===s.id?' active':'');const st=telemetry?.sources?.[s.id];const age=st?.lastReceivedAt?Date.now()-Date.parse(st.lastReceivedAt):Infinity;const state=age<20000?'● Actif':st?.lastReceivedAt?'● Inactif':'○ Aucune mesure';b.textContent=s.name+' ('+s.id+') — '+state;b.onclick=()=>{if(dirty&&!confirm('Abandonner les modifications non enregistrées ?'))return;choose(s.id)};$('catalogue').append(b)}
+const s=source();const st=selected?telemetry?.sources?.[selected]:null;const age=st?.lastReceivedAt?Math.max(0,Math.round((Date.now()-Date.parse(st.lastReceivedAt))/1000)):null;
+$('connection').textContent=!selected?'Sélectionner une source.':age===null?'Aucune publication reçue depuis le démarrage du serveur.':(age<20?'Réception active':'Pas de réception récente')+' — dernière publication il y a '+age+' s ('+st.lastReceivedAt+')';
+$('save').disabled=!(creating||s?.origin==='manual');$('import').disabled=!!s&&s.id==='clock';$('delete').disabled=!s||s.id==='clock'||s.id.startsWith('device_');
+const props=s?.descriptor?.properties||{};const values=st?.values||{};$('properties').replaceChildren();for(const [key,definition] of Object.entries(props)){const tr=document.createElement('tr');const marker='${'+key+'}';const cell=document.createElement('td');cell.textContent=key;tr.append(cell);const td=document.createElement('td');const button=document.createElement('button');button.type='button';button.className='btn btn-sm btn-secondary mono';button.textContent=marker;button.title='Copier le marqueur';button.onclick=async()=>{try{await navigator.clipboard.writeText(marker);msg('Marqueur copié : '+marker)}catch{msg('Copie automatique indisponible : '+marker)}};td.append(button);tr.append(td);const v=document.createElement('td');v.textContent=Object.hasOwn(values,key)?JSON.stringify(values[key]):'— non reçue';tr.append(v);const u=document.createElement('td');u.textContent=definition.unit||'—';tr.append(u);$('properties').append(tr)}$('count').textContent=String(Object.keys(props).length);$('empty').textContent=s?'Les valeurs sont celles réellement reçues par le serveur. « Non reçue » ne signifie pas zéro.':'Sélectionner une source pour voir ses propriétés.'}
+function parse(){const raw=JSON.parse($('descriptor').value);const full=raw&&typeof raw==='object'&&!Array.isArray(raw)&&raw.descriptor&&typeof raw.descriptor==='object';const descriptor=full?raw.descriptor:raw;const id=full?raw.id:$('id').value.trim();const name=full?raw.name:$('name').value.trim();if(typeof id!=='string'||!/^[a-zA-Z0-9_-]{1,80}$/.test(id))throw Error('Identifiant invalide (lettres, chiffres, _ ou -).');if(typeof name!=='string'||!name.trim())throw Error('Nom manquant.');if(!descriptor||typeof descriptor!=='object'||Array.isArray(descriptor))throw Error('Descripteur JSON invalide.');return{id,name,descriptor}}
+async function reload(keep){config=await api('/api/admin/config');telemetry=await api('/api/admin/sources/status');if(keep&&config.sources.some(s=>s.id===keep))choose(keep);else if(!creating)choose(config.sources[0]?.id);else render()}
+$('refresh').onclick=async()=>{try{await reload(selected);msg('Catalogue actualisé')}catch(e){msg(e.message,true)}};
+$('filter').oninput=render;$('new').onclick=()=>{if(dirty&&!confirm('Abandonner les modifications ?'))return;newForm()};$('cancel').onclick=()=>{if(source())choose(selected);else newForm()};
+for(const id of ['id','name','origin','endpoint','descriptor'])$(id).addEventListener('input',()=>dirty=true);
+$('import').onclick=async()=>{try{const v=parse();if(source()&&v.id!==selected)throw Error('L’identifiant d’une source existante est immuable. Créer une nouvelle source.');const response=await api('/api/admin/sources/import',{method:'PUT',headers:{'content-type':'application/json'},body:JSON.stringify({...v,revision:config.revision})});await reload(response.source.id);msg('Source importée : '+response.source.id)}catch(e){msg('Import impossible : '+e.message,true)}};
+$('save').onclick=async()=>{try{const v=parse();if(source()?.origin==='imported')throw Error('Une source externe se met à jour par Importer le JSON.');if(source()&&v.id!==selected)throw Error('Identifiant immuable.');if(config.sources.some(x=>x.id===v.id&&x.id!==selected))throw Error('Identifiant déjà utilisé.');const item={...v,origin:'manual'};if($('endpoint').value.trim())item.endpoint=$('endpoint').value.trim();const sources=config.sources.filter(x=>x.id!==selected).concat(item);await api('/api/admin/config',{method:'PUT',headers:{'content-type':'application/json'},body:JSON.stringify({...config,sources})});creating=false;await reload(v.id);msg('Source manuelle enregistrée : '+v.id)}catch(e){msg('Enregistrement impossible : '+e.message,true)}};
+$('delete').onclick=async()=>{
+ const s=source();if(!s)return;
+ const linked=[];
+ const pageSets=config.pageSets.map(set=>({...set,pages:set.pages.map(page=>({...page,components:page.components.map(item=>{
+  if(item.sourceId!==s.id)return item;
+  linked.push(set.id+' / '+page.title+' / '+item.id);
+  const detached={...item};
+  delete detached.sourceId;delete detached.action;delete detached.writeAction;delete detached.property;delete detached.parameters;
+  return detached;
+ })}))}));
+ const note=linked.length?'\\n'+linked.length+' composant(s) lié(s) seront conservés mais dissociés de cette source :\\n'+linked.join('\\n'):'';
+ if(!confirm('Supprimer définitivement la source '+s.id+' ?'+note))return;
+ try{
+  await api('/api/admin/config',{method:'PUT',headers:{'content-type':'application/json'},body:JSON.stringify({...config,pageSets,sources:config.sources.filter(x=>x.id!==s.id)})});
+  selected=null;creating=false;await reload(null);msg('Source supprimée'+(linked.length?' ; '+linked.length+' composant(s) dissocié(s).':''));
+ }catch(e){msg('Suppression impossible : '+e.message,true)}
+};
+(async()=>{try{await reload();msg('Catalogue chargé. Les mesures sont actualisées toutes les 5 secondes.')}catch(e){msg('Chargement impossible : '+e.message,true)}})();
+setInterval(async()=>{try{telemetry=await api('/api/admin/sources/status');render()}catch{}},5000);
+
 })();
 </script></body></html>
