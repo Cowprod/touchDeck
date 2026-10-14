@@ -9,7 +9,7 @@ function connect(port, clientId) {
     const messages = [];
     socket.on('error', reject);
     socket.on('message', raw => { const msg = JSON.parse(raw.toString()); messages.push(msg); if (msg.type === 'page') resolve({ socket, messages }); });
-    socket.on('open', () => socket.send(JSON.stringify({ type: 'hello', clientId })));
+    socket.on('open', () => socket.send(JSON.stringify({ type: 'hello', clientId, deviceType: 'web-simulator' })));
   });
 }
 function waitPage(socket, action) {
