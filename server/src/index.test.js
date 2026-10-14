@@ -338,6 +338,28 @@ test('static label/icon/button actions navigate only the interacting client',asy
  }finally{a?.close();b?.close();await app.stop();await rm(dir,{recursive:true,force:true})}
 });
 
+test('numeric components and icon bars persist and render on client',async()=>{
+ const {mkdtemp,rm}=await import('node:fs/promises');
+ const {tmpdir}=await import('node:os');
+ const {join}=await import('node:path');
+ const dir=await mkdtemp(join(tmpdir(),'touchdeck-graphics-'));
+ const app=createTouchDeckServer({port:0,host:'127.0.0.1',dataFile:join(dir,'config.json')});
+ let socket;
+ try{
+  const {port}=await app.start();
+  const config=await (await fetch('http://127.0.0.1:'+port+'/api/admin/config')).json();
+  const page=config.pageSets[0].pages[0];
+  page.components[0]={...page.components[0],type:'Gauge',min:0,max:100,value:45,display:'circle'};
+  const response=await fetch('http://127.0.0.1:'+port+'/api/admin/config',{method:'PUT',headers:{'content-type':'application/json'},body:JSON.stringify(config)});
+  assert.equal(response.status,200,JSON.stringify(await response.json()));
+  const connected=await connect(port,'graphic-test');socket=connected.socket;
+  const state=await waitPage(socket,{type:'assign',groupId:'demo'});
+  assert.equal(state.page.components[0].type,'Gauge');
+  assert.equal(state.page.components[0].value,45);
+  assert.equal(state.page.components[0].display,'circle');
+ }finally{socket?.close();await app.stop();await rm(dir,{recursive:true,force:true})}
+});
+
 test('bound button dispatches POST to source and acknowledges only after HTTP success',async()=>{
  const http=await import('node:http');
  const {mkdtemp,rm}=await import('node:fs/promises');
