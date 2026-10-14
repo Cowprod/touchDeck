@@ -312,6 +312,32 @@ test('component interaction validates page, type and explicitly rejects unconfig
  }finally{socket?.close();await app.stop();await rm(dir,{recursive:true,force:true})}
 });
 
+test('static label/icon/button actions navigate only the interacting client',async()=>{
+ const {mkdtemp,rm}=await import('node:fs/promises');
+ const {tmpdir}=await import('node:os');
+ const {join}=await import('node:path');
+ const dir=await mkdtemp(join(tmpdir(),'touchdeck-static-nav-'));
+ const app=createTouchDeckServer({port:0,host:'127.0.0.1',dataFile:join(dir,'config.json')});
+ let a,b;
+ try{
+  const {port}=await app.start();
+  const data=await (await fetch('http://127.0.0.1:'+port+'/api/admin/config')).json();
+  data.pageSets[0].pages[0].components.push({id:'go-second',type:'Icon',icon:'solid/house',x:0,y:6,w:2,h:1,action:'page_target',targetPageId:'second'});
+  data.pageSets[0].pages[1].components.push({id:'go-home',type:'Label',x:0,y:6,w:2,h:1,text:'Home',action:'page_first'});
+  assert.equal((await fetch('http://127.0.0.1:'+port+'/api/admin/config',{method:'PUT',headers:{'content-type':'application/json'},body:JSON.stringify(data)})).status,200);
+  const first=await connect(port,'nav-a'),other=await connect(port,'nav-b');a=first.socket;b=other.socket;
+  const pageA=await waitPage(a,{type:'assign',groupId:'demo'});
+  const pageB=await waitPage(b,{type:'assign',groupId:'demo'});
+  assert.equal(pageA.page.id,'home');assert.equal(pageB.page.id,'home');
+  const target=await waitPage(a,{type:'interact',pageId:'home',pageRevision:pageA.pageRevision,componentId:'go-second',requestId:'nav-1'});
+  assert.equal(target.page.id,'second');
+  const back=await waitPage(a,{type:'interact',pageId:'second',pageRevision:target.pageRevision,componentId:'go-home',requestId:'nav-2'});
+  assert.equal(back.page.id,'home');
+  const still=await waitPage(b,{type:'navigate',direction:'next'});
+  assert.equal(still.page.id,'second');
+ }finally{a?.close();b?.close();await app.stop();await rm(dir,{recursive:true,force:true})}
+});
+
 test('bound button dispatches POST to source and acknowledges only after HTTP success',async()=>{
  const http=await import('node:http');
  const {mkdtemp,rm}=await import('node:fs/promises');
