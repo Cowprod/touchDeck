@@ -455,3 +455,35 @@ test('stopwatch demo page executes Start Stop Reset through WebSocket and clock 
   assert.equal(app.clients.get('stopwatch-e2e').pageId,'stopwatch');
  }finally{socket?.close();await app.stop();await rm(dir,{recursive:true,force:true})}
 });
+
+
+test('admin protects a group referenced by an offline persisted device', async () => {
+  const { mkdtemp, writeFile, rm } = await import('node:fs/promises');
+  const { tmpdir } = await import('node:os');
+  const { join } = await import('node:path');
+  const dir = await mkdtemp(join(tmpdir(), 'touchdeck-offline-assignment-'));
+  const file = join(dir, 'config.json');
+  const first = createTouchDeckServer({ port: 0, host: '127.0.0.1', dataFile: file });
+  let app = first;
+  try {
+    const { port } = await first.start();
+    const initial = await (await fetch('http://127.0.0.1:' + port + '/api/admin/config')).json();
+    await first.stop();
+    const persisted = { ...initial, schemaVersion: 1, deviceAssignments: { 'offline-device-1': initial.groups[0].id } };
+    await writeFile(file, JSON.stringify(persisted));
+    app = createTouchDeckServer({ port: 0, host: '127.0.0.1', dataFile: file });
+    const restarted = await app.start();
+    const url = 'http://127.0.0.1:' + restarted.port + '/api/admin/config';
+    const config = await (await fetch(url)).json();
+    const assignedGroup = config.groups[0].id;
+    config.groups = config.groups.filter(group => group.id !== assignedGroup);
+    const response = await fetch(url, { method: 'PUT', headers: { 'content-type': 'application/json' }, body: JSON.stringify(config) });
+    assert.equal(response.status, 409);
+    assert.deepEqual(await response.json(), { error: 'group_has_clients', groupId: assignedGroup });
+    const after = await (await fetch(url)).json();
+    assert.ok(after.groups.some(group => group.id === assignedGroup));
+  } finally {
+    await app.stop();
+    await rm(dir, { recursive: true, force: true });
+  }
+});
