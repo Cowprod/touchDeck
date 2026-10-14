@@ -284,8 +284,16 @@ export function createTouchDeckServer({ port = 3000, host = '0.0.0.0', dataFile 
       catch { json(500, { error: 'admin_ui_unavailable' }); }
       return;
     }
+    if (request.method === 'GET' && url.pathname === '/favicon.svg') {
+      try {
+        const bytes = await readFile(fileURLToPath(new URL('../public/favicon.svg', import.meta.url)));
+        response.writeHead(200, { 'content-type': 'image/svg+xml; charset=utf-8', 'cache-control': 'public, max-age=3600', 'x-content-type-options': 'nosniff' });
+        response.end(bytes);
+      } catch { json(500, { error: 'favicon_unavailable' }); }
+      return;
+    }
     if (request.method === 'GET' && url.pathname === '/favicon.ico') {
-      response.writeHead(204, { 'cache-control': 'public, max-age=86400' });
+      response.writeHead(302, { location: '/favicon.svg', 'cache-control': 'no-store' });
       response.end();
       return;
     }
