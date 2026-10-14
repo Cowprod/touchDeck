@@ -385,8 +385,8 @@ export function createTouchDeckServer({ port = 3000, host = '0.0.0.0', dataFile 
       return json(200,{sources:result});
     }
     if (request.method === 'GET' && url.pathname === '/admin/sources') {
-      try { const html = await readFile(fileURLToPath(new URL('../public/sources.html', import.meta.url))); response.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store', 'content-security-policy': "default-src 'self'; script-src 'unsafe-inline'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'self'" }); response.end(html); }
-      catch { return json(500,{error:'sources_ui_unavailable'}); }
+      response.writeHead(302, { location: '/admin#sources', 'cache-control': 'no-store' });
+      response.end();
       return;
     }
     if (url.pathname === '/api/admin/config') {
