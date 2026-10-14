@@ -535,3 +535,33 @@ test('D-028: referenced page sets, sources and device profiles remain protected'
     await rm(dir, { recursive: true, force: true });
   }
 });
+
+
+test('admin has four unified tabs and legacy Sources URL redirects to its tab', async () => {
+  const { readFile, mkdtemp, rm } = await import('node:fs/promises');
+  const { tmpdir } = await import('node:os');
+  const { join } = await import('node:path');
+  const { fileURLToPath } = await import('node:url');
+  const { Script } = await import('node:vm');
+  const html = await readFile(fileURLToPath(new URL('../public/admin.html', import.meta.url)), 'utf8');
+  for (const tab of ['editor', 'groups', 'sources', 'devices']) {
+    assert.match(html, new RegExp('data-td-view="' + tab + '"'));
+  }
+  assert.match(html, /id="td-sources"/);
+  assert.match(html, /id="catalogue"/);
+  assert.match(html, /const sections=\\{editor,groups,sources:sourcesSection,devices\\}/);
+  const scripts = [...html.matchAll(/<script(?:\\s[^>]*)?>([\\s\\S]*?)<\\/script>/g)];
+  assert.ok(scripts.length >= 2);
+  for (const [, code] of scripts) new Script(code);
+  const dir = await mkdtemp(join(tmpdir(), 'touchdeck-unified-admin-'));
+  const app = createTouchDeckServer({ port: 0, host: '127.0.0.1', dataFile: join(dir, 'config.json') });
+  try {
+    const { port } = await app.start();
+    const response = await fetch('http://127.0.0.1:' + port + '/admin/sources', { redirect: 'manual' });
+    assert.equal(response.status, 302);
+    assert.equal(response.headers.get('location'), '/admin#sources');
+  } finally {
+    await app.stop();
+    await rm(dir, { recursive: true, force: true });
+  }
+});
