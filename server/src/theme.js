@@ -12,6 +12,10 @@ export function resolvePage(page, profile) {
     backgroundColor:COLORS[page.background] ?? '#0f172a',
     components:page.components.map(item=>({
       id:item.id,type:item.type,text:item.text??'',icon:item.type==='Icon'?item.icon??null:null,
+      icons:item.type==='IconBar'?item.icons??[]:undefined,
+      min:item.min??0,max:item.max??100,value:item.value??0,
+      orientation:item.orientation??'horizontal',display:item.display??'bar',
+      property:item.property??null,
       x:Math.round(item.x*profile.width/profile.gridColumns),
       y:Math.round(item.y*profile.height/profile.gridRows),
       w:Math.round(item.w*profile.width/profile.gridColumns),
