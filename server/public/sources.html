@@ -10,7 +10,7 @@ main{max-width:1800px;padding-top:1rem}.card{margin-bottom:1rem}.mono{font-famil
 .td-tab:hover,.td-external:hover{background:rgba(255,255,255,.09);color:#fff}
 .td-tab.active{background:rgba(255,255,255,.15);color:#fff}
 @media(max-width:650px){.td-nav .container-fluid{padding:.5rem}.td-tab,.td-external{padding:.5rem .65rem;font-size:.88rem}}
-</style></head><body><main class="container-fluid py-4">
+</style></head><body>
 <nav class="td-nav" aria-label="Navigation principale"><div class="container-fluid">
 <a class="td-brand" href="/admin"><img src="/favicon.svg" alt="" width="28" height="28" class="me-2" style="vertical-align:middle">TouchDeck</a>
 <a class="td-tab" href="/admin#editor"><i class="fa-solid fa-pen-ruler me-1"></i> Éditeur</a>
@@ -18,7 +18,8 @@ main{max-width:1800px;padding-top:1rem}.card{margin-bottom:1rem}.mono{font-famil
 <a class="td-tab active" href="/admin/sources" aria-current="page"><i class="fa-solid fa-database me-1"></i> Sources</a>
 <a class="td-tab" href="/admin#devices"><i class="fa-solid fa-microchip me-1"></i> Appareils</a>
 <a class="td-external ms-auto" href="/"><i class="fa-solid fa-display me-1"></i> Simulateur plein écran</a>
-</div></nav>\n<main class="container-fluid py-4"><div class="mb-3"><h1 class="h3 mb-1"><i class="fa-solid fa-database me-2"></i>Sources de données</h1><div class="text-body-secondary">Catalogue, configuration et mesures reçues par TouchDeck</div></div>
+</div></nav>
+<main class="container-fluid py-4"><div class="mb-3"><h1 class="h3 mb-1"><i class="fa-solid fa-database me-2"></i>Sources de données</h1><div class="text-body-secondary">Catalogue, configuration et mesures reçues par TouchDeck</div></div>
 <div id="message" role="status" class="alert alert-info">Chargement…</div>
 <div class="row g-3"><div class="col-lg-4"><div class="card"><div class="card-header">Catalogue <button id="refresh" class="btn btn-sm btn-secondary float-end" type="button">Actualiser</button></div><div class="card-body"><div class="input-group mb-3"><input id="filter" class="form-control" placeholder="Rechercher une source"><button id="new" class="btn btn-success" type="button"><i class="fa-solid fa-plus"></i> Nouvelle</button></div><div id="catalogue" class="list-group"></div></div></div>
 <div class="card"><div class="card-header">État de la réception</div><div class="card-body"><div id="connection" class="mb-2">—</div><div class="small text-body-secondary">Une source push est « active » si une mesure a été reçue récemment. Sans mesure, l'état est inconnu ou inactif ; il ne prouve pas une panne réseau. Les mesures sont conservées en mémoire jusqu'au redémarrage du serveur.</div></div></div></div>
