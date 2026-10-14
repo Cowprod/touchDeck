@@ -73,6 +73,9 @@ test('physical device starts unassigned and group selection persists across serv
   let response=await fetch(base+'/api/admin/clients',{method:'PUT',headers,body:JSON.stringify({clientId:'esp-test-1',groupId:'demo'})});
   assert.equal(response.status,200);
   await until(()=>client.messages.some(m=>m.type==='page'&&m.page?.id==='home'));
+  const config=await(await fetch(base+'/api/admin/config')).json();
+  config.pageSets[0].pages[0].title='Persistence regression';
+  assert.equal((await fetch(base+'/api/admin/config',{method:'PUT',headers,body:JSON.stringify(config)})).status,200);
   ws.close();await new Promise(resolve=>ws.once('close',resolve));await app.stop();
   app=createTouchDeckServer({port:0,host:'127.0.0.1',dataFile});({port}=await app.start());base='http://127.0.0.1:'+port;
   client=await connect(port,'esp-test-1','esp32c3');ws=client.ws;
