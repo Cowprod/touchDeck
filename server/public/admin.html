@@ -72,7 +72,7 @@ main{max-width:1800px!important;padding-top:1rem!important}
 .td-live-column #simulators>div iframe{width:100%!important;max-width:100%!important}
 /* Atelier : rail affleurant à gauche, aperçu dans l'éditeur avant les composants. */
 main.container-fluid{padding-left:0!important;padding-top:0!important}
-#td-editor>.td-section-heading,#td-editor>.td-help{display:none}
+#td-admin-workspace .td-section[hidden]{display:none!important}
 .td-workspace{gap:12px!important;grid-template-columns:250px minmax(0,1fr)!important}
 .td-live-column{border-radius:0!important;padding:0!important;margin:0!important;width:250px!important;max-width:250px!important;position:sticky!important;top:var(--td-nav-height,72px)!important;grid-column:1!important;grid-row:1!important;max-height:calc(100dvh - var(--td-nav-height,72px))!important;overflow-y:auto!important}
 .td-edit-column{grid-column:2!important;grid-row:1!important;padding-right:12px!important;min-width:0}
@@ -587,24 +587,22 @@ document.addEventListener('visibilitychange',()=>{if(!document.hidden)refreshFir
  const firmwarePanel=document.getElementById('firmwareDevices')?.closest('.card');
  const legacySources=panelOf('source');
  if(!groupPanel||!pagePanel||!componentPanel||!previewPanel||!simPanel||!firmwarePanel)return;
- const editor=document.createElement('div');editor.id='td-editor';editor.className='td-section';
- const workspace=document.createElement('div');workspace.className='td-workspace';
+ const workspace=document.createElement('div');workspace.id='td-admin-workspace';workspace.className='td-workspace';
+ const live=document.createElement('aside');live.className='td-live-column rounded-end overflow-hidden bg-dark';live.setAttribute('aria-label','Simulateurs toujours visibles');
  const controls=document.createElement('div');controls.className='td-edit-column';
- const live=document.createElement('aside');live.className='td-live-column';live.setAttribute('aria-label','Simulateurs toujours visibles');
- const title=document.createElement('h1');title.className='td-section-heading';title.textContent='Éditeur de pages';
- const help=document.createElement('p');help.className='td-help';help.textContent='Simulateurs à gauche ; édition, aperçu et composants à droite.';
- editor.append(title,help,workspace);workspace.append(live,controls);
- for(const panel of [pagePanel,previewPanel,componentPanel]){panel.classList.remove('col-lg-6','col-12');controls.append(panel)}
- simPanel.classList.remove('col-lg-6','col-12');live.classList.add('rounded-end','overflow-hidden','bg-dark');live.append(simPanel)
+ workspace.append(live,controls);
+ const editor=document.createElement('div');editor.id='td-editor';editor.className='td-section';
+ for(const panel of [pagePanel,previewPanel,componentPanel]){panel.classList.remove('col-lg-6','col-12');editor.append(panel)}
+ simPanel.classList.remove('col-lg-6','col-12');live.append(simPanel);
  const groups=document.createElement('div');groups.id='td-groups';groups.className='td-section';groups.hidden=true;
- groups.innerHTML='<h1 class="td-section-heading">Groupes</h1><p class="td-help">Affectation des groupes aux jeux de pages.</p>';
  groupPanel.classList.remove('col-lg-6');groups.append(groupPanel);
  const sourcesSection=document.getElementById('td-sources');
+ sourcesSection.querySelector(':scope > .mb-3')?.remove();
  const devices=document.createElement('div');devices.id='td-devices';devices.className='td-section';devices.hidden=true;
- devices.innerHTML='<h1 class="td-section-heading">Appareils connectés</h1><p class="td-help">État des clients et versions du firmware.</p>';
  devices.append(firmwarePanel);
  if(legacySources){legacySources.hidden=true;legacySources.style.display='none'}
- row.replaceWith(editor,groups,devices,...(legacySources?[legacySources]:[]));
+ controls.append(editor,groups,sourcesSection,devices);
+ row.replaceWith(workspace,...(legacySources?[legacySources]:[]));
  const sections={editor,groups,sources:sourcesSection,devices};
  function show(view){
   if(!sections[view])view='editor';
