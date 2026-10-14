@@ -151,9 +151,23 @@ export function createTouchDeckServer({ port = 3000, host = '0.0.0.0', dataFile 
     const page=set?.pages.find(p=>p.id===client.pageId);
     if(!page||message.pageId!==page.id||message.pageRevision!==configRevision)return {error:'stale_page'};
     const item=page.components.find(c=>c.id===message.componentId);
-    if(!item||!['Button','Toggle'].includes(item.type)||item.disabled)return {error:'invalid_interaction'};
+    if(!item||!['Button','Toggle','Label','Icon'].includes(item.type)||item.disabled)return {error:'invalid_interaction'};
     const requestId=typeof message.requestId==='string'&&/^[a-zA-Z0-9_-]{1,80}$/.test(message.requestId)?message.requestId:null;
     if(!requestId)return {error:'invalid_request_id'};
+    if(item.type!=='Toggle'&&!item.sourceId&&item.action){
+      const pages=visiblePages(client.groupId);
+      const destination=item.action==='page_first'?pages[0]:item.action==='page_target'?pages.find(p=>p.id===item.targetPageId):null;
+      if(item.action==='page_next'||item.action==='page_previous'){
+        navigate(client,item.action==='page_next'?'next':'previous');
+      }else if(destination){
+        client.pageId=destination.id;
+        send(client,snapshot(client));
+      }else{
+        return {error:'invalid_navigation_target'};
+      }
+      send(client,{type:'interaction_result',componentId:item.id,requestId,status:'acknowledged'});
+      return {};
+    }
     if(item.type==='Toggle'&&item.sourceId&&item.property){
       const source=sources.get(item.sourceId),definition=source?.descriptor?.properties?.[item.property];
       if(source&&!source.descriptor.actions?.[item.writeAction??('set_'+item.property)])return {error:'invalid_toggle_write_action'};
@@ -182,7 +196,7 @@ export function createTouchDeckServer({ port = 3000, host = '0.0.0.0', dataFile 
       });
       return {};
     }
-    if(item.type==='Button'&&item.sourceId&&item.action){
+    if(['Button','Label','Icon'].includes(item.type)&&item.sourceId&&item.action){
       const source=sources.get(item.sourceId),definition=source?.descriptor?.actions?.[item.action];
       if(!definition)return {error:'invalid_action_binding'};
       const params={};
@@ -205,7 +219,7 @@ export function createTouchDeckServer({ port = 3000, host = '0.0.0.0', dataFile 
       return {};
     }
     // No action binding means no execution.
-    if(item.type==='Button'){
+    if(['Button','Label','Icon'].includes(item.type)){
       send(client,{type:'interaction_result',componentId:item.id,requestId,status:'rejected',reason:'action_not_configured'});
       return {};
     }
