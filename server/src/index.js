@@ -453,7 +453,8 @@ export function createTouchDeckServer({ port = 3000, host = '0.0.0.0', dataFile 
             if (!validId(group.id) || groupIds.has(group.id) || typeof group.name !== 'string' || group.name.length > 120 || !sets.has(group.pageSetId)) return json(400, { error: 'invalid_group' });
             groupIds.add(group.id);
           }
-          await store.save({ schemaVersion: 1, revision: configRevision + 1, groups: config.groups, pageSets: config.pageSets, sources:requestedSources,deviceAssignments:Object.fromEntries(deviceAssignments) });
+          await store.save({ schemaVersion: 1, revision: configRevision + 1, groups: config.groups, pageSets: config.pageSets, sources:requestedSources,deviceAssignments:Object.fromEntries([...deviceAssignments].filter(([,groupId])=>groupIds.has(groupId))) });
+          for(const [id,groupId] of deviceAssignments)if(!groupIds.has(groupId))deviceAssignments.delete(id);
           configRevision += 1;
           groups.clear(); pageSets.clear();
           for (const set of config.pageSets) pageSets.set(set.id, set);
