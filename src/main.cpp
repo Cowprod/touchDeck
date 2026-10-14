@@ -232,11 +232,70 @@ void syncFonts(const String &group,uint32_t newRevision){
  Serial.printf("font_sync_ok group=%s glyphs=%u\\n",group.c_str(),(unsigned)fontPaths.size());
 }
 
+// Render frequently updated labels off-screen to avoid per-glyph SPI flicker.
+// Reuse a bounded RGB565 buffer; fall back to the legacy path if it cannot fit.
+bool drawBufferedLabel(const String &text,int x,int y,int w,int h,uint16_t fg,uint16_t bg,int size){
+ if(!fontPaths.is<JsonObject>()||fontPaths.as<JsonObject>().size()==0)return false;
+ if(w<=0||h<=0||(uint32_t)w*h>12000)return false;
+ static uint16_t *pixels=nullptr;
+ static size_t capacity=0;
+ const size_t needed=(size_t)w*h;
+ if(capacity<needed){
+  uint16_t *replacement=(uint16_t*)realloc(pixels,needed*sizeof(uint16_t));
+  if(!replacement)return false;
+  pixels=replacement;capacity=needed;
+ }
+ for(size_t i=0;i<needed;i++)pixels[i]=bg;
+ const int cell=(size*3+2)/5,gh=size+4;
+ int count=0;
+ for(unsigned i=0;i<text.length();){nextFontCodepoint(text,i);count++;}
+ const int start=max(0,(w-count*cell)/2),top=max(0,(h-gh)/2);
+ unsigned index=0;
+ int pos=0;
+ while(index<text.length()&&pos<100){
+  uint32_t cp=nextFontCodepoint(text,index);
+  String id=String(size)+"-"+String(cp,HEX);
+  const char *path=fontPaths[id] | "";
+  if(path[0]){
+   File file=LittleFS.open(path,"r");
+   if(file){
+    const int magic=file.read(),gw=file.read(),height=file.read(),advance=file.read();
+    const int bytes=(gw*height+1)/2;
+    if(magic==0x54&&gw>0&&gw<=32&&height==gh&&bytes<=600&&advance>0){
+     uint8_t bitmap[600];
+     if(file.read(bitmap,bytes)==bytes){
+      for(int py=0;py<height;py++)for(int px=0;px<gw;px++){
+       const int dx=start+pos*cell+px,dy=top+py;
+       if(dx<0||dx>=w||dy<0||dy>=h)continue;
+       const int pixel=py*gw+px;
+       const uint8_t a=(pixel&1)?(bitmap[pixel>>1]&15):(bitmap[pixel>>1]>>4);
+       if(a)pixels[dy*w+dx]=blendFontColor(fg,bg,a);
+      }
+     }
+    }
+    file.close();
+   }
+  }
+  pos++;
+ }
+ lcd->draw16bitRGBBitmap(x,y,pixels,w,h);
+ return true;
+}
 void drawComponent(JsonVariantConst component,bool clearArea){
  int x=component["x"]|0,y=component["y"]|0,w=component["w"]|30,h=component["h"]|30;
  if(x<0||y<0||w<4||h<4||x+w>240||y+h>240)return;
- if(clearArea)lcd->fillRect(x,y,w,h,rgb(state["page"]["backgroundColor"]|"",BLACK));
  String type=component["type"]|"Label";
+ // Only opaque, rectangular, dynamically refreshed labels use the buffer.
+ // Preserve legacy transparency and rounded-corner behavior elsewhere.
+ if(type=="Label"&&clearArea&&!component["backgroundColor"].isNull()&&(component["radius"]|0)==0){
+  String text=component["text"]|"";
+  int size=component["fontSize"]|15;
+  if(size!=12&&size!=15&&size!=20)size=15;
+  const uint16_t foreground=rgb(component["textColor"]|"",WHITE);
+  const uint16_t background=rgb(component["backgroundColor"]|"",rgb(state["page"]["backgroundColor"]|"",BLACK));
+  if(drawBufferedLabel(text,x,y,w,h,foreground,background,size))return;
+ }
+ if(clearArea)lcd->fillRect(x,y,w,h,rgb(state["page"]["backgroundColor"]|"",BLACK));
  if(!((type=="Label"||type=="Icon") && component["backgroundColor"].isNull())){
   int radius=component["radius"]|1;
   int r=radius==2?min(w-2,h-2)/2:radius==0?0:4;
