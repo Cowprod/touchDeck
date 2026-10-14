@@ -70,11 +70,12 @@ export function createTouchDeckServer({ port = 3000, host = '0.0.0.0', dataFile 
   function persist() { return store.save({ schemaVersion: 1, revision: configRevision, groups: [...groups.values()], pageSets: [...pageSets.values()], sources:[...sources.values()],deviceAssignments:Object.fromEntries(deviceAssignments) }); }
   function broadcastConfig() {
     for (const client of clients.values()) {
-      if (client.groupId && !groups.has(client.groupId)) { client.groupId = null; client.pageId = null; }
+      if (client.groupId && !groups.has(client.groupId)) { client.groupId = null; client.pageId = null; deviceAssignments.delete(client.id); }
       const group = groups.get(client.groupId);
       const allPages = pageSets.get(group?.pageSetId)?.pages ?? [];
       if (!allPages.some(page => page.id === client.pageId)) client.pageId = visiblePages(client.groupId)[0]?.id ?? null;
-      if(client.groupId)send(client, snapshot(client));
+      if(client.groupId)send(client,snapshot(client));
+      else send(client,{type:'page',clientId:client.id,groupId:null,page:null,profile:null,pageRevision:configRevision});
     }
   }
   const clients = new Map();
