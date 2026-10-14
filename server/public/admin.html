@@ -187,7 +187,7 @@ async function refreshGroupClients(){
   const response=await fetch('/api/admin/clients',{cache:'no-store'});
   if(!response.ok)throw Error('HTTP '+response.status);
   const data=await response.json();
-  if(currentGroup()?.id!==groupId)return;
+  if(requestId!==groupClientsRequest||currentGroup()?.id!==groupId)return;
   const clients=(data.clients??[]).filter(c=>c.groupId===groupId);
   if(!clients.length){target.textContent='Aucun appareil ou simulateur associé.';return;}
   for(const client of clients){
@@ -198,7 +198,7 @@ async function refreshGroupClients(){
    meta.textContent=kind+' · '+(client.online?'Connecté':'Déconnecté');
    line.append(name,meta);target.append(line);
   }
- }catch(error){target.textContent='Liste indisponible : '+error.message;}
+ }catch(error){if(requestId===groupClientsRequest)target.textContent='Liste indisponible : '+error.message;}
 }
 function refreshSet(selectedPage){const s=currentSet();$('profile').value=s?.profileId??'round-240';options($('page'),(s?.pages??[]).map(x=>({id:x.id,label:x.title})),selectedPage);refreshPage()}
 function refreshPage(){const p=currentPage();$('pageTitle').value=p?.title??'';$('visible').checked=!!p?.visible;$('pageBg').value=p?.background??'';$('components').value=JSON.stringify(p?.components??[],null,2);refreshComponents();renderPreview()}
@@ -514,6 +514,7 @@ async function refreshFirmware(){
      const response=await fetch('/api/admin/clients',{method:'PUT',headers:{'content-type':'application/json'},body:JSON.stringify({clientId:client.id,groupId:select.value||null})});
      if(!response.ok)throw Error('HTTP '+response.status);
      status('Affectation de '+client.id+' enregistrée');
+     refreshGroupClients();
     }catch(error){status('Affectation impossible : '+error.message,true);}
     finally{await refreshFirmware();}
    };
