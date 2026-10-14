@@ -48,13 +48,13 @@ status.textContent=data.page.title+' · '+id.slice(0,8)+' · groupe '+(data.grou
 let simReadySent=false;
 function connect(){simReadySent=false;socket=new WebSocket((location.protocol==='https:'?'wss:':'ws:')+'//'+location.host+'/ws');
 socket.onopen=()=>{status.textContent='Connecté';send({type:'hello',clientId:id})};
-socket.onmessage=event=>{const data=JSON.parse(event.data);if(data.type==='welcome'&&embedded&&window.parent!==window&&!simReadySent){simReadySent=true;window.parent.postMessage({type:'touchdeck-sim-ready',clientId:id},location.origin);}if(data.type==='page')render(data);
+socket.onmessage=event=>{const data=JSON.parse(event.data);if(data.type==='welcome'&&embedded&&window.parent!==window&&!simReadySent){simReadySent=true;window.parent.postMessage({type:'touchdeck-sim-ready',clientId:id},location.origin);}if(data.type==='welcome'&&data.groupId===null)render({type:'page',groupId:null,page:null,profile:null,pageRevision:0});if(data.type==='page')render(data);
 if(data.type==='component_update'&&data.pageId===currentPageId&&data.pageRevision===currentPageRevision){
  for(const change of data.changes??[]){const element=[...screen.children].find(child=>child.dataset.componentId===change.id);if(element){if(['Gauge','Progress','Slider'].includes(element.dataset.type)){const item=element._item;item.value=change.value??item.value;paintVisual(element,item)}else element.textContent=change.text??''}}
 }
 if(data.type==='interaction_result'){const el=[...screen.children].find(child=>child.dataset.componentId===data.componentId);if(el&&data.status!=='pending'){el.dataset.pending='0';el.style.opacity=el.dataset.disabled==='1'?'.45':'1'}status.textContent=data.status==='rejected'?'Action non exécutée : '+data.reason:'Action : '+data.status}
 if(data.type==='error')status.textContent='Erreur : '+data.code};
-socket.onclose=()=>{status.textContent='Déconnecté';setTimeout(connect,3000)}}
+socket.onclose=()=>{screen.replaceChildren();currentPageId=null;currentPageRevision=null;status.textContent='Déconnecté';setTimeout(connect,3000)}}
 document.getElementById('assign').onclick=()=>send({type:'assign',groupId:'demo'});
 document.getElementById('prev').onclick=()=>send({type:'navigate',direction:'previous'});
 document.getElementById('next').onclick=()=>send({type:'navigate',direction:'next'});
