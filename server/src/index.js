@@ -4,6 +4,7 @@ import os from 'node:os';
 import { readFile } from 'node:fs/promises';
 import { iconSource, iconManifest, iconCatalog, validIcon } from './icons.js';
 import { rasterSvg, rasterSvgAlpha } from './icon-raster.js';
+import { createCanvas } from '@napi-rs/canvas';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { WebSocketServer } from 'ws';
 import { createJsonStore } from './store.js';
@@ -328,6 +329,27 @@ export function createTouchDeckServer({ port = 3000, host = '0.0.0.0', dataFile 
       const query = url.searchParams.get('q') ?? '';
       if (query.length > 80) return json(400, { error: 'invalid_query' });
       return json(200, await iconCatalog(query));
+    }
+    if (request.method === 'GET' && url.pathname.startsWith('/api/icons/preview/')) {
+      const name = url.pathname.slice('/api/icons/preview/'.length);
+      if (!validIcon(name)) return json(400, { error: 'invalid_icon' });
+      const icon = await iconSource(name);
+      if (!icon) return json(404, { error: 'icon_not_found' });
+      try {
+        // Same 48x48 four-bit alpha mask used by the ESP32 firmware.
+        const mask = rasterSvgAlpha(icon.bytes.toString('utf8'), 48);
+        const canvas = createCanvas(48, 48), context = canvas.getContext('2d');
+        const pixels = context.createImageData(48, 48);
+        for (let i = 0; i < 48 * 48; i++) {
+          const alpha = (i & 1) ? (mask[3 + (i >> 1)] & 15) : (mask[3 + (i >> 1)] >> 4);
+          pixels.data[i * 4] = 255; pixels.data[i * 4 + 1] = 255;
+          pixels.data[i * 4 + 2] = 255; pixels.data[i * 4 + 3] = alpha * 17;
+        }
+        context.putImageData(pixels, 0, 0);
+        response.writeHead(200, { 'content-type': 'image/png', 'cache-control': 'public, max-age=86400', 'x-content-type-options': 'nosniff' });
+        response.end(canvas.toBuffer('image/png'));
+      } catch { return json(422, { error: 'icon_preview_unavailable' }); }
+      return;
     }
     if (request.method === 'GET' && url.pathname.startsWith('/api/icons/alpha/')) {
       const name = url.pathname.slice('/api/icons/alpha/'.length);
