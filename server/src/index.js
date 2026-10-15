@@ -125,7 +125,7 @@ export function createTouchDeckServer({ port = 3000, host = '0.0.0.0', dataFile 
     otaCache={version:otaFirmwareVersion,board:otaFirmwareBoard,size:info.size,sha256:hash.digest('hex'),mtimeMs:info.mtimeMs};
     return otaCache;
   }
-  const latestFirmwareVersion=otaFirmwareVersion||process.env.TOUCHDECK_FIRMWARE_VERSION??'0.1.0';
+  const latestFirmwareVersion=otaFirmwareVersion||(process.env.TOUCHDECK_FIRMWARE_VERSION??'0.1.0');
   const deviceSourceId=id=>'device_'+id.slice(0,73);
   function deviceSource(id){
     const sourceId=deviceSourceId(id);
