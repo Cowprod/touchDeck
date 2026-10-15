@@ -307,7 +307,7 @@ function renderPreview(){
  const ratio=Math.max(0,Math.min(1,((item.value??0)-(item.min??0))/((item.max??100)-(item.min??0)||1)));
  const track=document.createElement('div');track.style.cssText='position:relative;width:80%;height:35%;background:#475569;border-radius:5px;overflow:hidden';
  if(item.display==='circle'||item.display==='arc'){
-  const mapped={w:item.w*30,h:item.h*30,display:item.display,textColor:palette[item.color]??'#ffffff',backgroundColor:palette[item.background]??palette[currentPage()?.background]??'#111827'};
+  const mapped={w:item.w*30,h:item.h*30,display:item.display,textColor:palette[item.color]??'#ffffff',backgroundColor:item.background?(palette[item.background]??'#313031'):null};
   paintEspGauge(div,mapped,ratio);
  }
  else{
