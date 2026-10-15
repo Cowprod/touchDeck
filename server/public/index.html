@@ -19,7 +19,7 @@ function paintEspGauge(element,item,ratio){
  canvas.style.cssText='display:block;width:100%;height:100%;image-rendering:pixelated';
  const ctx=canvas.getContext('2d'),image=ctx.createImageData(width,height);
  const rgb565=hex=>{const n=parseInt((hex||'#000000').replace('#',''),16)||0;return ((n>>19)<<11)|(((n>>10)&63)<<5)|((n>>3)&31)};
- const background=rgb565(item.backgroundColor||getComputedStyle(element).backgroundColor||'#111827');
+ const background=item.backgroundColor?rgb565(item.backgroundColor):0x3186;
  const foreground=rgb565(item.textColor||'#ffffff'),track=0x8410;
  const cx=Math.floor(width/2),cy=Math.floor(height/2),radius=Math.max(3,Math.floor(Math.min(width,height)/2)-5);
  const outer=radius+2.5,inner=Math.max(0,radius-2.5);
