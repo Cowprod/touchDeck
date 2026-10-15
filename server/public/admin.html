@@ -310,7 +310,17 @@ function renderPreview(){
   const mapped={w:item.w*30,h:item.h*30,display:item.display,textColor:palette[item.color]??'#ffffff',backgroundColor:palette[item.background]??palette[currentPage()?.background]??'#111827'};
   paintEspGauge(div,mapped,ratio);
  }
- else{const fill=document.createElement('div');if(item.orientation==='vertical'){track.style.width='35%';track.style.height='80%';fill.style.cssText='position:absolute;bottom:0;width:100%;height:'+ratio*100+'%;background:currentColor'}else fill.style.cssText='height:100%;width:'+ratio*100+'%;background:currentColor';track.append(fill)}div.append(track)
+ else{
+  const width=item.w*30,height=item.h*30,vertical=item.orientation==='vertical';
+  const bx=vertical?Math.floor(width/3):4,bw=vertical?Math.max(3,Math.floor(width/3)):Math.max(1,width-8);
+  const by=vertical?4:Math.floor(height/3),bh=vertical?Math.max(1,height-8):Math.max(3,Math.floor(height/3));
+  const filled=Math.floor((vertical?bh:bw)*ratio);
+  track.style.cssText='position:absolute;left:'+bx+'px;top:'+by+'px;width:'+bw+'px;height:'+bh+'px;background:#848284;border-radius:0;overflow:hidden';
+  const fill=document.createElement('div');
+  fill.style.cssText=vertical?'position:absolute;bottom:0;left:0;width:100%;height:'+filled+'px;background:currentColor;border-radius:0':'position:absolute;top:0;left:0;width:'+filled+'px;height:100%;background:currentColor;border-radius:0';
+  track.append(fill);
+ }
+ if(item.display!=='circle'&&item.display!=='arc')div.append(track)
  }else if(item.type==='IconBar'){for(const icon of item.icons??[]){const glyph=document.createElement('span');glyph.style.cssText='flex:1;min-width:0;height:65%;background:currentColor;mask-size:contain;mask-position:center;mask-repeat:no-repeat;-webkit-mask-size:contain;-webkit-mask-position:center;-webkit-mask-repeat:no-repeat';glyph.style.maskImage='url("'+iconUrl(icon)+'")';glyph.style.webkitMaskImage=glyph.style.maskImage;div.append(glyph)}}else div.textContent=item.text??item.type;div.title='Déplacer ou redimensionner '+item.id;
   div.onpointerdown=event=>{
    if(event.button!==0)return;event.preventDefault();
