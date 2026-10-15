@@ -58,8 +58,11 @@ void drawIcon(const String &name,int x,int y,int w,int h,uint16_t color,uint16_t
  File file=LittleFS.open(path,"r");
  if(!file)return;
  if(file.read()!=0x41||file.read()!=96||file.read()!=96||file.size()!=4611){file.close();return;}
- uint8_t bitmap[4608];
- if(file.read(bitmap,sizeof(bitmap))!=sizeof(bitmap)){file.close();return;}
+ // A 96x96 mask exceeds the remaining loopTask stack on ESP32-C3.
+ // Allocate the bitmap in heap instead of the task stack.
+ std::unique_ptr<uint8_t[]> bitmap(new (std::nothrow) uint8_t[4608]);
+ if(!bitmap){file.close();Serial.println("icon_bitmap_alloc_failed");return;}
+ if(file.read(bitmap.get(),4608)!=4608){file.close();return;}
  file.close();
  const int scale=min(w,h);
  if(scale<=0||scale>240)return;
