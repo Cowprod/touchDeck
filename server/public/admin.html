@@ -244,7 +244,7 @@ async function refreshGroupClients(){
 function refreshSet(selectedPage){const s=currentSet();$('profile').value=s?.profileId??'round-240';options($('page'),(s?.pages??[]).map(x=>({id:x.id,label:x.title})),selectedPage);refreshPage()}
 function refreshPage(){const p=currentPage();$('pageTitle').value=p?.title??'';$('visible').checked=!!p?.visible;$('pageBg').value=p?.background??'';$('components').value=JSON.stringify(p?.components??[],null,2);refreshComponents();renderPreview()}
 function currentComponent(){return currentPage()?.components.find(x=>x.id===$('component').value)}
-function iconUrl(name){return '/api/icons/source/'+name.split('/').map(encodeURIComponent).join('/')}
+function iconUrl(name){return '/api/icons/preview/'+name.split('/').map(encodeURIComponent).join('/')}
 function refreshComponents(selected){const p=currentPage();options($('component'),(p?.components??[]).map(x=>({id:x.id,label:x.type+' — '+(x.text??x.id)})),selected??$('component').value);refreshComponent()}
 function refreshComponent(){const item=currentComponent();
 const source=config?.sources?.find(s=>s.id===item?.sourceId);
