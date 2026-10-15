@@ -350,10 +350,36 @@ void drawComponent(JsonVariantConst component,bool clearArea){
   if(display=="circle"||display=="arc"){
    int cx=x+w/2,cy=y+h/2,r=max(3,min(w,h)/2-5);
    int start=display=="arc"?135:0,extent=display=="arc"?270:360;
-   for(int a=0;a<extent;a+=3){
-    float angle=(start+a-90)*PI/180.0f;
-    int px=cx+(int)(cosf(angle)*r),py=cy+(int)(sinf(angle)*r);
-    lcd->fillCircle(px,py,2,a<extent*ratio?color:track);
+   // Render a continuous annular band with 4x subpixel coverage.
+   // Avoid disconnected fillCircle stamps at 3-degree increments.
+   const float outer=r+2.5f,inner=max(0.0f,r-2.5f);
+   const float progress=extent*ratio;
+   const int left=max(0,(int)floorf(cx-outer-1)),right=min(239,(int)ceilf(cx+outer+1));
+   const int top=max(0,(int)floorf(cy-outer-1)),bottom=min(239,(int)ceilf(cy+outer+1));
+   const uint16_t bg=rgb(component["backgroundColor"]|"",rgb(state["page"]["backgroundColor"]|"",BLACK));
+   uint16_t line[240];
+   for(int py=top;py<=bottom;py++){
+    for(int px=left;px<=right;px++){
+     int active=0,inactive=0;
+     for(int sy=0;sy<2;sy++)for(int sx=0;sx<2;sx++){
+      float dx=px+(sx?0.75f:0.25f)-cx,dy=py+(sy?0.75f:0.25f)-cy;
+      float dist2=dx*dx+dy*dy;
+      if(dist2<inner*inner||dist2>outer*outer)continue;
+      float deg=atan2f(dy,dx)*180.0f/PI+90.0f-start;
+      while(deg<0)deg+=360.0f;
+      if(deg>=extent)continue;
+      if(deg<progress)active++;else inactive++;
+     }
+     uint16_t target=bg;
+     if(active||inactive){
+      const int rr=((color>>11)*active+(track>>11)*inactive+(bg>>11)*(4-active-inactive)+2)/4;
+      const int gg=(((color>>5)&63)*active+((track>>5)&63)*inactive+((bg>>5)&63)*(4-active-inactive)+2)/4;
+      const int bb=((color&31)*active+(track&31)*inactive+(bg&31)*(4-active-inactive)+2)/4;
+      target=(rr<<11)|(gg<<5)|bb;
+     }
+     line[px-left]=target;
+    }
+    lcd->draw16bitRGBBitmap(left,py,line,right-left+1,1);
    }
   }else if(orientation=="vertical"){
    int bx=x+w/3,bw=max(3,w/3),by=y+4,bh=max(1,h-8),filled=(int)(bh*ratio);
