@@ -1,5 +1,8 @@
 import http from 'node:http';
 import os from 'node:os';
+import { createHash } from 'node:crypto';
+import { stat } from 'node:fs/promises';
+import { createReadStream } from 'node:fs';
 
 import { readFile } from 'node:fs/promises';
 import { iconSource, iconManifest, iconCatalog, validIcon } from './icons.js';
@@ -106,7 +109,23 @@ export function createTouchDeckServer({ port = 3000, host = '0.0.0.0', dataFile 
     actionQueues.set(client.id,next);
     next.finally(()=>{if(actionQueues.get(client.id)===next)actionQueues.delete(client.id)}).catch(()=>{});
   }
-  const latestFirmwareVersion=process.env.TOUCHDECK_FIRMWARE_VERSION??'0.1.0';
+  // OTA artifact is published out-of-band by a trusted build/deployment step.
+  // No upload or arbitrary filesystem path is accepted from HTTP clients.
+  const otaFirmwarePath=process.env.TOUCHDECK_OTA_FIRMWARE_PATH??'';
+  const otaFirmwareVersion=process.env.TOUCHDECK_OTA_FIRMWARE_VERSION??'';
+  const otaFirmwareBoard=process.env.TOUCHDECK_OTA_FIRMWARE_BOARD??'esp32c3';
+  let otaCache=null;
+  async function otaArtifact(){
+    if(!otaFirmwarePath||!/^\\d+\\.\\d+\\.\\d+(?:[-+][a-zA-Z0-9.-]+)?$/.test(otaFirmwareVersion))return null;
+    const info=await stat(otaFirmwarePath);
+    if(!info.isFile()||info.size<4096||info.size>2097152)throw new Error('ota_artifact_invalid');
+    if(otaCache?.mtimeMs===info.mtimeMs&&otaCache.size===info.size)return otaCache;
+    const hash=createHash('sha256');
+    for await(const chunk of createReadStream(otaFirmwarePath))hash.update(chunk);
+    otaCache={version:otaFirmwareVersion,board:otaFirmwareBoard,size:info.size,sha256:hash.digest('hex'),mtimeMs:info.mtimeMs};
+    return otaCache;
+  }
+  const latestFirmwareVersion=otaFirmwareVersion||process.env.TOUCHDECK_FIRMWARE_VERSION??'0.1.0';
   const deviceSourceId=id=>'device_'+id.slice(0,73);
   function deviceSource(id){
     const sourceId=deviceSourceId(id);
@@ -409,6 +428,19 @@ export function createTouchDeckServer({ port = 3000, host = '0.0.0.0', dataFile 
       if (!group) return json(404, { error: 'group_not_found' });
       try { return json(200, { groupId, ...await iconManifest(pageSets.get(group.pageSetId)) }); }
       catch { return json(500, { error: 'icon_manifest_unavailable' }); }
+    }
+    if(request.method==='GET'&&url.pathname==='/api/firmware/manifest'){
+      try{const artifact=await otaArtifact();return json(200,{available:!!artifact,...(artifact??{})});}
+      catch{return json(503,{error:'ota_artifact_unavailable'});}
+    }
+    if(request.method==='GET'&&url.pathname==='/api/firmware/esp32c3.bin'){
+      try{
+        const artifact=await otaArtifact();
+        if(!artifact||artifact.board!=='esp32c3')return json(404,{error:'firmware_not_found'});
+        response.writeHead(200,{'content-type':'application/octet-stream','content-length':artifact.size,'cache-control':'no-store','x-firmware-sha256':artifact.sha256});
+        createReadStream(otaFirmwarePath).on('error',()=>response.destroy()).pipe(response);
+        return;
+      }catch{return json(503,{error:'ota_artifact_unavailable'});}
     }
     if (request.method === 'GET' && url.pathname === '/api/health') return json(200, { ok: true, service: 'touchDeck' });
     if (request.method === 'GET' && url.pathname === '/api/admin/sources/status') {
