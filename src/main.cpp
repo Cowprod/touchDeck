@@ -51,32 +51,38 @@ void status(String a,String b){
  label(a,20,104,200,20,YELLOW,1);
  label(b,20,132,200,30,WHITE,1);
 }
-void drawIcon(const String &name,int x,int y,int w,int h,uint16_t color){
+// Alpha icons are rendered as RGB565 row spans; transparent pixels remain untouched.
+void drawIcon(const String &name,int x,int y,int w,int h,uint16_t color,uint16_t background){
  const char *path=iconPaths[name] | "";
  if(!path[0]||!iconFsReady)return;
  File file=LittleFS.open(path,"r");
  if(!file)return;
- int width=file.read(),height=file.read();
- if(width!=48||height!=48||file.size()!=290){file.close();return;}
- uint8_t bitmap[288];
+ if(file.read()!=0x41||file.read()!=48||file.read()!=48||file.size()!=1155){file.close();return;}
+ uint8_t bitmap[1152];
  if(file.read(bitmap,sizeof(bitmap))!=sizeof(bitmap)){file.close();return;}
  file.close();
- int scale=min(w,h);
- int left=x+(w-scale)/2,top=y+(h-scale)/2;
- // Draw contiguous opaque spans instead of one SPI transaction per pixel.
- // Preserve transparency and the existing 48x48 icon mask for this A/B test.
+ const int scale=min(w,h);
+ if(scale<=0||scale>240)return;
+ const int left=x+(w-scale)/2,top=y+(h-scale)/2;
+ uint16_t row[240];
  for(int py=0;py<scale;py++){
   const int sy=py*48/scale;
   int runStart=-1;
   for(int px=0;px<=scale;px++){
-   bool opaque=false;
+   uint8_t alpha=0;
    if(px<scale){
     const int sx=px*48/scale,bit=sy*48+sx;
-    opaque=(bitmap[bit>>3]&(0x80>>(bit&7)))!=0;
+    alpha=(bit&1)?(bitmap[bit>>1]&15):(bitmap[bit>>1]>>4);
    }
-   if(opaque&&runStart<0)runStart=px;
-   if(!opaque&&runStart>=0){
-    lcd->drawFastHLine(left+runStart,top+py,px-runStart,color);
+   if(alpha){
+    if(runStart<0)runStart=px;
+    const uint8_t inv=15-alpha;
+    const uint16_t red=(((color>>11)*alpha+(background>>11)*inv+7)/15);
+    const uint16_t green=(((((color>>5)&63)*alpha+((background>>5)&63)*inv+7)/15));
+    const uint16_t blue=(((color&31)*alpha+(background&31)*inv+7)/15);
+    row[px]=(red<<11)|(green<<5)|blue;
+   }else if(runStart>=0){
+    lcd->draw16bitRGBBitmap(left+runStart,top+py,row+runStart,px-runStart,1);
     runStart=-1;
    }
   }
@@ -101,22 +107,22 @@ void syncIcons(const String &group,uint32_t newRevision){
  for(JsonVariantConst resource:manifest["resources"].as<JsonArrayConst>()){
   String name=resource["id"]|"",sha=resource["sha256"]|"";
   if(name.length()<3||name.length()>90||sha.length()!=64){success=false;break;}
-  String path="/i"+sha.substring(0,24)+".bin";
+  String path="/a"+sha.substring(0,24)+".bin";
   if(!LittleFS.exists(path)){
    HTTPClient imageHttp;WiFiClient imageNet;
-   String imageUrl="http://"+host+":"+String(port)+"/api/icons/mask/"+name;
+   String imageUrl="http://"+host+":"+String(port)+"/api/icons/alpha/"+name;
    if(!imageHttp.begin(imageNet,imageUrl)){success=false;break;}
    imageHttp.setTimeout(5000);
    int imageCode=imageHttp.GET();
-   if(imageCode!=200||(imageHttp.getSize()>=0&&imageHttp.getSize()!=290)){Serial.printf("icon_mask_http=%d size=%d\\n",imageCode,imageHttp.getSize());imageHttp.end();success=false;break;}
+   if(imageCode!=200||(imageHttp.getSize()>=0&&imageHttp.getSize()!=1155)){Serial.printf("icon_mask_http=%d size=%d\\n",imageCode,imageHttp.getSize());imageHttp.end();success=false;break;}
    String tmp=path+".tmp";
    File output=LittleFS.open(tmp,"w");
    if(!output){imageHttp.end();success=false;break;}
    int copied=imageHttp.writeToStream(&output);
    output.close();imageHttp.end();
-   if(copied!=290){LittleFS.remove(tmp);success=false;break;}
+   if(copied!=1155){LittleFS.remove(tmp);success=false;break;}
    File verify=LittleFS.open(tmp,"r");
-   bool valid=verify&&verify.size()==290&&verify.read()==48&&verify.read()==48;
+   bool valid=verify&&verify.size()==1155&&verify.read()==0x41&&verify.read()==48&&verify.read()==48;
    verify.close();
    if(!valid||!LittleFS.rename(tmp,path)){LittleFS.remove(tmp);success=false;break;}
   }
@@ -133,7 +139,7 @@ void syncIcons(const String &group,uint32_t newRevision){
   file.close();
   bool keep=false;
   for(JsonPairConst entry:iconPaths.as<JsonObjectConst>())if(path==entry.value().as<String>()){keep=true;break;}
-  if(path.startsWith("/i")&&path.endsWith(".bin")&&!keep)LittleFS.remove(path);
+  if((path.startsWith("/i")||path.startsWith("/a"))&&path.endsWith(".bin")&&!keep)LittleFS.remove(path);
   file=root.openNextFile();
  }
  root.close();
@@ -362,13 +368,13 @@ void drawComponent(JsonVariantConst component,bool clearArea){
   int count=icons.size();if(count==0)return;
   for(int i=0;i<count;i++){
    int iw=w/count;
-   drawIcon(icons[i].as<String>(),x+i*iw+2,y+2,iw-4,h-4,rgb(component["textColor"]|"",WHITE));
+   drawIcon(icons[i].as<String>(),x+i*iw+2,y+2,iw-4,h-4,rgb(component["textColor"]|"",WHITE),rgb(component["backgroundColor"]|"",rgb(state["page"]["backgroundColor"]|"",BLACK)));
   }
   return;
  }
  if(type=="Icon"){
   Serial.printf("icon_render name=%s color=%s bg=%s cached=%d\\n",component["icon"]|"",component["textColor"]|"",component["backgroundColor"]|"transparent",iconPaths.containsKey(component["icon"]|""));
-  drawIcon(component["icon"]|"",x+2,y+2,w-4,h-4,rgb(component["textColor"]|"",WHITE));
+  drawIcon(component["icon"]|"",x+2,y+2,w-4,h-4,rgb(component["textColor"]|"",WHITE),rgb(component["backgroundColor"]|"",rgb(state["page"]["backgroundColor"]|"",BLACK)));
  }
  else {
   String text=component["text"]|"";
