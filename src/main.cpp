@@ -293,13 +293,17 @@ bool drawBufferedLabel(const String &text,int x,int y,int w,int h,uint16_t fg,ui
  lcd->draw16bitRGBBitmap(x,y,pixels,w,h);
  return true;
 }
+// Diagnostic A/B: use the graphics library's built-in bitmap font.
+// Set to 0 to restore the custom downloaded glyph renderer.
+#define TOUCHDECK_TEST_BUILTIN_FONT 1
+
 void drawComponent(JsonVariantConst component,bool clearArea){
  int x=component["x"]|0,y=component["y"]|0,w=component["w"]|30,h=component["h"]|30;
  if(x<0||y<0||w<4||h<4||x+w>240||y+h>240)return;
  String type=component["type"]|"Label";
  // Only opaque, rectangular, dynamically refreshed labels use the buffer.
  // Preserve legacy transparency and rounded-corner behavior elsewhere.
- if(type=="Label"&&clearArea&&!component["backgroundColor"].isNull()){
+ if(!TOUCHDECK_TEST_BUILTIN_FONT&&type=="Label"&&clearArea&&!component["backgroundColor"].isNull()){
   String text=component["text"]|"";
   int size=component["fontSize"]|15;
   if(size!=12&&size!=15&&size!=20)size=15;
@@ -358,7 +362,7 @@ void drawComponent(JsonVariantConst component,bool clearArea){
   uint16_t background=rgb(component["backgroundColor"]|"",rgb(state["page"]["backgroundColor"]|"",BLACK));
   int size=component["fontSize"]|15;
   if(size!=12&&size!=15&&size!=20)size=15;
-  if(!drawFontText(text,x+2,y+2,w-4,h-4,foreground,background,size))
+  if(TOUCHDECK_TEST_BUILTIN_FONT || !drawFontText(text,x+2,y+2,w-4,h-4,foreground,background,size))
    label(text,x+2,y+2,w-4,h-4,foreground,size>=19?2:1);
  }
 }
