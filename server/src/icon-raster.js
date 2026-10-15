@@ -2,7 +2,7 @@
 // Output: 2-byte header (width, height), followed by row-major packed 1-bit mask.
 const tokens = d => d.match(/[a-zA-Z]|[-+]?(?:\d*\.\d+|\d+\.?\d*)(?:[eE][-+]?\d+)?/g) ?? [];
 export function rasterSvg(svg, size = 48) {
-  if (!Number.isInteger(size) || size < 8 || size > 96) throw Error('invalid_size');
+  if (!Number.isInteger(size) || size < 8 || size > 192) throw Error('invalid_size');
   const vb = /viewBox="([^"]+)"/.exec(svg)?.[1]?.split(/[ ,]+/).map(Number);
   if (!vb || vb.length !== 4 || vb[2] <= 0 || vb[3] <= 0) throw Error('invalid_viewbox');
   const paths = [...svg.matchAll(/<path\b[^>]*\bd="([^"]+)"/g)].map(m => m[1]);
@@ -73,6 +73,25 @@ export function rasterSvg(svg, size = 48) {
       }
     }
     if(winding!==0){const bit=y*size+x;out[2+(bit>>3)]|=0x80>>(bit&7)}
+  }
+  return out;
+}
+
+// Four-bit alpha mask, supersampled 2x to smooth vector edges.
+// Header: 'A', width, height; two alpha pixels per byte (high nibble first).
+export function rasterSvgAlpha(svg, size = 48) {
+  if (!Number.isInteger(size) || size < 8 || size > 96) throw Error('invalid_size');
+  const high = rasterSvg(svg, size * 2);
+  const out = Buffer.alloc(3 + Math.ceil(size * size / 2));
+  out[0] = 0x41; out[1] = size; out[2] = size;
+  for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) {
+    let coverage = 0;
+    for (let dy = 0; dy < 2; dy++) for (let dx = 0; dx < 2; dx++) {
+      const bit = (2*y+dy)*(2*size)+(2*x+dx);
+      if (high[2+(bit>>3)] & (0x80>>(bit&7))) coverage++;
+    }
+    const alpha = Math.round(coverage*15/4), index = y*size+x;
+    out[3+(index>>1)] |= (index&1) ? alpha : alpha<<4;
   }
   return out;
 }
