@@ -63,9 +63,23 @@ void drawIcon(const String &name,int x,int y,int w,int h,uint16_t color){
  file.close();
  int scale=min(w,h);
  int left=x+(w-scale)/2,top=y+(h-scale)/2;
- for(int py=0;py<scale;py++)for(int px=0;px<scale;px++){
-  int sx=px*48/scale,sy=py*48/scale,bit=sy*48+sx;
-  if(bitmap[bit>>3]&(0x80>>(bit&7)))lcd->drawPixel(left+px,top+py,color);
+ // Draw contiguous opaque spans instead of one SPI transaction per pixel.
+ // Preserve transparency and the existing 48x48 icon mask for this A/B test.
+ for(int py=0;py<scale;py++){
+  const int sy=py*48/scale;
+  int runStart=-1;
+  for(int px=0;px<=scale;px++){
+   bool opaque=false;
+   if(px<scale){
+    const int sx=px*48/scale,bit=sy*48+sx;
+    opaque=(bitmap[bit>>3]&(0x80>>(bit&7)))!=0;
+   }
+   if(opaque&&runStart<0)runStart=px;
+   if(!opaque&&runStart>=0){
+    lcd->drawFastHLine(left+runStart,top+py,px-runStart,color);
+    runStart=-1;
+   }
+  }
  }
 }
 void syncIcons(const String &group,uint32_t newRevision){
