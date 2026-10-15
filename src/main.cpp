@@ -57,8 +57,8 @@ void drawIcon(const String &name,int x,int y,int w,int h,uint16_t color,uint16_t
  if(!path[0]||!iconFsReady)return;
  File file=LittleFS.open(path,"r");
  if(!file)return;
- if(file.read()!=0x41||file.read()!=48||file.read()!=48||file.size()!=1155){file.close();return;}
- uint8_t bitmap[1152];
+ if(file.read()!=0x41||file.read()!=96||file.read()!=96||file.size()!=4611){file.close();return;}
+ uint8_t bitmap[4608];
  if(file.read(bitmap,sizeof(bitmap))!=sizeof(bitmap)){file.close();return;}
  file.close();
  const int scale=min(w,h);
@@ -66,12 +66,12 @@ void drawIcon(const String &name,int x,int y,int w,int h,uint16_t color,uint16_t
  const int left=x+(w-scale)/2,top=y+(h-scale)/2;
  uint16_t row[240];
  for(int py=0;py<scale;py++){
-  const int sy=py*48/scale;
+  const int sy=py*96/scale;
   int runStart=-1;
   for(int px=0;px<=scale;px++){
    uint8_t alpha=0;
    if(px<scale){
-    const int sx=px*48/scale,bit=sy*48+sx;
+    const int sx=px*96/scale,bit=sy*96+sx;
     alpha=(bit&1)?(bitmap[bit>>1]&15):(bitmap[bit>>1]>>4);
    }
    if(alpha){
@@ -107,22 +107,22 @@ void syncIcons(const String &group,uint32_t newRevision){
  for(JsonVariantConst resource:manifest["resources"].as<JsonArrayConst>()){
   String name=resource["id"]|"",sha=resource["sha256"]|"";
   if(name.length()<3||name.length()>90||sha.length()!=64){success=false;break;}
-  String path="/a"+sha.substring(0,24)+".bin";
+  String path="/a96"+sha.substring(0,24)+".bin";
   if(!LittleFS.exists(path)){
    HTTPClient imageHttp;WiFiClient imageNet;
    String imageUrl="http://"+host+":"+String(port)+"/api/icons/alpha/"+name;
    if(!imageHttp.begin(imageNet,imageUrl)){success=false;break;}
    imageHttp.setTimeout(5000);
    int imageCode=imageHttp.GET();
-   if(imageCode!=200||(imageHttp.getSize()>=0&&imageHttp.getSize()!=1155)){Serial.printf("icon_mask_http=%d size=%d\\n",imageCode,imageHttp.getSize());imageHttp.end();success=false;break;}
+   if(imageCode!=200||(imageHttp.getSize()>=0&&imageHttp.getSize()!=4611)){Serial.printf("icon_mask_http=%d size=%d\\n",imageCode,imageHttp.getSize());imageHttp.end();success=false;break;}
    String tmp=path+".tmp";
    File output=LittleFS.open(tmp,"w");
    if(!output){imageHttp.end();success=false;break;}
    int copied=imageHttp.writeToStream(&output);
    output.close();imageHttp.end();
-   if(copied!=1155){LittleFS.remove(tmp);success=false;break;}
+   if(copied!=4611){LittleFS.remove(tmp);success=false;break;}
    File verify=LittleFS.open(tmp,"r");
-   bool valid=verify&&verify.size()==1155&&verify.read()==0x41&&verify.read()==48&&verify.read()==48;
+   bool valid=verify&&verify.size()==4611&&verify.read()==0x41&&verify.read()==96&&verify.read()==96;
    verify.close();
    if(!valid||!LittleFS.rename(tmp,path)){LittleFS.remove(tmp);success=false;break;}
   }
