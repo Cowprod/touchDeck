@@ -112,18 +112,23 @@ export function createTouchDeckServer({ port = 3000, host = '0.0.0.0', dataFile 
   }
   // OTA artifact is published out-of-band by a trusted build/deployment step.
   // No upload or arbitrary filesystem path is accepted from HTTP clients.
-  const otaFirmwarePath=process.env.TOUCHDECK_OTA_FIRMWARE_PATH??'';
+  const otaFirmwarePath=process.env.TOUCHDECK_OTA_FIRMWARE_PATH??fileURLToPath(new URL('../data/ota/firmware.bin',import.meta.url));
   const otaFirmwareVersion=process.env.TOUCHDECK_OTA_FIRMWARE_VERSION??'';
   const otaFirmwareBoard=process.env.TOUCHDECK_OTA_FIRMWARE_BOARD??'esp32c3';
   let otaCache=null;
   async function otaArtifact(){
-    if(!otaFirmwarePath||!/^\\d+\\.\\d+\\.\\d+(?:[-+][a-zA-Z0-9.-]+)?$/.test(otaFirmwareVersion))return null;
+    let version=otaFirmwareVersion;
+    let expectedHash=null;
+    if(!version){try{const release=JSON.parse(await readFile(fileURLToPath(new URL('../data/ota/release.json',import.meta.url)),'utf8'));version=release.version;expectedHash=release.sha256;}catch(error){if(error.code==='ENOENT')return null;throw error;}}
+    if(!/^\\d+\\.\\d+\\.\\d+(?:[-+][a-zA-Z0-9.-]+)?$/.test(version))return null;
     const info=await stat(otaFirmwarePath);
     if(!info.isFile()||info.size<4096||info.size>1310720)throw new Error('ota_artifact_invalid');
-    if(otaCache?.mtimeMs===info.mtimeMs&&otaCache.size===info.size)return otaCache;
+    if(otaCache?.mtimeMs===info.mtimeMs&&otaCache.size===info.size&&otaCache.version===version)return otaCache;
     const hash=createHash('sha256');
     for await(const chunk of createReadStream(otaFirmwarePath))hash.update(chunk);
-    otaCache={version:otaFirmwareVersion,board:otaFirmwareBoard,size:info.size,sha256:hash.digest('hex'),mtimeMs:info.mtimeMs};
+    const sha256=hash.digest('hex');
+    if(expectedHash&&sha256!==expectedHash)throw new Error('ota_integrity_mismatch');
+    otaCache={version,board:otaFirmwareBoard,size:info.size,sha256,mtimeMs:info.mtimeMs};
     return otaCache;
   }
   const latestFirmwareVersion=otaFirmwareVersion||(process.env.TOUCHDECK_FIRMWARE_VERSION??'0.1.0');
