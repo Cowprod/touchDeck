@@ -1,8 +1,9 @@
 import http from 'node:http';
 import os from 'node:os';
 import { createHash } from 'node:crypto';
-import { stat } from 'node:fs/promises';
+import { stat, mkdir, writeFile } from 'node:fs/promises';
 import { createReadStream } from 'node:fs';
+import { join } from 'node:path';
 
 import { readFile } from 'node:fs/promises';
 import { iconSource, iconManifest, iconCatalog, validIcon } from './icons.js';
@@ -441,6 +442,25 @@ export function createTouchDeckServer({ port = 3000, host = '0.0.0.0', dataFile 
         createReadStream(otaFirmwarePath).on('error',()=>response.destroy()).pipe(response);
         return;
       }catch{return json(503,{error:'ota_artifact_unavailable'});}
+    }
+    if(request.method==='POST'&&url.pathname==='/api/admin/firmware/publish'){
+      const token=process.env.TOUCHDECK_OTA_ADMIN_TOKEN;
+      if(!token||request.headers.authorization!=='Bearer '+token)return json(403,{error:'ota_authorization_required'});
+      try{
+        let body='';for await(const chunk of request){body+=chunk;if(body.length>512)return json(413,{error:'too_large'});}
+        const {version}=JSON.parse(body);
+        if(!/^\\d+\\.\\d+\\.\\d+$/.test(version))return json(400,{error:'invalid_version'});
+        const source=fileURLToPath(new URL('../../.pio/build/esp32c3_diagnostic/firmware.bin',import.meta.url));
+        const bytes=await readFile(source);
+        if(bytes.length<4096||bytes.length>1310720||bytes[0]!==0xe9)return json(409,{error:'invalid_build'});
+        const sha256=createHash('sha256').update(bytes).digest('hex');
+        const destination=fileURLToPath(new URL('../data/ota/',import.meta.url));
+        await mkdir(destination,{recursive:true});
+        await writeFile(join(destination,'firmware.bin'),bytes);
+        await writeFile(join(destination,'release.json'),JSON.stringify({version,board:'esp32c3',size:bytes.length,sha256}));
+        otaCache=null;
+        return json(200,{ok:true,version,size:bytes.length,sha256});
+      }catch{return json(409,{error:'publication_failed'});}
     }
     if(request.method==='POST'&&url.pathname==='/api/admin/firmware/update'){
       // Explicit bearer token is mandatory: OTA changes executable code.
