@@ -432,7 +432,7 @@ void send(const char *type,const char *key,const String &value){
 void runOta(JsonVariantConst command){
  const String version=command["version"]|"",sha=command["sha256"]|"",board=command["board"]|"";
  const size_t expected=command["size"]|0;
- if(board!="esp32c3"||sha.length()!=64||expected<4096||expected>2097152||version.isEmpty()){
+ if(board!="esp32c3"||sha.length()!=64||expected<4096||expected>1310720||version.isEmpty()){
   Serial.println("ota_rejected_manifest");return;
  }
  const String installed=TOUCHDECK_FIRMWARE_VERSION;
