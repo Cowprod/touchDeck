@@ -13,7 +13,10 @@
 #include <mbedtls/sha256.h>
 Arduino_DataBus *bus = new Arduino_ESP32SPI(2,10,6,7,GFX_NOT_DEFINED);
 Arduino_GFX *lcd = new Arduino_GC9A01(bus,GFX_NOT_DEFINED,0,true);
-#define TOUCHDECK_FIRMWARE_VERSION "0.1.0+" __DATE__ " " __TIME__
+#ifndef TOUCHDECK_VERSION
+#define TOUCHDECK_VERSION "0.1.0"
+#endif
+#define TOUCHDECK_FIRMWARE_VERSION TOUCHDECK_VERSION "+" __DATE__ " " __TIME__
 WebSocketsClient ws;
 WebServer web(80);
 Preferences prefs;
