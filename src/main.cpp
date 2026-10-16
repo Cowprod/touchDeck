@@ -9,6 +9,8 @@
 #include <ESPmDNS.h>
 #include <HTTPClient.h>
 #include <LittleFS.h>
+#include <Update.h>
+#include <mbedtls/sha256.h>
 Arduino_DataBus *bus = new Arduino_ESP32SPI(2,10,6,7,GFX_NOT_DEFINED);
 Arduino_GFX *lcd = new Arduino_GC9A01(bus,GFX_NOT_DEFINED,0,true);
 #define TOUCHDECK_FIRMWARE_VERSION "0.1.0+" __DATE__ " " __TIME__
@@ -425,6 +427,56 @@ void send(const char *type,const char *key,const String &value){
  StaticJsonDocument<256> d;d["type"]=type;d[key]=value;
  String out;serializeJson(d,out);ws.sendTXT(out);
 }
+// OTA is only initiated by the connected TouchDeck server. The manifest
+// supplies an exact SHA-256, board identifier and version before any flash write.
+void runOta(JsonVariantConst command){
+ const String version=command["version"]|"",sha=command["sha256"]|"",board=command["board"]|"";
+ const size_t expected=command["size"]|0;
+ if(board!="esp32c3"||sha.length()!=64||expected<4096||expected>2097152||version.isEmpty()){
+  Serial.println("ota_rejected_manifest");return;
+ }
+ const String installed=TOUCHDECK_FIRMWARE_VERSION;
+ if(installed.startsWith(version+"+")){Serial.println("ota_already_installed");return;}
+ WiFiClient net;
+ HTTPClient http;
+ String url="http://"+host+":"+String(port)+"/api/firmware/esp32c3.bin";
+ if(!http.begin(net,url)){Serial.println("ota_http_begin_failed");return;}
+ http.setTimeout(15000);
+ int code=http.GET();
+ if(code!=200||http.getSize()!=(int)expected){
+  Serial.printf("ota_download_rejected http=%d bytes=%d\\n",code,http.getSize());http.end();return;
+ }
+ if(!Update.begin(expected,U_FLASH)){Serial.printf("ota_begin_failed error=%u\\n",Update.getError());http.end();return;}
+ mbedtls_sha256_context digest;
+ mbedtls_sha256_init(&digest);
+ mbedtls_sha256_starts_ret(&digest,0);
+ WiFiClient *stream=http.getStreamPtr();
+ uint8_t buffer[1024];size_t received=0;
+ unsigned long lastData=millis();
+ bool failed=false;
+ while(received<expected){
+  int available=stream->available();
+  if(available<=0){
+   if(millis()-lastData>15000||!http.connected()){failed=true;break;}
+   delay(5);continue;
+  }
+  size_t count=stream->readBytes(buffer,min((size_t)available,min(sizeof(buffer),expected-received)));
+  if(!count){failed=true;break;}
+  mbedtls_sha256_update_ret(&digest,buffer,count);
+  if(Update.write(buffer,count)!=count){failed=true;break;}
+  received+=count;lastData=millis();
+  delay(1);
+ }
+ uint8_t hash[32];mbedtls_sha256_finish_ret(&digest,hash);mbedtls_sha256_free(&digest);
+ char actual[65];for(int i=0;i<32;i++)sprintf(actual+i*2,"%02x",hash[i]);actual[64]=0;
+ http.end();
+ if(failed||received!=expected||sha!=String(actual)){
+  Update.abort();Serial.printf("ota_integrity_failed bytes=%u expected=%u hash=%s\\n",(unsigned)received,(unsigned)expected,actual);return;
+ }
+ if(!Update.end(true)){Serial.printf("ota_commit_failed error=%u\\n",Update.getError());return;}
+ Serial.printf("ota_success version=%s reboot\\n",version.c_str());
+ delay(200);ESP.restart();
+}
 void onWs(WStype_t event,uint8_t *payload,size_t len){
  if(event==WStype_DISCONNECTED){wsReady=false;if(!disconnectedAt)disconnectedAt=millis();status("Serveur deconnecte",host+":"+String(port));Serial.printf("ws_disconnected endpoint=%s:%u wifi=%s\n",host.c_str(),port,WiFi.localIP().toString().c_str());return;}
  if(event==WStype_CONNECTED){disconnectedAt=0;wsReady=true;StaticJsonDocument<256> hello;hello["type"]="hello";hello["clientId"]=id;hello["firmwareVersion"]=TOUCHDECK_FIRMWARE_VERSION;hello["deviceType"]="esp32c3";String out;serializeJson(hello,out);ws.sendTXT(out);Serial.printf("ws_connected firmware=%s\n",TOUCHDECK_FIRMWARE_VERSION);return;}
@@ -433,6 +485,7 @@ void onWs(WStype_t event,uint8_t *payload,size_t len){
  DeserializationError parseError=deserializeJson(doc,payload,len);
  if(parseError){Serial.printf("ws_json_error=%s len=%u\n",parseError.c_str(),(unsigned)len);return;}
  String type=doc["type"]|"";
+ if(type=="ota_update"){runOta(doc.as<JsonVariantConst>());return;}
  if(type=="welcome"){
   String group=doc["groupId"]|"";
   currentGroup=group;
