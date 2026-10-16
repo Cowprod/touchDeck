@@ -600,7 +600,7 @@ async function refreshFirmware(){
   target.replaceChildren();
   if(!clients.length){target.textContent='Aucun ESP32 enregistré depuis le démarrage du serveur.';return;}
   const table=document.createElement('table');table.className='table table-sm mb-0';
-  const head=document.createElement('thead');head.innerHTML='<tr><th>Appareil</th><th>État</th><th>Installée / disponible</th><th>Groupe</th></tr>';table.append(head);
+  const head=document.createElement('thead');head.innerHTML='<tr><th>Appareil</th><th>État</th><th>Installée / disponible</th><th>Groupe</th><th>OTA</th></tr>';table.append(head);
   const body=document.createElement('tbody');
   for(const client of clients){
    const tr=document.createElement('tr');
@@ -623,6 +623,22 @@ async function refreshFirmware(){
     finally{await refreshFirmware();}
    };
    td.append(select);tr.append(td);
+   const otaTd=document.createElement('td');
+   const otaButton=document.createElement('button');otaButton.type='button';otaButton.className='btn btn-sm btn-warning';otaButton.textContent='Mettre à jour';
+   otaButton.disabled=!client.online||client.updateAvailable!==true;
+   otaButton.title=otaButton.disabled?'Aucune mise à jour disponible ou appareil déconnecté':'Installer le firmware OTA';
+   otaButton.onclick=async()=>{
+    if(!confirm('Mettre à jour '+client.id+' ? L’appareil redémarrera.'))return;
+    const token=prompt('Jeton administrateur OTA (non enregistré)');if(!token)return;
+    otaButton.disabled=true;
+    try{
+     const response=await fetch('/api/admin/firmware/update',{method:'POST',headers:{'content-type':'application/json','authorization':'Bearer '+token},body:JSON.stringify({clientId:client.id})});
+     const data=await response.json();if(!response.ok)throw Error(data.error??'HTTP '+response.status);
+     status('Commande OTA transmise à '+client.id+' ; attendre sa reconnexion.');
+    }catch(error){status('OTA impossible : '+error.message,true);}
+    finally{await refreshFirmware();}
+   };
+   otaTd.append(otaButton);tr.append(otaTd);
    body.append(tr);
   }
   table.append(body);target.append(table);
