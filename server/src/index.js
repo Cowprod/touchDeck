@@ -118,7 +118,7 @@ export function createTouchDeckServer({ port = 3000, host = '0.0.0.0', dataFile 
   async function otaArtifact(){
     if(!otaFirmwarePath||!/^\\d+\\.\\d+\\.\\d+(?:[-+][a-zA-Z0-9.-]+)?$/.test(otaFirmwareVersion))return null;
     const info=await stat(otaFirmwarePath);
-    if(!info.isFile()||info.size<4096||info.size>2097152)throw new Error('ota_artifact_invalid');
+    if(!info.isFile()||info.size<4096||info.size>1310720)throw new Error('ota_artifact_invalid');
     if(otaCache?.mtimeMs===info.mtimeMs&&otaCache.size===info.size)return otaCache;
     const hash=createHash('sha256');
     for await(const chunk of createReadStream(otaFirmwarePath))hash.update(chunk);
