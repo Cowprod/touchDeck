@@ -442,6 +442,21 @@ export function createTouchDeckServer({ port = 3000, host = '0.0.0.0', dataFile 
         return;
       }catch{return json(503,{error:'ota_artifact_unavailable'});}
     }
+    if(request.method==='POST'&&url.pathname==='/api/admin/firmware/update'){
+      // Explicit bearer token is mandatory: OTA changes executable code.
+      const token=process.env.TOUCHDECK_OTA_ADMIN_TOKEN;
+      if(!token||request.headers.authorization!=='Bearer '+token)return json(403,{error:'ota_authorization_required'});
+      try{
+        let body='';for await(const chunk of request){body+=chunk;if(body.length>2048)return json(413,{error:'too_large'});}
+        const data=JSON.parse(body),client=clients.get(data.clientId),artifact=await otaArtifact();
+        if(!artifact)return json(409,{error:'firmware_not_published'});
+        if(!client||client.deviceType!=='esp32c3'||!client.sockets.size)return json(409,{error:'device_offline'});
+        if(artifact.board!=='esp32c3')return json(409,{error:'board_mismatch'});
+        if(client.firmwareVersion?.startsWith(artifact.version+'+'))return json(409,{error:'already_installed'});
+        send(client,{type:'ota_update',version:artifact.version,board:artifact.board,size:artifact.size,sha256:artifact.sha256});
+        return json(202,{ok:true,clientId:client.id,version:artifact.version});
+      }catch{return json(400,{error:'invalid_ota_request'});}
+    }
     if (request.method === 'GET' && url.pathname === '/api/health') return json(200, { ok: true, service: 'touchDeck' });
     if (request.method === 'GET' && url.pathname === '/api/admin/sources/status') {
       const result={};
