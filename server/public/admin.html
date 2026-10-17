@@ -121,6 +121,7 @@ main.container-fluid{padding:12px!important;max-width:1800px!important}
 #td-admin-workspace #td-sources>.row.g-3>div>.card:first-child{margin-top:0!important}
 /* Rail au même niveau que les cards, sans décalage dû au sticky lors du changement d'onglet. */
 #td-admin-workspace .td-live-column{position:relative!important;top:0!important;align-self:start!important}
+ .td-component-dialog{width:min(720px,calc(100vw - 24px));max-height:85vh;overflow:auto;border:1px solid #64748b;border-radius:12px;padding:0;background:#20283b;color:#fff;box-shadow:0 20px 70px #0009}.td-component-dialog::backdrop{background:#0009}.td-component-dialog .card{margin:0;border:0}.td-component-dialog-head{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;background:#27364c;position:sticky;top:0;z-index:2}.td-component-dialog .card-body{padding:16px}.piece{cursor:grab}.piece:active{cursor:grabbing}
 </style></head><body>
 <nav class="td-nav" aria-label="Navigation principale"><div class="container-fluid">
 <a class="td-brand" href="/admin"><img src="/favicon.svg" alt="" width="28" height="28" class="me-2" style="vertical-align:middle">TouchDeck</a>
@@ -349,7 +350,7 @@ function renderPreview(){
      for(const key of ['X','Y','W','H'])$('component'+key).value=item[key.toLowerCase()];
     }
    };
-   const finish=()=>{div.onpointermove=null;div.onpointerup=null;div.onpointercancel=null;if(changed){$('components').value=JSON.stringify(currentPage().components,null,2);dirty(null)}renderPreview();view.focus({preventScroll:true})};
+   const finish=()=>{div.onpointermove=null;div.onpointerup=null;div.onpointercancel=null;if(changed){$('components').value=JSON.stringify(currentPage().components,null,2);dirty(null)}renderPreview();view.focus({preventScroll:true});if(!changed&&typeof window.tdOpenComponentEditor==='function')window.tdOpenComponentEditor()};
    div.onpointerup=finish;div.onpointercancel=finish;
   };
   div.onpointermove=event=>{
@@ -738,5 +739,20 @@ $('delete').onclick=async()=>{
 (async()=>{try{await reload();msg(null)}catch(e){msg('Chargement impossible : '+e.message,true)}})();
 setInterval(async()=>{try{telemetry=await api('/api/admin/sources/status');render()}catch{}},5000);
 
+})();
+</script><dialog id="tdComponentDialog" class="td-component-dialog" aria-label="Propriétés du composant"><div class="td-component-dialog-head"><strong>Modifier le composant</strong><button type="button" class="btn btn-secondary btn-sm" id="tdComponentDialogClose" aria-label="Fermer"><i class="fa-solid fa-xmark"></i> Fermer</button></div><div id="tdComponentDialogContent"></div></dialog>
+<script>
+(function(){
+ const dialog=document.getElementById('tdComponentDialog'),content=document.getElementById('tdComponentDialogContent'),selector=document.getElementById('component');
+ if(!dialog||!selector)return;
+ const card=selector.closest('.card'),anchor=document.createComment('component-editor-original-position');
+ card.parentNode.insertBefore(anchor,card);
+ function open(){if(!dialog.open){content.appendChild(card);dialog.showModal();}document.getElementById('componentText')?.focus({preventScroll:true});}
+ function close(){if(dialog.open)dialog.close();}
+ dialog.addEventListener('close',()=>{anchor.parentNode.insertBefore(card,anchor.nextSibling);});
+ document.getElementById('tdComponentDialogClose').addEventListener('click',close);
+ dialog.addEventListener('click',e=>{if(e.target===dialog)close();});
+ document.getElementById('preview').addEventListener('dblclick',e=>{if(e.target.closest('.piece'))open();});
+ window.tdOpenComponentEditor=open;
 })();
 </script></body></html>
