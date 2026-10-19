@@ -567,15 +567,22 @@ test('admin has four unified tabs and legacy Sources URL redirects to its tab', 
 });
 
 
-test('admin simulator rail is outside all four tab sections', async () => {
+test('admin editor has independent simulators and properties panels without modal', async () => {
   const { readFile } = await import('node:fs/promises');
   const { fileURLToPath } = await import('node:url');
   const html = await readFile(fileURLToPath(new URL('../public/admin.html', import.meta.url)), 'utf8');
   assert.ok(html.includes("workspace.id='td-admin-workspace'"));
-  assert.ok(html.includes("workspace.append(live,controls)"));
-  assert.ok(html.includes("live.append(simPanel)"));
+  assert.ok(html.includes("workspace.append(simulators,controls,properties)"));
+  assert.ok(html.includes("simulators.append(simPanel)"));
+  assert.ok(html.includes("properties.append(componentPanel)"));
   assert.ok(html.includes("controls.append(editor,groups,sourcesSection,devices)"));
   assert.ok(html.includes("row.replaceWith(workspace"));
-  assert.ok(html.includes("#td-admin-workspace .td-section[hidden]{display:none!important}"));
   assert.ok(html.includes("sourcesSection.querySelector(':scope > .mb-3')?.remove()"));
+  assert.ok(html.includes("toggleSimulators.addEventListener('click'"));
+  assert.ok(html.includes("toggleProperties.addEventListener('click'"));
+  assert.ok(html.includes("localStorage.setItem(key,value?'1':'0')"));
+  assert.ok(html.includes(".td-workspace.td-hide-simulators.td-hide-properties"));
+  assert.ok(html.includes("@media(max-width:850px)"));
+  assert.ok(!html.includes('id="tdPropertiesPanel"'));
+  assert.ok(!html.includes('tdOpenComponentEditor'));
 });
