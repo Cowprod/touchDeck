@@ -572,7 +572,16 @@ test('admin editor has independent simulators and properties panels without moda
   const { fileURLToPath } = await import('node:url');
   const html = await readFile(fileURLToPath(new URL('../public/admin.html', import.meta.url)), 'utf8');
   assert.ok(html.includes("workspace.id='td-admin-workspace'"));
-  assert.ok(html.includes("workspace.append(simulators,controls,properties)"));
+  assert.ok(html.includes("workspace.append(simulators,controls,resizer,properties)"));
+  assert.ok(html.includes("resizer.setAttribute('role','separator')"));
+  assert.ok(html.includes("resizer.addEventListener('pointerdown'"));
+  assert.ok(html.includes("resizer.addEventListener('pointermove'"));
+  assert.ok(html.includes("resizer.addEventListener('keydown'"));
+  assert.ok(html.includes("resizer.addEventListener('dblclick'"));
+  assert.ok(html.includes("localStorage.setItem('td-properties-width'"));
+  assert.ok(html.includes("grid-template-areas:\"sim editor splitter props\""));
+  assert.ok(html.includes("var(--td-properties-width,480px)"));
+  assert.ok(html.includes(".td-properties-resizer{display:none}"));
   assert.ok(html.includes("simulators.append(simPanel)"));
   assert.ok(html.includes("properties.append(componentPanel)"));
   assert.ok(html.includes("controls.append(editor,groups,sourcesSection,devices)"));
