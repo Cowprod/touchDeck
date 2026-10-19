@@ -18,110 +18,79 @@ main{max-width:1800px!important;padding-top:1rem!important}
 .td-nav .td-tab.active{background:rgba(255,255,255,.15);color:#fff;box-shadow:inset 0 -3px 0 var(--bs-primary)}
 .td-nav .td-external{color:#d6e0f4;text-decoration:none;padding:.65rem 1rem;border-radius:.65rem;font-weight:600}
 .td-nav .td-external:hover{background:rgba(255,255,255,.09);color:#fff}
-.td-workspace{display:grid;grid-template-columns:minmax(320px,440px) minmax(460px,1fr);gap:1rem;align-items:start}
-.td-edit-column{min-width:0}
-.td-live-column{position:sticky;top:5.8rem;max-height:calc(100vh - 6.5rem);overflow:auto;min-width:0;padding-right:.25rem;grid-column:1;grid-row:1}.td-edit-column{grid-column:2;grid-row:1}
-.td-live-column .card{margin-bottom:1rem}
-.td-live-column .preview{max-width:100%}
-.td-live-column #simulators>.col-lg-4{width:100%;flex:0 0 100%;max-width:100%}
-.td-live-column iframe{max-width:100%}
-.td-edit-column>.card,.td-edit-column>section{width:100%;max-width:100%}
-.td-section[hidden]{display:none!important}
+
+/* Atelier TouchDeck : grille sans overlays, panneaux indépendants. */
+main.container-fluid{max-width:1800px!important;padding:12px!important}
+.td-workspace{display:grid;grid-template-columns:270px minmax(0,1fr) minmax(350px,400px);gap:12px;align-items:start;min-width:0}
+.td-workspace.td-hide-simulators{grid-template-columns:minmax(0,1fr) minmax(350px,400px)}
+.td-workspace.td-hide-properties{grid-template-columns:270px minmax(0,1fr)}
+.td-workspace.td-hide-simulators.td-hide-properties{grid-template-columns:minmax(0,1fr)}
+.td-live-column,.td-edit-column,.td-properties-column{min-width:0}
+.td-live-column,.td-properties-column{position:sticky;top:calc(var(--td-nav-height,72px) + 12px);max-height:calc(100dvh - var(--td-nav-height,72px) - 24px);overflow-y:auto;overscroll-behavior:contain}
+.td-live-column{width:270px;max-width:100%;border-radius:10px;background:#151b25;padding:5px;overflow-x:hidden}
+.td-live-column>section{margin:0;padding:0}
+.td-live-column>section>.card{background:transparent;border:0;box-shadow:none;margin:0 0 8px}
+.td-live-column>section>.card>.card-header{background:transparent;border:0;padding:6px 3px;min-height:0;display:flex;justify-content:flex-end}
+.td-live-column>section>.card>.card-header>span{display:none}
+.td-live-column>section>.card>.card-body{padding:0;background:transparent}
+.td-live-column #simulators{margin:0;gap:8px;display:flex;flex-direction:column;align-items:stretch}
+.td-live-column #simulators>div{width:100%;min-width:0;max-width:100%;flex:0 0 auto;padding:0}
+.td-live-column #simulators>div>.card{margin:0;border:0;background:#212529;box-shadow:none;border-radius:6px;overflow:hidden}
+.td-live-column #simulators>div .card-header{padding:3px;gap:3px;background:#212529;border:0}
+.td-live-column #simulators>div .card-header .small{display:none}
+.td-live-column #simulators>div .card-header .input-group{display:flex;flex-wrap:nowrap;width:100%;min-width:0}
+.td-live-column #simulators>div .card-header select{flex:1 1 auto;width:1%;min-width:0;max-width:none;font-size:11px;padding:3px 18px 3px 5px}
+.td-live-column #simulators>div .card-header button{flex:0 0 auto;font-size:12px;padding:1px 7px}
+.td-live-column #simulators>div iframe{display:block;width:100%;height:330px;max-width:100%}
+.td-live-column #simulators>div .card-footer{font-size:10px;padding:3px;background:#212529;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.td-editor-toolbar{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:12px}
+.td-editor-toolbar .btn-group{flex-wrap:wrap}
+.td-edit-column>.td-section>section,.td-properties-column>section{display:block;width:100%;max-width:100%;margin:0 0 12px;padding:0}
+.td-edit-column>.td-section>section>.card,.td-properties-column>section>.card{height:auto!important}
+.td-edit-column .card-body,.td-properties-column .card-body{padding:.75rem}
+.td-edit-column .input-group,.td-properties-column .input-group{margin-bottom:.65rem}
+.td-edit-column .input-group-text,.td-properties-column .input-group-text{padding:.45rem .55rem;white-space:normal;line-height:1.2;min-width:0}
+.td-edit-column .input-group-text.field-label{width:22%;flex:0 0 22%;font-size:.88rem}
+.td-properties-column .input-group-text.field-label{width:36%;flex:0 0 36%;font-size:.83rem}
+.td-edit-column .form-control,.td-edit-column .form-select,.td-properties-column .form-control,.td-properties-column .form-select{min-width:0;padding:.45rem .55rem}
+.td-edit-column .card-header,.td-properties-column .card-header{padding:.6rem .85rem}
+.td-properties-column{border:1px solid rgba(255,255,255,.15);border-radius:10px;background:#20283b;padding:8px}
+.td-properties-column>section>.card{margin:0;background:transparent;border:0;box-shadow:none}
+.td-properties-column #numericBinding .row>.col-4{width:100%;flex:0 0 100%;max-width:100%}
+.td-properties-column #numericBinding .row .input-group-text{min-width:72px}
+.td-section[hidden],.td-workspace [hidden]{display:none!important}
 .td-section-heading{font-size:1.5rem;font-weight:700;margin:0 0 1rem}
 .td-help{color:#d3dbea;margin-bottom:1rem}
 #state{position:relative;z-index:1}
-@media(max-width:1100px){
- .td-workspace{grid-template-columns:minmax(0,1fr)}
- .td-edit-column{grid-column:1;grid-row:1}
- .td-live-column{position:static;max-height:none;overflow:visible;grid-column:1;grid-row:2;padding:0}
- .td-live-column #simulators>.col-lg-4{width:50%;flex:0 0 50%}
- .td-nav .container-fluid{gap:.25rem}
- .td-nav .td-tab,.td-nav .td-external{padding:.55rem .7rem}
- .td-workspace .card{height:auto!important}
+.piece{cursor:grab}
+.piece:active{cursor:grabbing}
+@media(max-width:1250px){
+ .td-workspace,.td-workspace.td-hide-properties{grid-template-columns:270px minmax(0,1fr)}
+ .td-workspace.td-hide-simulators,.td-workspace.td-hide-simulators.td-hide-properties{grid-template-columns:minmax(0,1fr)}
+ .td-live-column{grid-column:1;grid-row:1 / span 2}
+ .td-edit-column{grid-column:2;grid-row:1}
+ .td-properties-column{grid-column:2;grid-row:2;position:static;max-height:none;overflow:visible}
+ .td-workspace.td-hide-simulators .td-edit-column{grid-column:1;grid-row:1}
+ .td-workspace.td-hide-simulators .td-properties-column{grid-column:1;grid-row:2}
 }
-
-@media(max-width:650px){.td-nav .container-fluid{padding:.5rem}.td-nav .td-tab,.td-nav .td-external{padding:.5rem .65rem;font-size:.88rem}.td-workspace{display:block}.td-live-column #simulators>.col-lg-4{width:100%;flex:0 0 100%}.input-group-text.field-label{width:30%}}
-
-/* Bandeau compact de simulateurs : 240 px utiles, sans cartes imbriquées. */
-.td-workspace{grid-template-columns:250px minmax(0,1fr)!important}
-.td-live-column{width:250px;max-width:250px;background:#151b25;border-radius:10px;padding:5px!important;overflow-x:hidden}
-.td-live-column>section{margin:0!important;padding:0!important}
-.td-live-column>section>.card{background:transparent!important;border:0!important;box-shadow:none!important;margin:0 0 8px!important}
-.td-live-column>section>.card>.card-header{background:transparent!important;border:0!important;padding:6px 3px!important;font-size:12px;min-height:0}
-.td-live-column>section>.card>.card-header span{font-size:0}
-.td-live-column>section>.card>.card-header span::after{content:'Simulateurs';font-size:13px;font-weight:600}
-.td-live-column>section>.card>.card-body{padding:0!important;background:transparent!important}
-.td-live-column #simulators{margin:0!important;gap:8px!important;display:flex;flex-direction:column}
-.td-live-column #simulators>div{width:240px!important;min-width:240px!important;max-width:240px!important;flex:0 0 auto!important;padding:0!important}
-.td-live-column #simulators>div>.card{margin:0!important;border:0!important;background:#212529!important;box-shadow:none!important;border-radius:6px!important;overflow:hidden}
-.td-live-column #simulators>div .card-header{padding:3px!important;gap:3px!important;background:#212529!important;border:0!important}
-.td-live-column #simulators>div .card-header .small{display:none}
-.td-live-column #simulators>div .card-header select{flex:1;min-width:0!important;max-width:unset!important;font-size:11px!important;padding:3px 18px 3px 5px!important}
-.td-live-column #simulators>div .card-header button{padding:1px 7px!important;font-size:12px!important}
-.td-live-column #simulators>div iframe{display:block;width:240px!important;height:330px!important;max-width:240px!important}
-.td-live-column #simulators>div .card-footer{font-size:10px!important;padding:3px!important;background:#212529!important;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.td-live-column .editor-viewport{max-width:240px}
-.td-live-column .card-body .row{margin:0!important}
-@media(max-width:1100px){.td-workspace{grid-template-columns:250px minmax(0,1fr)!important}.td-live-column{position:sticky;top:5.8rem;max-height:calc(100vh - 6.5rem);overflow-y:auto;grid-column:1;grid-row:1}.td-edit-column{grid-column:2;grid-row:1}}
-@media(max-width:550px){.td-workspace{grid-template-columns:minmax(0,1fr)!important}.td-edit-column{grid-column:1;grid-row:1}.td-live-column{position:static;grid-column:1;grid-row:2;width:250px;max-width:250px}}
-
-/* Le rail conserve un bord gauche affleurant ; seuls les coins droits sont arrondis. */
-.td-live-column.rounded-end{border-top-right-radius:var(--bs-border-radius-lg, .5rem)!important;border-bottom-right-radius:var(--bs-border-radius-lg, .5rem)!important;border-top-left-radius:0!important;border-bottom-left-radius:0!important}
-.td-live-column #simulators>div{width:100%!important;min-width:0!important;max-width:100%!important}
-.td-live-column #simulators>div>.card{width:100%!important}
-.td-live-column #simulators>div iframe{width:100%!important;max-width:100%!important}
-/* Atelier : rail affleurant à gauche, aperçu dans l'éditeur avant les composants. */
-main.container-fluid{padding-left:0!important;padding-top:0!important}
-#td-admin-workspace .td-section[hidden]{display:none!important}
-.td-workspace{gap:12px!important;grid-template-columns:250px minmax(0,1fr)!important}
-.td-live-column{border-radius:0!important;padding:0!important;margin:0!important;width:250px!important;max-width:250px!important;position:sticky!important;top:var(--td-nav-height,72px)!important;grid-column:1!important;grid-row:1!important;max-height:calc(100dvh - var(--td-nav-height,72px))!important;overflow-y:auto!important}
-.td-edit-column{grid-column:2!important;grid-row:1!important;padding-right:12px!important;min-width:0}
-.td-live-column #simulators>div{width:100%!important;min-width:0!important;max-width:100%!important}
-.td-live-column #simulators{align-items:stretch}
-.td-edit-column>section{margin:0 0 12px!important;padding:0!important}
-.td-edit-column>section>.card{height:auto!important}
-@media(max-width:550px){.td-workspace{grid-template-columns:250px minmax(0,1fr)!important;overflow-x:auto}.td-edit-column{min-width:300px}.td-live-column{position:sticky!important;left:0!important}}
-/* Écran 240 px + bordure 2 × 5 px + marges iframe 2 × 4 px : rail de 270 px. */
-.td-workspace{grid-template-columns:270px minmax(0,1fr)!important}
-.td-live-column{width:270px!important;max-width:270px!important}
-.td-live-column #simulators>div iframe{width:270px!important;max-width:270px!important}
-@media(max-width:1100px){.td-workspace{grid-template-columns:270px minmax(0,1fr)!important}}
-@media(max-width:550px){.td-workspace{grid-template-columns:270px minmax(0,1fr)!important}}
-/* Formulaires compacts : privilégier la place utile des valeurs. */
-.td-edit-column .card-body{padding:.75rem!important}
-.td-edit-column .input-group{margin-bottom:.65rem!important}
-.td-edit-column .input-group-text{padding:.45rem .55rem!important;white-space:normal;line-height:1.2;min-width:0}
-.td-edit-column .input-group-text.field-label{width:22%!important;flex:0 0 22%!important;font-size:.88rem}
-.td-edit-column .form-control,.td-edit-column .form-select{padding:.45rem .55rem!important}
-.td-edit-column .card-header{padding:.6rem .85rem!important}
-@media(max-width:850px){.td-edit-column .input-group-text.field-label{width:25%!important;flex-basis:25%!important}}
-
-/* Groupe Bootstrap unique : select + bouton contigus, marge sur le groupe entier. */
-.td-live-column>section>.card>.card-header span,.td-live-column>section>.card>.card-header span::after{display:none!important;content:none!important}
-.td-live-column>section>.card>.card-header{justify-content:flex-end!important}
-.td-live-column #simulators>div .card-header .input-group{display:flex;flex-wrap:nowrap;width:calc(100% - .5rem)!important;min-width:0}
-.td-live-column #simulators>div .card-header .input-group select{flex:1 1 auto!important;width:1%!important;min-width:0!important;max-width:none!important;border-top-right-radius:0!important;border-bottom-right-radius:0!important}
-.td-live-column #simulators>div .card-header .input-group button{flex:0 0 auto;margin-left:0!important;border-top-left-radius:0!important;border-bottom-left-radius:0!important}
-/* Espacement unique pour les quatre onglets : navigation, simulateurs et cards. */
-main.container-fluid{padding:12px!important;max-width:1800px!important}
-#td-admin-workspace{gap:12px!important;align-items:start}
-#td-admin-workspace .td-live-column{border-radius:10px!important;top:calc(var(--td-nav-height,72px) + 12px)!important;max-height:calc(100dvh - var(--td-nav-height,72px) - 24px)!important}
-#td-admin-workspace .td-edit-column{padding:0!important;min-width:0}
-#td-admin-workspace .td-edit-column>.td-section{margin:0!important;padding:0!important}
-#td-admin-workspace .td-edit-column>.td-section>.card:first-child{margin-top:0!important}
-#td-admin-workspace #td-sources>.row{margin-top:0!important}
-#td-admin-workspace #td-sources>.row>[class*="col-"]{padding-top:0!important}
-@media(max-width:550px){main.container-fluid{padding:12px!important}}
-/* Aligner strictement le haut des panneaux avec le rail, sans décalage par onglet. */
-#td-admin-workspace .td-live-column,#td-admin-workspace .td-edit-column{margin-top:0!important}
-#td-admin-workspace #td-editor>section:first-child,#td-admin-workspace #td-groups>section:first-child,#td-admin-workspace #td-devices>.card:first-child{margin-top:0!important;padding-top:0!important}
-#td-admin-workspace #td-sources #message[hidden],#td-admin-workspace #state[hidden]{display:none!important}
-#td-admin-workspace #td-sources>.row.g-3{margin-top:0!important}
-#td-admin-workspace #td-sources>.row.g-3>div{margin-top:0!important;padding-top:0!important}
-#td-admin-workspace #td-sources>.row.g-3>div>.card:first-child{margin-top:0!important}
-/* Rail au même niveau que les cards, sans décalage dû au sticky lors du changement d'onglet. */
-#td-admin-workspace .td-live-column{position:relative!important;top:0!important;align-self:start!important}
-.td-properties-panel{position:fixed;top:0;right:0;bottom:0;width:min(440px,100vw);z-index:1060;background:#20283b;box-shadow:-10px 0 32px #0005;display:none;flex-direction:column}.td-properties-panel.is-open{display:flex}.td-properties-head{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:#27364c;flex:none}.td-properties-scroll{overflow-y:auto;min-height:0;flex:1;padding:12px}.td-properties-scroll .card{margin:0}.piece{cursor:grab}.piece:active{cursor:grabbing}@media(min-width:1150px){body.td-properties-open main{padding-right:460px!important}.td-properties-panel{top:65px}.td-properties-panel.is-open{box-shadow:none;border-left:1px solid #64748b}}</style></head><body>
+@media(max-width:850px){
+ .td-workspace,.td-workspace.td-hide-properties,.td-workspace.td-hide-simulators,.td-workspace.td-hide-simulators.td-hide-properties{display:flex;flex-direction:column;gap:12px}
+ .td-edit-column{order:0;width:100%}
+ .td-properties-column{order:1;width:100%;position:static;max-height:none;overflow:visible}
+ .td-live-column{order:2;width:100%;max-width:100%;position:static;max-height:none}
+ .td-live-column #simulators{flex-direction:row;flex-wrap:wrap}
+ .td-live-column #simulators>div{width:270px;max-width:270px}
+ .td-edit-column .input-group-text.field-label{width:30%;flex-basis:30%}
+}
+@media(max-width:550px){
+ .td-nav .container-fluid{padding:.5rem;gap:.25rem}
+ .td-nav .td-tab,.td-nav .td-external{padding:.5rem .65rem;font-size:.88rem}
+ .td-live-column #simulators>div{max-width:100%}
+ .td-editor-toolbar{align-items:stretch}
+ .td-editor-toolbar .btn-group{width:100%}
+ .td-editor-toolbar .btn-group .btn{flex:1}
+}
+</style></head><body>
 <nav class="td-nav" aria-label="Navigation principale"><div class="container-fluid">
 <a class="td-brand" href="/admin"><img src="/favicon.svg" alt="" width="28" height="28" class="me-2" style="vertical-align:middle">TouchDeck</a>
 <button type="button" class="td-tab active" data-td-view="editor"><i class="fa-solid fa-pen-ruler me-1"></i> Éditeur</button>
@@ -349,7 +318,7 @@ function renderPreview(){
      for(const key of ['X','Y','W','H'])$('component'+key).value=item[key.toLowerCase()];
     }
    };
-   const finish=()=>{div.onpointermove=null;div.onpointerup=null;div.onpointercancel=null;if(changed){$('components').value=JSON.stringify(currentPage().components,null,2);dirty(null)}renderPreview();view.focus({preventScroll:true});if(!changed&&typeof window.tdOpenComponentEditor==='function')window.tdOpenComponentEditor()};
+   const finish=()=>{div.onpointermove=null;div.onpointerup=null;div.onpointercancel=null;if(changed){$('components').value=JSON.stringify(currentPage().components,null,2);dirty(null)}renderPreview();view.focus({preventScroll:true});};
    div.onpointerup=finish;div.onpointercancel=finish;
   };
   div.onpointermove=event=>{
@@ -658,21 +627,32 @@ document.addEventListener('visibilitychange',()=>{if(!document.hidden)refreshFir
    les champs ni les iframes, afin de conserver leurs écouteurs et leur état. */
 (function setupWorkspace(){
  const main=document.querySelector('main');
- const statusBox=document.getElementById('state');
  const row=main.querySelector('.row.g-3');
  const panelOf=id=>document.getElementById(id)?.closest('section');
  const groupPanel=panelOf('group'),pagePanel=panelOf('set'),componentPanel=panelOf('component');
  const previewPanel=panelOf('preview'),simPanel=panelOf('simulators');
  const firmwarePanel=document.getElementById('firmwareDevices')?.closest('.card');
  const legacySources=panelOf('source');
- if(!groupPanel||!pagePanel||!componentPanel||!previewPanel||!simPanel||!firmwarePanel)return;
+ if(!row||!groupPanel||!pagePanel||!componentPanel||!previewPanel||!simPanel||!firmwarePanel)return;
  const workspace=document.createElement('div');workspace.id='td-admin-workspace';workspace.className='td-workspace';
- const live=document.createElement('aside');live.className='td-live-column rounded-end overflow-hidden bg-dark';live.setAttribute('aria-label','Simulateurs toujours visibles');
+ const simulators=document.createElement('aside');simulators.className='td-live-column';simulators.id='tdSimulatorsColumn';simulators.setAttribute('aria-label','Simulateurs');
  const controls=document.createElement('div');controls.className='td-edit-column';
- workspace.append(live,controls);
+ const properties=document.createElement('aside');properties.className='td-properties-column';properties.id='tdPropertiesColumn';properties.setAttribute('aria-label','Propriétés du composant');
+ workspace.append(simulators,controls,properties);
  const editor=document.createElement('div');editor.id='td-editor';editor.className='td-section';
- for(const panel of [pagePanel,previewPanel,componentPanel]){panel.classList.remove('col-lg-6','col-12');editor.append(panel)}
- simPanel.classList.remove('col-lg-6','col-12');live.append(simPanel);
+ const toolbar=document.createElement('div');toolbar.className='td-editor-toolbar';
+ const heading=document.createElement('h1');heading.className='h5 m-0';heading.textContent='Éditeur visuel';
+ const buttons=document.createElement('div');buttons.className='btn-group';buttons.setAttribute('role','group');buttons.setAttribute('aria-label','Afficher ou masquer les panneaux');
+ const button=(id,label,icon,target)=>{
+  const b=document.createElement('button');b.type='button';b.id=id;b.className='btn btn-sm btn-primary';b.setAttribute('aria-controls',target);
+  const glyph=document.createElement('i');glyph.className='fa-solid '+icon+' me-1';b.append(glyph,document.createTextNode(label));buttons.append(b);return b;
+ };
+ const toggleSimulators=button('tdToggleSimulators','Simulateurs','fa-display','tdSimulatorsColumn');
+ const toggleProperties=button('tdToggleProperties','Propriétés','fa-sliders','tdPropertiesColumn');
+ toolbar.append(heading,buttons);editor.append(toolbar);
+ for(const panel of [previewPanel,pagePanel]){panel.classList.remove('col-lg-6','col-12');editor.append(panel)}
+ componentPanel.classList.remove('col-lg-6','col-12');properties.append(componentPanel);
+ simPanel.classList.remove('col-lg-6','col-12');simulators.append(simPanel);
  const groups=document.createElement('div');groups.id='td-groups';groups.className='td-section';groups.hidden=true;
  groupPanel.classList.remove('col-lg-6');groups.append(groupPanel);
  const sourcesSection=document.getElementById('td-sources');
@@ -683,15 +663,34 @@ document.addEventListener('visibilitychange',()=>{if(!document.hidden)refreshFir
  controls.append(editor,groups,sourcesSection,devices);
  row.replaceWith(workspace,...(legacySources?[legacySources]:[]));
  const sections={editor,groups,sources:sourcesSection,devices};
- function show(view){
-  if(!sections[view])view='editor';
-  for(const [key,section] of Object.entries(sections))section.hidden=key!==view;
-  for(const button of document.querySelectorAll('[data-td-view]')){
-   const active=button.dataset.tdView===view;button.classList.toggle('active',active);button.setAttribute('aria-current',active?'page':'false');
+ let currentView='editor';
+ const readPreference=key=>{try{return localStorage.getItem(key)!=='0'}catch{return true}};
+ let simulatorsVisible=readPreference('td-show-simulators');
+ let propertiesVisible=readPreference('td-show-properties');
+ const remember=(key,value)=>{try{localStorage.setItem(key,value?'1':'0')}catch{}};
+ function syncPanels(){
+  const showSimulators=simulatorsVisible;
+  const showProperties=propertiesVisible&&currentView==='editor';
+  simulators.hidden=!showSimulators;properties.hidden=!showProperties;
+  workspace.classList.toggle('td-hide-simulators',!showSimulators);
+  workspace.classList.toggle('td-hide-properties',!showProperties);
+  for(const [b,shown] of [[toggleSimulators,showSimulators],[toggleProperties,propertiesVisible]]){
+   b.setAttribute('aria-pressed',String(shown));b.classList.toggle('btn-primary',shown);b.classList.toggle('btn-secondary',!shown);
+   b.title=(shown?'Masquer ':'Afficher ')+(b===toggleSimulators?'les simulateurs':'les propriétés');
   }
+ }
+ toggleSimulators.addEventListener('click',()=>{simulatorsVisible=!simulatorsVisible;remember('td-show-simulators',simulatorsVisible);syncPanels()});
+ toggleProperties.addEventListener('click',()=>{propertiesVisible=!propertiesVisible;remember('td-show-properties',propertiesVisible);syncPanels()});
+ function show(view){
+  if(!sections[view])view='editor';currentView=view;
+  for(const [key,section] of Object.entries(sections))section.hidden=key!==view;
+  for(const b of document.querySelectorAll('[data-td-view]')){
+   const active=b.dataset.tdView===view;b.classList.toggle('active',active);b.setAttribute('aria-current',active?'page':'false');
+  }
+  syncPanels();
   if(location.hash!=='#'+view)history.replaceState(null,'','#'+view);
  }
- for(const button of document.querySelectorAll('[data-td-view]'))button.addEventListener('click',()=>show(button.dataset.tdView));
+ for(const b of document.querySelectorAll('[data-td-view]'))b.addEventListener('click',()=>show(b.dataset.tdView));
  window.addEventListener('hashchange',()=>show(location.hash.slice(1)));
  show(location.hash.slice(1)||'editor');
 })();
@@ -738,18 +737,5 @@ $('delete').onclick=async()=>{
 (async()=>{try{await reload();msg(null)}catch(e){msg('Chargement impossible : '+e.message,true)}})();
 setInterval(async()=>{try{telemetry=await api('/api/admin/sources/status');render()}catch{}},5000);
 
-})();
-</script><aside id="tdPropertiesPanel" class="td-properties-panel" aria-label="Propriétés du composant"><div class="td-properties-head"><strong>Propriétés du composant</strong><button type="button" class="btn btn-secondary btn-sm" id="tdPropertiesClose"><i class="fa-solid fa-xmark"></i> Fermer</button></div><div id="tdPropertiesContent" class="td-properties-scroll"></div></aside>
-<script>
-(function(){
- const panel=document.getElementById('tdPropertiesPanel'),content=document.getElementById('tdPropertiesContent'),selector=document.getElementById('component');
- if(!panel||!selector)return;
- const card=selector.closest('.card'),anchor=document.createComment('component-editor-original-position');
- card.parentNode.insertBefore(anchor,card);
- function open(){if(!panel.classList.contains('is-open')){content.appendChild(card);panel.classList.add('is-open');document.body.classList.add('td-properties-open');}}
- function close(){panel.classList.remove('is-open');document.body.classList.remove('td-properties-open');anchor.parentNode.insertBefore(card,anchor.nextSibling);}
- document.getElementById('tdPropertiesClose').addEventListener('click',close);
- document.getElementById('preview').addEventListener('dblclick',e=>{if(e.target.closest('.piece'))open();});
- window.tdOpenComponentEditor=open;
 })();
 </script></body></html>
