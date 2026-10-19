@@ -21,11 +21,19 @@ main{max-width:1800px!important;padding-top:1rem!important}
 
 /* Atelier TouchDeck : grille sans overlays, panneaux indépendants. */
 main.container-fluid{max-width:1800px!important;padding:12px!important}
-.td-workspace{display:grid;grid-template-columns:270px minmax(0,1fr) minmax(350px,400px);gap:12px;align-items:start;min-width:0}
-.td-workspace.td-hide-simulators{grid-template-columns:minmax(0,1fr) minmax(350px,400px)}
-.td-workspace.td-hide-properties{grid-template-columns:270px minmax(0,1fr)}
-.td-workspace.td-hide-simulators.td-hide-properties{grid-template-columns:minmax(0,1fr)}
+.td-workspace{display:grid;grid-template-columns:270px minmax(320px,1fr) 10px var(--td-properties-width,480px);grid-template-areas:"sim editor splitter props";gap:12px;align-items:start;min-width:0}
+.td-workspace.td-hide-simulators{grid-template-columns:minmax(320px,1fr) 10px var(--td-properties-width,480px);grid-template-areas:"editor splitter props"}
+.td-workspace.td-hide-properties{grid-template-columns:270px minmax(0,1fr);grid-template-areas:"sim editor"}
+.td-workspace.td-hide-simulators.td-hide-properties{grid-template-columns:minmax(0,1fr);grid-template-areas:"editor"}
+.td-live-column{grid-area:sim}
+.td-edit-column{grid-area:editor}
+.td-properties-column{grid-area:props}
 .td-live-column,.td-edit-column,.td-properties-column{min-width:0}
+.td-properties-resizer{grid-area:splitter;position:sticky;top:calc(var(--td-nav-height,72px) + 12px);height:min(520px,calc(100dvh - var(--td-nav-height,72px) - 24px));min-height:180px;cursor:col-resize;touch-action:none;user-select:none;border-radius:6px;display:flex;align-items:center;justify-content:center}
+.td-properties-resizer::before{content:"";display:block;width:4px;height:68px;border-radius:6px;background:rgba(200,220,250,.36);transition:background .15s}
+.td-properties-resizer:hover::before,.td-properties-resizer:focus-visible::before,.td-properties-resizer.is-dragging::before{background:var(--bs-primary,#8c68cd)}
+.td-properties-resizer:focus-visible{outline:2px solid var(--bs-primary,#8c68cd);outline-offset:1px}
+body.td-resizing-properties{cursor:col-resize!important;user-select:none!important}
 .td-live-column,.td-properties-column{position:sticky;top:calc(var(--td-nav-height,72px) + 12px);max-height:calc(100dvh - var(--td-nav-height,72px) - 24px);overflow-y:auto;overscroll-behavior:contain}
 .td-live-column{width:270px;max-width:100%;border-radius:10px;background:#151b25;padding:5px;overflow-x:hidden}
 .td-live-column>section{margin:0;padding:0}
@@ -65,19 +73,19 @@ main.container-fluid{max-width:1800px!important;padding:12px!important}
 .piece{cursor:grab}
 .piece:active{cursor:grabbing}
 @media(max-width:1250px){
- .td-workspace,.td-workspace.td-hide-properties{grid-template-columns:270px minmax(0,1fr)}
- .td-workspace.td-hide-simulators,.td-workspace.td-hide-simulators.td-hide-properties{grid-template-columns:minmax(0,1fr)}
- .td-live-column{grid-column:1;grid-row:1 / span 2}
- .td-edit-column{grid-column:2;grid-row:1}
- .td-properties-column{grid-column:2;grid-row:2;position:static;max-height:none;overflow:visible}
- .td-workspace.td-hide-simulators .td-edit-column{grid-column:1;grid-row:1}
- .td-workspace.td-hide-simulators .td-properties-column{grid-column:1;grid-row:2}
+ .td-workspace{grid-template-columns:270px minmax(0,1fr);grid-template-areas:"sim editor" "sim props"}
+ .td-workspace.td-hide-properties{grid-template-columns:270px minmax(0,1fr);grid-template-areas:"sim editor"}
+ .td-workspace.td-hide-simulators{grid-template-columns:minmax(0,1fr);grid-template-areas:"editor" "props"}
+ .td-workspace.td-hide-simulators.td-hide-properties{grid-template-columns:minmax(0,1fr);grid-template-areas:"editor"}
+ .td-properties-resizer{display:none}
+ .td-properties-column{position:static;max-height:none;overflow:visible}
 }
 @media(max-width:850px){
  .td-workspace,.td-workspace.td-hide-properties,.td-workspace.td-hide-simulators,.td-workspace.td-hide-simulators.td-hide-properties{display:flex;flex-direction:column;gap:12px}
  .td-edit-column{order:0;width:100%}
  .td-properties-column{order:1;width:100%;position:static;max-height:none;overflow:visible}
  .td-live-column{order:2;width:100%;max-width:100%;position:static;max-height:none}
+ .td-properties-resizer{display:none}
  .td-live-column #simulators{flex-direction:row;flex-wrap:wrap}
  .td-live-column #simulators>div{width:270px;max-width:270px}
  .td-edit-column .input-group-text.field-label{width:30%;flex-basis:30%}
@@ -638,7 +646,11 @@ document.addEventListener('visibilitychange',()=>{if(!document.hidden)refreshFir
  const simulators=document.createElement('aside');simulators.className='td-live-column';simulators.id='tdSimulatorsColumn';simulators.setAttribute('aria-label','Simulateurs');
  const controls=document.createElement('div');controls.className='td-edit-column';
  const properties=document.createElement('aside');properties.className='td-properties-column';properties.id='tdPropertiesColumn';properties.setAttribute('aria-label','Propriétés du composant');
- workspace.append(simulators,controls,properties);
+ const resizer=document.createElement('div');resizer.id='tdPropertiesResizer';resizer.className='td-properties-resizer';
+ resizer.setAttribute('role','separator');resizer.setAttribute('aria-label','Ajuster la largeur des propriétés');
+ resizer.setAttribute('aria-orientation','vertical');resizer.setAttribute('aria-controls','tdPropertiesColumn');
+ resizer.tabIndex=0;resizer.title='Glisser pour ajuster la largeur des propriétés ; double-clic pour réinitialiser';
+ workspace.append(simulators,controls,resizer,properties);
  const editor=document.createElement('div');editor.id='td-editor';editor.className='td-section';
  const toolbar=document.createElement('div');toolbar.className='td-editor-toolbar';
  const heading=document.createElement('h1');heading.className='h5 m-0';heading.textContent='Éditeur visuel';
@@ -668,12 +680,68 @@ document.addEventListener('visibilitychange',()=>{if(!document.hidden)refreshFir
  let simulatorsVisible=readPreference('td-show-simulators');
  let propertiesVisible=readPreference('td-show-properties');
  const remember=(key,value)=>{try{localStorage.setItem(key,value?'1':'0')}catch{}};
+ const defaultPropertiesWidth=480;
+ const savedWidth=(()=>{try{return Number(localStorage.getItem('td-properties-width'))}catch{return NaN}})();
+ let preferredPropertiesWidth=Number.isFinite(savedWidth)&&savedWidth>=350&&savedWidth<=760?savedWidth:defaultPropertiesWidth;
+ let displayedPropertiesWidth=defaultPropertiesWidth;
+ let drag=null;
+ function propertiesWidthMaximum(){
+  const simWidth=simulatorsVisible?270:0;
+  const gaps=simulatorsVisible?36:24;
+  return Math.max(350,Math.min(760,Math.floor(workspace.clientWidth-simWidth-gaps-10-320)));
+ }
+ function applyPropertiesWidth(){
+  const max=propertiesWidthMaximum();
+  displayedPropertiesWidth=Math.round(Math.max(350,Math.min(max,preferredPropertiesWidth)));
+  workspace.style.setProperty('--td-properties-width',displayedPropertiesWidth+'px');
+  resizer.setAttribute('aria-valuemin','350');
+  resizer.setAttribute('aria-valuemax',String(max));
+  resizer.setAttribute('aria-valuenow',String(displayedPropertiesWidth));
+  resizer.setAttribute('aria-valuetext',displayedPropertiesWidth+' pixels');
+ }
+ function rememberWidth(){try{localStorage.setItem('td-properties-width',String(preferredPropertiesWidth))}catch{}}
+ function chooseWidth(next){
+  preferredPropertiesWidth=Math.round(Math.max(350,Math.min(propertiesWidthMaximum(),next)));
+  applyPropertiesWidth();
+ }
+ resizer.addEventListener('pointerdown',event=>{
+  if(event.button!==0||window.matchMedia('(max-width:1250px)').matches||resizer.hidden)return;
+  drag={id:event.pointerId,x:event.clientX,width:displayedPropertiesWidth};
+  resizer.setPointerCapture(event.pointerId);
+  resizer.classList.add('is-dragging');document.body.classList.add('td-resizing-properties');
+  event.preventDefault();
+ });
+ resizer.addEventListener('pointermove',event=>{
+  if(!drag||event.pointerId!==drag.id)return;
+  chooseWidth(drag.width+drag.x-event.clientX);
+ });
+ function finishDrag(event){
+  if(!drag||event.pointerId!==drag.id)return;
+  drag=null;resizer.classList.remove('is-dragging');document.body.classList.remove('td-resizing-properties');
+  if(resizer.hasPointerCapture(event.pointerId))resizer.releasePointerCapture(event.pointerId);
+  rememberWidth();
+ }
+ resizer.addEventListener('pointerup',finishDrag);
+ resizer.addEventListener('pointercancel',finishDrag);
+ resizer.addEventListener('lostpointercapture',()=>{if(drag){drag=null;resizer.classList.remove('is-dragging');document.body.classList.remove('td-resizing-properties');rememberWidth()}});
+ resizer.addEventListener('dblclick',()=>{preferredPropertiesWidth=defaultPropertiesWidth;applyPropertiesWidth();rememberWidth()});
+ resizer.addEventListener('keydown',event=>{
+  let width=null;
+  if(event.key==='ArrowLeft')width=displayedPropertiesWidth+(event.shiftKey?50:20);
+  if(event.key==='ArrowRight')width=displayedPropertiesWidth-(event.shiftKey?50:20);
+  if(event.key==='Home')width=350;
+  if(event.key==='End')width=propertiesWidthMaximum();
+  if(width===null)return;
+  event.preventDefault();chooseWidth(width);rememberWidth();
+ });
+ window.addEventListener('resize',applyPropertiesWidth,{passive:true});
  function syncPanels(){
   const showSimulators=simulatorsVisible;
   const showProperties=propertiesVisible&&currentView==='editor';
-  simulators.hidden=!showSimulators;properties.hidden=!showProperties;
+  simulators.hidden=!showSimulators;properties.hidden=!showProperties;resizer.hidden=!showProperties;
   workspace.classList.toggle('td-hide-simulators',!showSimulators);
   workspace.classList.toggle('td-hide-properties',!showProperties);
+  applyPropertiesWidth();
   for(const [b,shown] of [[toggleSimulators,showSimulators],[toggleProperties,propertiesVisible]]){
    b.setAttribute('aria-pressed',String(shown));b.classList.toggle('btn-primary',shown);b.classList.toggle('btn-secondary',!shown);
    b.title=(shown?'Masquer ':'Afficher ')+(b===toggleSimulators?'les simulateurs':'les propriétés');
