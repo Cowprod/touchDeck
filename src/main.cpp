@@ -741,7 +741,7 @@ void loop(){
    // Force a manifest refresh even when the server revision has not changed.
    iconRevision=0;
    syncIcons(currentGroup,revision);
-   if(iconPaths.size()>0)draw();
+   if(iconRevision==revision && iconGroup==currentGroup)draw();
   }
  }
  if(wsStarted&&!wsReady&&disconnectedAt&&millis()-disconnectedAt>90000){
