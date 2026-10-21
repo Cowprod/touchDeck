@@ -39,7 +39,7 @@ test('OTA publication rejects mismatch and commits a verified release without in
     };
     const release = {version:'0.1.2',sha256:hash,size:image.length};
     assert.equal((await publish({...release,version:'invalid'})).status,400);
-    assert.equal((await publish({...release,version:'0.1.1'})).status,409);
+    assert.deepEqual(await publish({...release,version:'0.1.1'}),{status:409,body:{error:'firmware_version_mismatch'}});
     assert.equal((await publish({...release,sha256:'0'.repeat(64)})).status,409);
     assert.equal((await publish({...release,size:image.length+1})).status,409);
     assert.equal((await get('/api/firmware/manifest')).available,false);
