@@ -1,7 +1,7 @@
 import http from 'node:http';
 import os from 'node:os';
 import { createHash } from 'node:crypto';
-import { stat, mkdir, writeFile } from 'node:fs/promises';
+import { stat, mkdir, writeFile, rename, unlink } from 'node:fs/promises';
 import { createReadStream } from 'node:fs';
 import { join } from 'node:path';
 
@@ -119,16 +119,17 @@ export function createTouchDeckServer({ port = 3000, host = '0.0.0.0', dataFile 
   async function otaArtifact(){
     let version=otaFirmwareVersion;
     let expectedHash=null;
-    if(!version){try{const release=JSON.parse(await readFile(fileURLToPath(new URL('../data/ota/release.json',import.meta.url)),'utf8'));version=release.version;expectedHash=release.sha256;}catch(error){if(error.code==='ENOENT')return null;throw error;}}
+    let binaryPath=otaFirmwarePath;
+    if(!version){try{const release=JSON.parse(await readFile(fileURLToPath(new URL('../data/ota/release.json',import.meta.url)),'utf8'));version=release.version;expectedHash=release.sha256;if(release.file){if(!/^firmware-[a-f0-9]{64}\\.bin$/.test(release.file))throw new Error('ota_file_invalid');binaryPath=fileURLToPath(new URL('../data/ota/'+release.file,import.meta.url));}}catch(error){if(error.code==='ENOENT')return null;throw error;}}
     if(!/^\d+\.\d+\.\d+(?:[-+][a-zA-Z0-9.-]+)?$/.test(version))return null;
-    const info=await stat(otaFirmwarePath);
+    const info=await stat(binaryPath);
     if(!info.isFile()||info.size<4096||info.size>1310720)throw new Error('ota_artifact_invalid');
-    if(otaCache?.mtimeMs===info.mtimeMs&&otaCache.size===info.size&&otaCache.version===version)return otaCache;
+    if(otaCache?.mtimeMs===info.mtimeMs&&otaCache.size===info.size&&otaCache.version===version&&otaCache.path===binaryPath)return otaCache;
     const hash=createHash('sha256');
-    for await(const chunk of createReadStream(otaFirmwarePath))hash.update(chunk);
+    for await(const chunk of createReadStream(binaryPath))hash.update(chunk);
     const sha256=hash.digest('hex');
     if(expectedHash&&sha256!==expectedHash)throw new Error('ota_integrity_mismatch');
-    otaCache={version,board:otaFirmwareBoard,size:info.size,sha256,mtimeMs:info.mtimeMs};
+    otaCache={version,board:otaFirmwareBoard,size:info.size,sha256,mtimeMs:info.mtimeMs,path:binaryPath};
     return otaCache;
   }
   async function latestFirmwareVersion(){
@@ -448,7 +449,7 @@ export function createTouchDeckServer({ port = 3000, host = '0.0.0.0', dataFile 
         const artifact=await otaArtifact();
         if(!artifact||artifact.board!=='esp32c3')return json(404,{error:'firmware_not_found'});
         response.writeHead(200,{'content-type':'application/octet-stream','content-length':artifact.size,'cache-control':'no-store','x-firmware-sha256':artifact.sha256});
-        createReadStream(otaFirmwarePath).on('error',()=>response.destroy()).pipe(response);
+        createReadStream(artifact.path).on('error',()=>response.destroy()).pipe(response);
         return;
       }catch{return json(503,{error:'ota_artifact_unavailable'});}
     }
@@ -457,16 +458,32 @@ export function createTouchDeckServer({ port = 3000, host = '0.0.0.0', dataFile 
       if(!token||request.headers.authorization!=='Bearer '+token)return json(403,{error:'ota_authorization_required'});
       try{
         let body='';for await(const chunk of request){body+=chunk;if(body.length>512)return json(413,{error:'too_large'});}
-        const {version}=JSON.parse(body);
-        if(!/^\d+\.\d+\.\d+$/.test(version))return json(400,{error:'invalid_version'});
+        const {version,sha256:expectedSha,size:expectedSize}=JSON.parse(body);
+        if(!/^\\d+\\.\\d+\\.\\d+$/.test(version))return json(400,{error:'invalid_version'});
+        if(!/^[a-f0-9]{64}$/.test(expectedSha)||!Number.isInteger(expectedSize))return json(400,{error:'invalid_build_attestation'});
+        if(otaFirmwareVersion||process.env.TOUCHDECK_OTA_FIRMWARE_PATH)return json(409,{error:'ota_environment_override'});
         const source=fileURLToPath(new URL('../../.pio/build/esp32c3_diagnostic/firmware.bin',import.meta.url));
         const bytes=await readFile(source);
         if(bytes.length<4096||bytes.length>1310720||bytes[0]!==0xe9)return json(409,{error:'invalid_build'});
+        if(!bytes.includes(Buffer.from(version)))return json(409,{error:'firmware_version_mismatch'});
         const sha256=createHash('sha256').update(bytes).digest('hex');
+        if(sha256!==expectedSha||bytes.length!==expectedSize)return json(409,{error:'build_attestation_mismatch'});
         const destination=fileURLToPath(new URL('../data/ota/',import.meta.url));
         await mkdir(destination,{recursive:true});
-        await writeFile(join(destination,'firmware.bin'),bytes);
-        await writeFile(join(destination,'release.json'),JSON.stringify({version,board:'esp32c3',size:bytes.length,sha256}));
+        const file='firmware-'+sha256+'.bin';
+        const imagePath=join(destination,file);
+        const tempImage=join(destination,'.firmware-'+process.pid+'-'+Date.now()+'.tmp');
+        const tempRelease=join(destination,'.release-'+process.pid+'-'+Date.now()+'.tmp');
+        try {
+          await writeFile(tempImage,bytes,{flag:'wx'});
+          await rename(tempImage,imagePath);
+          await writeFile(tempRelease,JSON.stringify({version,board:'esp32c3',size:bytes.length,sha256,file}),{flag:'wx'});
+          // Commit point: readers see either the previous release or the new immutable image.
+          await rename(tempRelease,join(destination,'release.json'));
+        } finally {
+          await unlink(tempImage).catch(()=>{});
+          await unlink(tempRelease).catch(()=>{});
+        }
         otaCache=null;
         return json(200,{ok:true,version,size:bytes.length,sha256});
       }catch{return json(409,{error:'publication_failed'});}
