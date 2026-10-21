@@ -731,7 +731,18 @@ void loop(){
     Serial.printf("icon_diag_component name=%s color=%s bg=%s file=%s exists=%d\\n",name.c_str(),component["textColor"]|"",component["backgroundColor"]|"transparent",path,strlen(path)>0&&LittleFS.exists(path));
    }
   }
-  if(iconPaths.size()==0 && !page.isNull())syncIcons(currentGroup,revision);
+  bool iconCacheIncomplete=iconPaths.size()==0;
+  for(JsonVariantConst component:page["components"].as<JsonArrayConst>()){
+   if(String(component["type"]|"")!="Icon")continue;
+   const char *path=iconPaths[component["icon"]|""] | "";
+   if(!path[0]||!LittleFS.exists(path)){iconCacheIncomplete=true;break;}
+  }
+  if(iconCacheIncomplete && !page.isNull()){
+   // Force a manifest refresh even when the server revision has not changed.
+   iconRevision=0;
+   syncIcons(currentGroup,revision);
+   if(iconPaths.size()>0)draw();
+  }
  }
  if(wsStarted&&!wsReady&&disconnectedAt&&millis()-disconnectedAt>90000){
   Serial.println("ws_rediscover");ws.disconnect();wsStarted=false;disconnectedAt=0;
