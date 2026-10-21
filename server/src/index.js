@@ -120,7 +120,7 @@ export function createTouchDeckServer({ port = 3000, host = '0.0.0.0', dataFile 
     let version=otaFirmwareVersion;
     let expectedHash=null;
     if(!version){try{const release=JSON.parse(await readFile(fileURLToPath(new URL('../data/ota/release.json',import.meta.url)),'utf8'));version=release.version;expectedHash=release.sha256;}catch(error){if(error.code==='ENOENT')return null;throw error;}}
-    if(!/^\\d+\\.\\d+\\.\\d+(?:[-+][a-zA-Z0-9.-]+)?$/.test(version))return null;
+    if(!/^\d+\.\d+\.\d+(?:[-+][a-zA-Z0-9.-]+)?$/.test(version))return null;
     const info=await stat(otaFirmwarePath);
     if(!info.isFile()||info.size<4096||info.size>1310720)throw new Error('ota_artifact_invalid');
     if(otaCache?.mtimeMs===info.mtimeMs&&otaCache.size===info.size&&otaCache.version===version)return otaCache;
@@ -454,7 +454,7 @@ export function createTouchDeckServer({ port = 3000, host = '0.0.0.0', dataFile 
       try{
         let body='';for await(const chunk of request){body+=chunk;if(body.length>512)return json(413,{error:'too_large'});}
         const {version}=JSON.parse(body);
-        if(!/^\\d+\\.\\d+\\.\\d+$/.test(version))return json(400,{error:'invalid_version'});
+        if(!/^\d+\.\d+\.\d+$/.test(version))return json(400,{error:'invalid_version'});
         const source=fileURLToPath(new URL('../../.pio/build/esp32c3_diagnostic/firmware.bin',import.meta.url));
         const bytes=await readFile(source);
         if(bytes.length<4096||bytes.length>1310720||bytes[0]!==0xe9)return json(409,{error:'invalid_build'});
