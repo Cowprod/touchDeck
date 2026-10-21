@@ -131,7 +131,10 @@ export function createTouchDeckServer({ port = 3000, host = '0.0.0.0', dataFile 
     otaCache={version,board:otaFirmwareBoard,size:info.size,sha256,mtimeMs:info.mtimeMs};
     return otaCache;
   }
-  const latestFirmwareVersion=otaFirmwareVersion||(process.env.TOUCHDECK_FIRMWARE_VERSION??'0.1.0');
+  async function latestFirmwareVersion(){
+    try{return (await otaArtifact())?.version??otaFirmwareVersion??process.env.TOUCHDECK_FIRMWARE_VERSION??'0.1.0';}
+    catch{return otaFirmwareVersion||process.env.TOUCHDECK_FIRMWARE_VERSION||'0.1.0';}
+  }
   const deviceSourceId=id=>'device_'+id.slice(0,73);
   function deviceSource(id){
     const sourceId=deviceSourceId(id);
@@ -144,13 +147,14 @@ export function createTouchDeckServer({ port = 3000, host = '0.0.0.0', dataFile 
     }
     return sourceId;
   }
-  function publishDevice(client,connected){
+  async function publishDevice(client,connected){
     if(!client.deviceType)return;
     const sourceId=deviceSource(client.id);
     const installed=client.firmwareVersion??'';
     const version=installed.split('+')[0];
-    publishSourceValues(sourceId,{firmwareVersion:installed,latestVersion:latestFirmwareVersion,
-      updateAvailable:version!==''&&version!==latestFirmwareVersion,connected,
+    const latest=await latestFirmwareVersion();
+    publishSourceValues(sourceId,{firmwareVersion:installed,latestVersion:latest,
+      updateAvailable:version!==''&&version!==latest,connected,
       lastSeen:new Date().toISOString(),deviceType:client.deviceType});
   }
   const profiles = new Map([['round-240', { id: 'round-240', width: 240, height: 240, shape: 'round', gridColumns: 8, gridRows: 8 }]]);
