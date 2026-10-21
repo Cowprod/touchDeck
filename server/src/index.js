@@ -120,7 +120,7 @@ export function createTouchDeckServer({ port = 3000, host = '0.0.0.0', dataFile 
     let version=otaFirmwareVersion;
     let expectedHash=null;
     let binaryPath=otaFirmwarePath;
-    if(!version){try{const release=JSON.parse(await readFile(fileURLToPath(new URL('../data/ota/release.json',import.meta.url)),'utf8'));version=release.version;expectedHash=release.sha256;if(release.file){if(!/^firmware-[a-f0-9]{64}\\.bin$/.test(release.file))throw new Error('ota_file_invalid');binaryPath=fileURLToPath(new URL('../data/ota/'+release.file,import.meta.url));}}catch(error){if(error.code==='ENOENT')return null;throw error;}}
+    if(!version){try{const release=JSON.parse(await readFile(fileURLToPath(new URL('../data/ota/release.json',import.meta.url)),'utf8'));version=release.version;expectedHash=release.sha256;if(release.file){if(!/^firmware-[a-f0-9]{64}\.bin$/.test(release.file))throw new Error('ota_file_invalid');binaryPath=fileURLToPath(new URL('../data/ota/'+release.file,import.meta.url));}}catch(error){if(error.code==='ENOENT')return null;throw error;}}
     if(!/^\d+\.\d+\.\d+(?:[-+][a-zA-Z0-9.-]+)?$/.test(version))return null;
     const info=await stat(binaryPath);
     if(!info.isFile()||info.size<4096||info.size>1310720)throw new Error('ota_artifact_invalid');
@@ -459,7 +459,7 @@ export function createTouchDeckServer({ port = 3000, host = '0.0.0.0', dataFile 
       try{
         let body='';for await(const chunk of request){body+=chunk;if(body.length>512)return json(413,{error:'too_large'});}
         const {version,sha256:expectedSha,size:expectedSize}=JSON.parse(body);
-        if(!/^\\d+\\.\\d+\\.\\d+$/.test(version))return json(400,{error:'invalid_version'});
+        if(!/^\d+\.\d+\.\d+$/.test(version))return json(400,{error:'invalid_version'});
         if(!/^[a-f0-9]{64}$/.test(expectedSha)||!Number.isInteger(expectedSize))return json(400,{error:'invalid_build_attestation'});
         if(otaFirmwareVersion||process.env.TOUCHDECK_OTA_FIRMWARE_PATH)return json(409,{error:'ota_environment_override'});
         const source=fileURLToPath(new URL('../../.pio/build/esp32c3_diagnostic/firmware.bin',import.meta.url));
