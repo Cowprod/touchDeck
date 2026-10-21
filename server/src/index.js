@@ -441,7 +441,7 @@ export function createTouchDeckServer({ port = 3000, host = '0.0.0.0', dataFile 
       catch { return json(500, { error: 'icon_manifest_unavailable' }); }
     }
     if(request.method==='GET'&&url.pathname==='/api/firmware/manifest'){
-      try{const artifact=await otaArtifact();return json(200,{available:!!artifact,...(artifact??{})});}
+      try{const artifact=await otaArtifact();if(!artifact)return json(200,{available:false});const {path:privatePath,mtimeMs:privateMtime,...publicArtifact}=artifact;return json(200,{available:true,...publicArtifact});}
       catch{return json(503,{error:'ota_artifact_unavailable'});}
     }
     if(request.method==='GET'&&url.pathname==='/api/firmware/esp32c3.bin'){
