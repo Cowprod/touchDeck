@@ -485,6 +485,7 @@ export function createTouchDeckServer({ port = 3000, host = '0.0.0.0', dataFile 
           await unlink(tempRelease).catch(()=>{});
         }
         otaCache=null;
+        await Promise.all([...clients.values()].map(client=>publishDevice(client,client.sockets.size>0)));
         return json(200,{ok:true,version,size:bytes.length,sha256});
       }catch{return json(409,{error:'publication_failed'});}
     }
