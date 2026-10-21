@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtemp, mkdir, writeFile, readFile, rm } from 'node:fs/promises';
+import { mkdtemp, mkdir, writeFile, readFile, rm, stat } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { createHash } from 'node:crypto';
@@ -10,6 +10,11 @@ test('OTA publication rejects mismatch and commits a verified release without in
   const root = resolve(import.meta.dirname, '../..');
   const build = join(root, '.pio/build/esp32c3_diagnostic');
   const ota = join(root, 'server/data/ota');
+  // Never run this filesystem fixture against a deployed OTA release.
+  for (const path of [build, ota]) {
+    try { await stat(path); throw new Error('OTA test refuses to touch existing directory: '+path); }
+    catch (error) { if (error.code !== 'ENOENT') throw error; }
+  }
   const tmp = await mkdtemp(join(tmpdir(), 'touchdeck-ota-test-'));
   const token = 'test-only-ota-token-000000000000';
   const oldToken = process.env.TOUCHDECK_OTA_ADMIN_TOKEN;
